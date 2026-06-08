@@ -21,6 +21,7 @@ import StatsPage from './pages/StatsPage'
 import PhotosPage from './pages/PhotosPage'
 import ArchiveListPage from './pages/ArchiveListPage'
 import ArchiveHubPage from './pages/ArchiveHubPage'
+import ExplorePage from './pages/ExplorePage'
 import { usePosts } from './hooks/usePosts'
 import { useProfile } from './hooks/useProfile'
 import { useSession } from './hooks/useSession'
@@ -65,6 +66,7 @@ function AuthenticatedApp({ onLogout }) {
         <Route path="/stats" element={<StatsPage />} />
         <Route path="/photos" element={<PhotosPage />} />
         <Route path="/archive" element={<ArchiveHubPage />} />
+        <Route path="/explore" element={<ExplorePage />} />
         <Route path="/tags/:tag" element={<ArchiveListPage kind="tag" />} />
         <Route path="/backlinks/:title" element={<ArchiveListPage kind="backlink" />} />
         <Route path="/diary"   element={<DiaryPage {...sharedProps} searchQuery={searchQuery} />} />

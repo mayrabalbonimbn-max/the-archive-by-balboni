@@ -23,6 +23,7 @@ app.use('/api/friends', require('./routes/friends'))
 app.use('/api/follows', require('./routes/follows'))
 app.use('/api', require('./routes/comments'))
 app.use('/api/notifications', require('./routes/notifications'))
+app.use('/api/search', require('./routes/search'))
 app.use('/api', require('./routes/attachments'))
 
 module.exports = app
