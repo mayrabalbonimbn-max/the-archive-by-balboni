@@ -1,0 +1,414 @@
+const express = require('express')
+const fs = require('fs/promises')
+const path = require('path')
+const pool = require('../db')
+const requireAuth = require('../middleware/auth')
+const { REACTIONS, attachmentVisibleSql, normalizeVisibility, reactionCountsSql, viewerReactionsSql, visibleSql } = require('../utils/social')
+
+const router = express.Router()
+const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, '..', '..', 'storage', 'uploads')
+const CODE_LANGUAGES = new Set([
+  'javascript', 'typescript', 'jsx', 'tsx', 'python', 'html', 'css', 'json',
+  'bash', 'sql', 'markdown', 'java', 'c', 'cpp', 'csharp', 'go', 'rust', 'plaintext',
+])
+const MAX_CODE_LENGTH = 50000
+router.use(requireAuth)
+
+function toPost(row) {
+  const reactionCounts = row.reaction_counts || {}
+  const viewerReactions = row.viewer_reactions || []
+  return {
+    id: row.id,
+    profileId: row.profile_id,
+    content: row.content,
+    type: row.type,
+    isDiary: row.is_diary,
+    isPrivate: row.is_private,
+    visibility: row.visibility || (row.is_private ? 'private' : 'private'),
+    isArticle: row.is_article || false,
+    articleTitle: row.article_title || null,
+    collectionId: row.collection_id || null,
+    attachments: row.attachments || [],
+    codeBlock: row.code_language ? { language: row.code_language, code: row.code_content || '' } : null,
+    liked: viewerReactions.includes('heart') || row.liked,
+    likeCount: Number(reactionCounts.heart ?? row.like_count ?? 0),
+    saved: viewerReactions.includes('save') || row.saved,
+    reactionCounts,
+    viewerReactions,
+    commentCount: Number(row.comment_count || 0),
+    pinned: row.pinned,
+    createdAt: row.created_at,
+    author: row.author_id ? {
+      id: row.author_id,
+      name: row.author_name,
+      handle: row.author_handle,
+      avatar: row.author_avatar,
+    } : null,
+  }
+}
+
+function commentCountSql(postAlias = 'p') {
+  return `(SELECT COUNT(*)::int FROM comments c WHERE c.post_id = ${postAlias}.id) AS comment_count`
+}
+
+async function notifyPostOwner(post, actorId, type, message) {
+  if (!post?.profile_id || post.profile_id === actorId) return
+  await pool.query(
+    `INSERT INTO notifications (profile_id, actor_id, post_id, type, message)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [post.profile_id, actorId, post.id, type, message]
+  )
+}
+
+const attachmentJsonSql = `
+  COALESCE(jsonb_agg(jsonb_build_object(
+    'id', a.id, 'postId', a.post_id, 'originalName', a.original_name, 'title', a.title, 'description', a.description,
+    'mimeType', a.mime_type, 'size', a.size, 'fileType', a.file_type,
+    'visibility', a.visibility, 'createdAt', a.created_at
+  ) ORDER BY a.created_at, a.id) FILTER (WHERE a.id IS NOT NULL), '[]'::jsonb) AS attachments`
+
+// GET /api/posts
+router.get('/', async (req, res) => {
+  try {
+    const { q } = req.query
+    let query, params
+
+    if (q && q.trim()) {
+      query = `SELECT p.*, ${reactionCountsSql('p')}, ${viewerReactionsSql('p', '$1')}, ${commentCountSql('p')},
+                ${attachmentJsonSql}
+               FROM posts p
+               LEFT JOIN post_attachments a ON a.post_id = p.id AND a.profile_id = p.profile_id AND ${attachmentVisibleSql('a', 'p')}
+               WHERE p.profile_id = $1 AND p.content ILIKE $2
+               GROUP BY p.id
+               ORDER BY p.pinned DESC, p.created_at DESC`
+      params = [req.user.profileId, `%${q.trim()}%`]
+    } else {
+      query = `SELECT p.*, ${reactionCountsSql('p')}, ${viewerReactionsSql('p', '$1')}, ${commentCountSql('p')},
+                ${attachmentJsonSql}
+               FROM posts p
+               LEFT JOIN post_attachments a ON a.post_id = p.id AND a.profile_id = p.profile_id AND ${attachmentVisibleSql('a', 'p')}
+               WHERE p.profile_id = $1
+               GROUP BY p.id
+               ORDER BY p.pinned DESC, p.created_at DESC`
+      params = [req.user.profileId]
+    }
+
+    const result = await pool.query(query, params)
+    res.json(result.rows.map(toPost))
+  } catch (err) {
+    console.error('GET /posts error:', err)
+    res.status(500).json({ error: 'Erro interno do servidor.' })
+  }
+})
+
+// GET /api/posts/friends
+router.get('/friends', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT p.*,
+        owner.id AS author_id, owner.name AS author_name, owner.handle AS author_handle, owner.avatar AS author_avatar,
+        ${reactionCountsSql('p')}, ${viewerReactionsSql('p', '$1')},
+        ${attachmentJsonSql}
+       FROM posts p
+       JOIN profiles owner ON owner.id = p.profile_id
+       LEFT JOIN post_attachments a ON a.post_id = p.id AND a.profile_id = p.profile_id AND ${attachmentVisibleSql('a', 'p')}
+       WHERE p.profile_id != $1
+         AND p.visibility IN ('friends', 'public')
+         AND EXISTS (
+           SELECT 1 FROM friendships f
+           WHERE f.status = 'accepted'
+             AND (
+               (f.requester_id = $1 AND f.receiver_id = p.profile_id)
+               OR (f.receiver_id = $1 AND f.requester_id = p.profile_id)
+             )
+         )
+       GROUP BY p.id, owner.id
+       ORDER BY p.created_at DESC`,
+      [req.user.profileId]
+    )
+    res.json(result.rows.map(toPost))
+  } catch (err) {
+    console.error('GET /posts/friends error:', err)
+    res.status(500).json({ error: 'Erro interno do servidor.' })
+  }
+})
+
+// GET /api/posts/following
+router.get('/following', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT p.*,
+        owner.id AS author_id, owner.name AS author_name, owner.handle AS author_handle, owner.avatar AS author_avatar,
+        ${reactionCountsSql('p')}, ${viewerReactionsSql('p', '$1')}, ${commentCountSql('p')},
+        ${attachmentJsonSql}
+       FROM posts p
+       JOIN profiles owner ON owner.id = p.profile_id
+       LEFT JOIN post_attachments a ON a.post_id = p.id AND a.profile_id = p.profile_id AND ${attachmentVisibleSql('a', 'p')}
+       WHERE p.profile_id != $1
+         AND EXISTS (SELECT 1 FROM follows fl WHERE fl.follower_id = $1 AND fl.following_id = p.profile_id)
+         AND ${visibleSql('p')}
+       GROUP BY p.id, owner.id
+       ORDER BY p.created_at DESC`,
+      [req.user.profileId]
+    )
+    res.json(result.rows.map(toPost))
+  } catch (err) {
+    console.error('GET /posts/following error:', err)
+    res.status(500).json({ error: 'Erro interno do servidor.' })
+  }
+})
+
+// GET /api/posts/explore
+router.get('/explore', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT p.*,
+        owner.id AS author_id, owner.name AS author_name, owner.handle AS author_handle, owner.avatar AS author_avatar,
+        ${reactionCountsSql('p')}, ${viewerReactionsSql('p', '$1')}, ${commentCountSql('p')},
+        ${attachmentJsonSql}
+       FROM posts p
+       JOIN profiles owner ON owner.id = p.profile_id
+       LEFT JOIN post_attachments a ON a.post_id = p.id AND a.profile_id = p.profile_id AND ${attachmentVisibleSql('a', 'p')}
+       WHERE p.profile_id != $1 AND p.visibility = 'public'
+       GROUP BY p.id, owner.id
+       ORDER BY p.created_at DESC
+       LIMIT 100`,
+      [req.user.profileId]
+    )
+    res.json(result.rows.map(toPost))
+  } catch (err) {
+    console.error('GET /posts/explore error:', err)
+    res.status(500).json({ error: 'Erro interno do servidor.' })
+  }
+})
+
+// GET /api/posts/:id
+router.get('/:id', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT p.*,
+        owner.id AS author_id, owner.name AS author_name, owner.handle AS author_handle, owner.avatar AS author_avatar,
+        ${reactionCountsSql('p')}, ${viewerReactionsSql('p', '$2')}, ${commentCountSql('p')},
+        ${attachmentJsonSql}
+       FROM posts p
+       JOIN profiles owner ON owner.id = p.profile_id
+       LEFT JOIN post_attachments a ON a.post_id = p.id AND a.profile_id = p.profile_id AND ${attachmentVisibleSql('a', 'p').replaceAll('$1', '$2')}
+       WHERE p.id = $1 AND ${visibleSql('p').replaceAll('$1', '$2')}
+       GROUP BY p.id, owner.id`,
+      [req.params.id, req.user.profileId]
+    )
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Post não encontrado.' })
+    res.json(toPost(result.rows[0]))
+  } catch (err) {
+    console.error('GET /posts/:id error:', err)
+    res.status(500).json({ error: 'Erro interno do servidor.' })
+  }
+})
+
+// POST /api/posts
+router.post('/', async (req, res) => {
+  try {
+    const { content, type, isDiary, isPrivate, visibility, hasAttachments, codeBlock, isArticle, articleTitle, collectionId } = req.body
+
+    const cleanContent = (content || '').trim()
+    const cleanCode = typeof codeBlock?.code === 'string' ? codeBlock.code.trimEnd() : ''
+    const codeLanguage = codeBlock?.language || null
+    const cleanTitle = typeof articleTitle === 'string' ? articleTitle.trim().slice(0, 500) : null
+    const cleanVisibility = normalizeVisibility(visibility, isPrivate === true ? 'private' : 'private')
+
+    if (!cleanContent && !cleanCode && hasAttachments !== true) {
+      return res.status(400).json({ error: 'Post deve ter texto, código ou anexo.' })
+    }
+    if (cleanCode && !CODE_LANGUAGES.has(codeLanguage)) {
+      return res.status(400).json({ error: 'Linguagem de código inválida.' })
+    }
+    if (cleanCode.length > MAX_CODE_LENGTH) {
+      return res.status(400).json({ error: 'Código deve ter no máximo 50 mil caracteres.' })
+    }
+
+    // Validate collectionId belongs to this profile
+    let validCollectionId = null
+    if (collectionId) {
+      const col = await pool.query(
+        'SELECT id FROM collections WHERE id = $1 AND profile_id = $2',
+        [collectionId, req.user.profileId]
+      )
+      if (col.rows.length > 0) validCollectionId = collectionId
+    }
+
+    const result = await pool.query(
+      `INSERT INTO posts (profile_id, content, type, is_diary, is_private, visibility, code_language, code_content, is_article, article_title, collection_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING *`,
+      [
+        req.user.profileId,
+        cleanContent,
+        type || 'pensamento',
+        isDiary === true,
+        cleanVisibility === 'private',
+        cleanVisibility,
+        cleanCode ? codeLanguage : null,
+        cleanCode || null,
+        isArticle === true,
+        cleanTitle || null,
+        validCollectionId,
+      ]
+    )
+    res.status(201).json(toPost(result.rows[0]))
+  } catch (err) {
+    console.error('POST /posts error:', err)
+    res.status(500).json({ error: 'Erro interno do servidor.' })
+  }
+})
+
+// PATCH /api/posts/:id
+router.patch('/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { action } = req.body
+
+    const check = await pool.query(
+      `SELECT p.* FROM posts p WHERE p.id = $1 AND ${visibleSql('p').replaceAll('$1', '$2')}`,
+      [id, req.user.profileId]
+    )
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Post não encontrado.' })
+    }
+
+    const post = check.rows[0]
+    let result
+
+    if (action === 'react') {
+      const reactionType = req.body.reactionType
+      if (!REACTIONS.has(reactionType)) return res.status(400).json({ error: 'Reação inválida.' })
+      const existing = await pool.query(
+        'SELECT id FROM post_reactions WHERE post_id = $1 AND profile_id = $2 AND reaction_type = $3',
+        [id, req.user.profileId, reactionType]
+      )
+      if (existing.rowCount > 0) {
+        await pool.query('DELETE FROM post_reactions WHERE id = $1', [existing.rows[0].id])
+      } else {
+        await pool.query(
+          'INSERT INTO post_reactions (post_id, profile_id, reaction_type) VALUES ($1, $2, $3)',
+          [id, req.user.profileId, reactionType]
+        )
+        if (reactionType === 'heart') {
+          const actor = await pool.query('SELECT name FROM profiles WHERE id = $1', [req.user.profileId])
+          await notifyPostOwner(post, req.user.profileId, 'like', `${actor.rows[0]?.name || 'Alguém'} curtiu seu post.`)
+        }
+      }
+      const updated = await pool.query(
+        `SELECT p.*, ${reactionCountsSql('p')}, ${viewerReactionsSql('p', '$2')}, ${commentCountSql('p')}
+         FROM posts p WHERE p.id = $1`,
+        [id, req.user.profileId]
+      )
+      return res.json(toPost(updated.rows[0]))
+    }
+
+    if (action === 'like') {
+      req.body.action = 'react'
+      req.body.reactionType = 'heart'
+      const existing = await pool.query(
+        'SELECT id FROM post_reactions WHERE post_id = $1 AND profile_id = $2 AND reaction_type = $3',
+        [id, req.user.profileId, 'heart']
+      )
+      if (existing.rowCount > 0) {
+        await pool.query('DELETE FROM post_reactions WHERE id = $1', [existing.rows[0].id])
+      } else {
+        await pool.query(
+          'INSERT INTO post_reactions (post_id, profile_id, reaction_type) VALUES ($1, $2, $3)',
+          [id, req.user.profileId, 'heart']
+        )
+        const actor = await pool.query('SELECT name FROM profiles WHERE id = $1', [req.user.profileId])
+        await notifyPostOwner(post, req.user.profileId, 'like', `${actor.rows[0]?.name || 'Alguém'} curtiu seu post.`)
+      }
+      const updated = await pool.query(
+        `SELECT p.*, ${reactionCountsSql('p')}, ${viewerReactionsSql('p', '$2')}, ${commentCountSql('p')}
+         FROM posts p WHERE p.id = $1`,
+        [id, req.user.profileId]
+      )
+      return res.json(toPost(updated.rows[0]))
+    } else if (action === 'save') {
+      const existing = await pool.query(
+        'SELECT id FROM post_reactions WHERE post_id = $1 AND profile_id = $2 AND reaction_type = $3',
+        [id, req.user.profileId, 'save']
+      )
+      if (existing.rowCount > 0) {
+        await pool.query('DELETE FROM post_reactions WHERE id = $1', [existing.rows[0].id])
+      } else {
+        await pool.query(
+          'INSERT INTO post_reactions (post_id, profile_id, reaction_type) VALUES ($1, $2, $3)',
+          [id, req.user.profileId, 'save']
+        )
+      }
+      const updated = await pool.query(
+        `SELECT p.*, ${reactionCountsSql('p')}, ${viewerReactionsSql('p', '$2')}, ${commentCountSql('p')}
+         FROM posts p WHERE p.id = $1`,
+        [id, req.user.profileId]
+      )
+      return res.json(toPost(updated.rows[0]))
+    }
+
+    if (post.profile_id !== req.user.profileId) {
+      return res.status(403).json({ error: 'Apenas o proprietário pode alterar este conteúdo.' })
+    }
+
+    if (action === 'legacy-like') {
+      const newLiked = !post.liked
+      const newCount = newLiked ? post.like_count + 1 : post.like_count - 1
+      result = await pool.query(
+        `UPDATE posts SET liked = $1, like_count = $2, updated_at = now()
+         WHERE id = $3 RETURNING *`,
+        [newLiked, Math.max(0, newCount), id]
+      )
+    } else if (action === 'pin') {
+      const newPinned = !post.pinned
+      // If pinning, unpin all others first
+      if (newPinned) {
+        await pool.query(
+          'UPDATE posts SET pinned = false WHERE profile_id = $1 AND id != $2',
+          [req.user.profileId, id]
+        )
+      }
+      result = await pool.query(
+        `UPDATE posts SET pinned = $1, updated_at = now()
+         WHERE id = $2 RETURNING *`,
+        [newPinned, id]
+      )
+    } else {
+      return res.status(400).json({ error: 'Ação inválida. Use: like, save, pin.' })
+    }
+
+    res.json(toPost(result.rows[0]))
+  } catch (err) {
+    console.error('PATCH /posts/:id error:', err)
+    res.status(500).json({ error: 'Erro interno do servidor.' })
+  }
+})
+
+// DELETE /api/posts/:id
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const attachments = await pool.query(
+      `SELECT storage_path FROM post_attachments
+       WHERE post_id = $1 AND profile_id = $2`,
+      [id, req.user.profileId]
+    )
+    const result = await pool.query('DELETE FROM posts WHERE id = $1 AND profile_id = $2', [id, req.user.profileId])
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Post não encontrado.' })
+    }
+    await Promise.all(attachments.rows.map(attachment =>
+      fs.unlink(path.join(uploadDir, attachment.storage_path)).catch(err => {
+        if (err.code !== 'ENOENT') console.error('delete post attachment file error:', err)
+      })
+    ))
+    res.status(204).send()
+  } catch (err) {
+    console.error('DELETE /posts/:id error:', err)
+    res.status(500).json({ error: 'Erro interno do servidor.' })
+  }
+})
+
+module.exports = router
