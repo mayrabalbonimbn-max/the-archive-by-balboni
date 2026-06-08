@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../utils/api'
 
-const TABS = ['Tudo', 'Pessoas', 'Posts', 'Artigos']
+const TABS = ['Tudo', 'Pessoas', 'Entradas', 'Artigos']
 
 function formatDate(iso) {
   if (!iso) return ''
@@ -95,7 +95,7 @@ function EmptyState({ query, tab }) {
           </svg>
         </div>
         <p className="text-dark-text font-semibold text-base">Explorar</p>
-        <p className="text-dark-muted text-sm mt-1">Busque por pessoas, posts, artigos ou tags.</p>
+        <p className="text-dark-muted text-sm mt-1">Busque por pessoas, entradas, artigos ou tags.</p>
       </div>
     )
   }
@@ -146,7 +146,7 @@ export default function ExplorePage() {
   const tabCounts = {
     Tudo: total,
     Pessoas: users.length,
-    Posts: posts.length,
+    Entradas: posts.length,
     Artigos: articles.length,
   }
 
@@ -162,7 +162,7 @@ export default function ExplorePage() {
     if (total === 0) return <EmptyState query={query} tab={tab} />
 
     const showUsers = tab === 'Tudo' || tab === 'Pessoas'
-    const showPosts = tab === 'Tudo' || tab === 'Posts'
+    const showPosts = tab === 'Tudo' || tab === 'Entradas'
     const showArticles = tab === 'Tudo' || tab === 'Artigos'
 
     return (
@@ -182,7 +182,7 @@ export default function ExplorePage() {
           <section>
             {tab === 'Tudo' && (
               <p className="px-4 py-2 text-[11px] uppercase tracking-[0.16em] text-dark-muted font-bold border-b border-dark-border/40 border-t border-t-dark-border/20 mt-2">
-                Posts
+                Entradas
               </p>
             )}
             {posts.map(p => <PostRow key={p.id} post={p} />)}

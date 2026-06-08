@@ -3,9 +3,9 @@ import PostCard from './PostCard'
 import { TYPE_CONFIG } from '../utils/helpers'
 
 const TABS = [
-  { id: 'all', label: 'Todos' },
+  { id: 'all', label: 'Todas' },
   { id: 'saved', label: 'Salvos' },
-  { id: 'liked', label: 'Curtidos' },
+  { id: 'liked', label: 'Apreciados' },
   ...Object.entries(TYPE_CONFIG).map(([id, { label }]) => ({ id, label }))
 ]
 

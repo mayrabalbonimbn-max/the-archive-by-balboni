@@ -189,7 +189,7 @@ export default function ComposeBox({ profile, onPost, autoFocus = false }) {
             onChange={e => setContent(e.target.value)}
             onFocus={() => setFocused(true)}
             onKeyDown={handleKeyDown}
-            placeholder={isArticle ? 'Escreva seu artigo aqui...' : 'O que você está pensando?'}
+            placeholder={isArticle ? 'Escreva seu artigo aqui...' : 'O que você quer registrar?'}
             rows={isArticle ? 8 : (focused ? 3 : 2)}
             className="w-full bg-transparent text-dark-text text-[16px] placeholder-dark-label/70 resize-none leading-relaxed mt-1.5 focus:outline-none min-h-[52px] tracking-[-0.005em]"
             style={{ height: 'auto' }}
@@ -393,7 +393,7 @@ export default function ComposeBox({ profile, onPost, autoFocus = false }) {
               disabled={!canPost}
               className="btn-primary text-[13px] px-4 py-1.5"
             >
-              {posting ? 'Publicando...' : 'Publicar'}
+              {posting ? 'Registrando...' : 'Registrar'}
             </button>
           </div>
         </div>

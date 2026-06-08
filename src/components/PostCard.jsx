@@ -285,7 +285,7 @@ export default function PostCard({ post, profile, onLike, onSave, onPin, onDelet
             </button>
 
             <div className="flex items-center gap-5 mt-3 -ml-0.5">
-              <button onClick={() => handleReaction('heart')} className={`post-action-btn ${post.liked ? 'liked' : ''}`} title="Gostei">
+              <button onClick={() => handleReaction('heart')} className={`post-action-btn ${post.liked ? 'liked' : ''}`} title="Apreciar">
                 <span className={likeAnimating ? 'animate-like-pop' : ''}><HeartIcon filled={post.liked} /></span>
                 {post.likeCount > 0 && <span className="text-xs font-medium tabular-nums">{post.likeCount}</span>}
               </button>
@@ -393,7 +393,7 @@ export default function PostCard({ post, profile, onLike, onSave, onPin, onDelet
             <button
               onClick={() => handleReaction('heart')}
               className={`post-action-btn ${post.liked ? 'liked' : ''}`}
-              title="Gostei"
+              title="Apreciar"
             >
               <span className={`transition-transform duration-200 ${likeAnimating ? 'animate-like-pop' : ''}`}>
                 <HeartIcon filled={post.liked} />

@@ -34,7 +34,7 @@ export default function RightPanel({ posts, onSearch, searchQuery }) {
         </svg>
         <input
           type="text"
-          placeholder="Buscar nos posts..."
+          placeholder="Buscar nas entradas..."
           value={searchQuery}
           onChange={e => onSearch(e.target.value)}
           className="w-full bg-dark-card border border-dark-border rounded-full pl-9 pr-4 py-2 text-[13px] text-dark-text placeholder-dark-label/80 focus:border-brand-rose/50 focus:bg-dark-card2 transition-all duration-200"
@@ -48,11 +48,11 @@ export default function RightPanel({ posts, onSearch, searchQuery }) {
         <div className="grid grid-cols-2 gap-2.5">
           <div className="p-3 rounded-xl bg-dark-hover">
             <p className="text-[22px] font-bold text-dark-text leading-none">{stats.total}</p>
-            <p className="text-[11px] text-dark-muted mt-1 tracking-wide">posts</p>
+            <p className="text-[11px] text-dark-muted mt-1 tracking-wide">entradas</p>
           </div>
           <div className="p-3 rounded-xl bg-dark-hover">
             <p className="text-[22px] font-bold text-brand-rose leading-none">{stats.liked}</p>
-            <p className="text-[11px] text-dark-muted mt-1 tracking-wide">curtidos</p>
+            <p className="text-[11px] text-dark-muted mt-1 tracking-wide">apreciados</p>
           </div>
           <div className="p-3 rounded-xl bg-dark-hover">
             <p className="text-[22px] font-bold text-brand-rose/80 leading-none">{stats.saved}</p>

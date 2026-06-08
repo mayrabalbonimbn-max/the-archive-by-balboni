@@ -39,7 +39,7 @@ export default function ProfilePage({ profile, posts, onPost, onLike, onSave, on
         </button>
         <div>
           <h1 className="font-bold text-xl text-dark-text">{profile.name}</h1>
-          <p className="text-dark-muted text-sm">{postCount} posts</p>
+          <p className="text-dark-muted text-sm">{postCount} entradas</p>
         </div>
       </div>
 
@@ -108,7 +108,7 @@ export default function ProfilePage({ profile, posts, onPost, onLike, onSave, on
         <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
           <div>
             <span className="font-bold text-dark-text">{postCount}</span>
-            <span className="text-dark-muted ml-1">Posts</span>
+            <span className="text-dark-muted ml-1">Entradas</span>
           </div>
           <div>
             <span className="font-bold text-dark-text">{articleCount}</span>
@@ -124,7 +124,7 @@ export default function ProfilePage({ profile, posts, onPost, onLike, onSave, on
           </div>
           <div>
             <span className="font-bold text-dark-text">{likedCount}</span>
-            <span className="text-dark-muted ml-1">Curtidos</span>
+            <span className="text-dark-muted ml-1">Apreciados</span>
           </div>
           <div>
             <span className="font-bold text-dark-text">{savedCount}</span>
@@ -158,7 +158,7 @@ export default function ProfilePage({ profile, posts, onPost, onLike, onSave, on
             onClick={() => setTab(t)}
             className={`filter-tab flex-1 text-center capitalize ${tab === t ? 'active' : ''}`}
           >
-            {t === 'artigos' ? `Artigos${articleCount > 0 ? ` (${articleCount})` : ''}` : 'Posts'}
+            {t === 'artigos' ? `Artigos${articleCount > 0 ? ` (${articleCount})` : ''}` : 'Entradas'}
           </button>
         ))}
       </div>
@@ -166,7 +166,7 @@ export default function ProfilePage({ profile, posts, onPost, onLike, onSave, on
       {/* Posts list */}
       {displayPosts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-dark-muted">
-          <p className="text-dark-text/50">Nenhum {tab === 'artigos' ? 'artigo' : 'post'} ainda</p>
+          <p className="text-dark-text/50">Nenhum {tab === 'artigos' ? 'artigo' : 'entrada'} ainda</p>
           <p className="text-sm mt-1">
             {tab === 'artigos' ? 'Use o modo "Artigo" ao criar um post ✍️' : 'Comece a escrever na página inicial ✨'}
           </p>
