@@ -210,12 +210,13 @@ export default function Sidebar({ profile, onLogout, onCompose }) {
 
             {/* 6 itens — sem rolagem */}
             <nav className="flex flex-col gap-0.5 px-3 py-3 shrink-0">
-              <NavItem to="/"         end   label="Início"   Icon={HomeIcon}    onClick={close} />
-              <NavItem to="/explore"        label="Explorar" Icon={ExploreIcon} onClick={close} />
-              <NavItem to="/archive"        label="Arquivo"  Icon={ArchiveIcon} onClick={close} />
-              <NavItem to="/profile"        label="Perfil"   Icon={UserIcon}    onClick={close} />
-              <NavItem to="/friends"        label="Conexões" Icon={FriendsIcon} onClick={close} />
-              <NavItem to="/settings"       label="Ajustes"  Icon={SettingsIcon} onClick={close} />
+              <NavItem to="/"               end   label="Início"        Icon={HomeIcon}    onClick={close} />
+              <NavItem to="/explore"              label="Explorar"      Icon={ExploreIcon} onClick={close} />
+              <NavItem to="/archive"              label="Arquivo"       Icon={ArchiveIcon} onClick={close} />
+              <NavItem to="/profile"              label="Perfil"        Icon={UserIcon}    onClick={close} />
+              <NavItem to="/friends"              label="Conexões"      Icon={FriendsIcon} onClick={close} />
+              <NavItem to="/notifications"        label="Notificações"  Icon={BellIcon}    onClick={close} />
+              <NavItem to="/settings"             label="Ajustes"       Icon={SettingsIcon} onClick={close} />
             </nav>
 
             {/* Sair */}
