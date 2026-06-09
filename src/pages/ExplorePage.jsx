@@ -1,133 +1,198 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import AppBar from '../components/ui/AppBar'
+import Icon from '../components/ui/Icon'
+import Chip from '../components/ui/Chip'
+import SectionLabel from '../components/ui/SectionLabel'
+import PhotoTile from '../components/ui/PhotoTile'
+import Avatar from '../components/ui/Avatar'
+import PersonRow from '../components/ui/PersonRow'
+import EntryCard from '../components/ui/EntryCard'
 import { api } from '../utils/api'
 
-const TABS = ['Tudo', 'Pessoas', 'Entradas', 'Artigos']
+const THEMES = [
+  'Fotografia', 'Ensaios', 'Notas de campo', 'Código', 'Leitura', 'Memória', 'Arquitetura',
+]
 
-function formatDate(iso) {
-  if (!iso) return ''
-  return new Date(iso).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' })
+// Tones for public archive cards — deterministic by index
+const CARD_TONES = [
+  ['#3a3f3c', '#191c1a'],
+  ['#26303a', '#11171d'],
+  ['#2d2533', '#161118'],
+]
+
+// ── SearchField ───────────────────────────────────────────────────────────────
+function SearchField({ value, onChange, inputRef }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderRadius: 13, border: '1px solid var(--line-strong)', background: 'rgba(255,255,255,0.03)' }}>
+      <Icon name="search" size={18} style={{ color: 'var(--ink-3)', flexShrink: 0 }} />
+      <input
+        ref={inputRef}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder="Arquivos, entradas, pessoas…"
+        style={{
+          flex: 1, background: 'none', border: 'none', outline: 'none',
+          color: 'var(--ink)', fontFamily: 'var(--sans)', fontSize: 14.5,
+        }}
+      />
+      {value && (
+        <button
+          onClick={() => onChange('')}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-3)', padding: 0, display: 'flex' }}
+        >
+          <Icon name="close" size={16} />
+        </button>
+      )}
+    </div>
+  )
 }
 
-function UserCard({ user, onFollowChange }) {
+// ── PublicArchiveCard ─────────────────────────────────────────────────────────
+function PublicArchiveCard({ user, idx }) {
   const navigate = useNavigate()
-  const [following, setFollowing] = useState(user.isFollowing)
-  const [busy, setBusy] = useState(false)
-
-  async function toggle(e) {
-    e.stopPropagation()
-    if (busy) return
-    setBusy(true)
-    try {
-      if (following) await api.delete(`/follows/${user.id}`)
-      else await api.post(`/follows/${user.id}`, {})
-      setFollowing(f => !f)
-      onFollowChange?.()
-    } finally {
-      setBusy(false)
-    }
-  }
+  const [tone1, tone2] = CARD_TONES[idx % CARD_TONES.length]
+  const headline = user.bio?.slice(0, 60) || `${user.name}'s archive`
 
   return (
     <div
       onClick={() => navigate(`/profiles/${user.id}`)}
-      className="flex items-center gap-3 px-4 py-3 hover:bg-dark-hover cursor-pointer transition-colors border-b border-dark-border/40 last:border-0"
+      style={{ flexShrink: 0, width: 256, cursor: 'pointer' }}
     >
-      <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 avatar-gradient flex items-center justify-center text-white font-bold text-base">
-        {user.name?.[0] || '@'}
+      <PhotoTile tone1={tone1} tone2={tone2} radius={16} style={{ height: 150 }}>
+        <div style={{
+          position: 'absolute', inset: 0, padding: 15,
+          display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+          background: 'linear-gradient(transparent 30%, rgba(0,0,0,0.7))',
+        }}>
+          <div style={{ fontFamily: 'var(--serif)', fontSize: 18, lineHeight: 1.2, color: '#fff' }}>
+            {headline}
+          </div>
+        </div>
+      </PhotoTile>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 11 }}>
+        <Avatar name={user.name} src={user.avatar} size={28} />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink)', fontWeight: 500 }}>{user.name}</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)' }}>{user.handle}</div>
+        </div>
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="font-semibold text-dark-text text-sm leading-tight truncate">{user.name}</p>
-        <p className="text-dark-muted text-xs truncate">{user.handle}</p>
-        {user.bio && <p className="text-dark-label text-xs mt-0.5 truncate">{user.bio}</p>}
-      </div>
-      <button
-        onClick={toggle}
-        disabled={busy}
-        className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-colors disabled:opacity-50 ${
-          following
-            ? 'border border-dark-border text-dark-text hover:bg-dark-hover'
-            : 'bg-brand-rose text-white hover:opacity-90'
-        }`}
-      >
-        {following ? 'Seguindo' : 'Seguir'}
-      </button>
     </div>
   )
 }
 
-function PostRow({ post }) {
+// ── DefaultState ──────────────────────────────────────────────────────────────
+function DefaultState({ suggested }) {
   const navigate = useNavigate()
-
-  function open() {
-    if (post.isArticle) navigate(`/articles/${post.id}`)
-    else navigate(`/profiles/${post.author.id}`)
-  }
+  const [activeTheme, setActiveTheme] = useState(0)
 
   return (
-    <div
-      onClick={open}
-      className="px-4 py-3 hover:bg-dark-hover cursor-pointer transition-colors border-b border-dark-border/40 last:border-0"
-    >
-      <div className="flex items-center gap-2 mb-1">
-        <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 avatar-gradient flex items-center justify-center text-white font-bold text-xs">
-          {post.author.name?.[0] || '@'}
-        </div>
-        <span className="text-dark-text text-xs font-semibold">{post.author.name}</span>
-        <span className="text-dark-muted text-xs">{post.author.handle}</span>
-        <span className="text-dark-label text-xs ml-auto shrink-0">{formatDate(post.createdAt)}</span>
+    <>
+      {/* Theme chips */}
+      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '14px 20px 20px', scrollbarWidth: 'none' }}>
+        {THEMES.map((t, i) => (
+          <Chip key={t} active={activeTheme === i} onClick={() => setActiveTheme(i)}>{t}</Chip>
+        ))}
       </div>
-      {post.isArticle && post.articleTitle && (
-        <p className="font-semibold text-dark-text text-sm leading-snug mb-0.5">{post.articleTitle}</p>
+
+      {/* Public archives */}
+      {suggested.length > 0 && (
+        <>
+          <SectionLabel>Arquivos públicos, abertos recentemente</SectionLabel>
+          <div style={{ display: 'flex', gap: 14, overflowX: 'auto', padding: '12px 20px 26px', scrollbarWidth: 'none' }}>
+            {suggested.slice(0, 5).map((u, i) => (
+              <PublicArchiveCard key={u.id} user={u} idx={i} />
+            ))}
+          </div>
+        </>
       )}
-      <p className="text-dark-label text-sm leading-relaxed line-clamp-2">{post.content}</p>
-    </div>
+
+      {/* People */}
+      <SectionLabel action="Ver tudo" onAction={() => navigate('/friends')}>
+        Pessoas guardando coisas como você
+      </SectionLabel>
+      <div style={{ borderTop: '1px solid var(--line)' }}>
+        {suggested.slice(0, 4).map(u => (
+          <PersonRow key={u.id} person={u} />
+        ))}
+        {suggested.length === 0 && (
+          <p style={{ padding: '24px 20px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-3)' }}>
+            Ninguém sugerido ainda.
+          </p>
+        )}
+      </div>
+    </>
   )
 }
 
-function EmptyState({ query, tab }) {
-  if (!query) {
+// ── SearchResults ─────────────────────────────────────────────────────────────
+function SearchResults({ q, results, loading }) {
+  const people = results?.users ?? []
+  const entries = [...(results?.posts ?? []), ...(results?.articles ?? [])]
+
+  if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
-        <div className="w-14 h-14 rounded-full border border-dark-border flex items-center justify-center mb-4 text-dark-muted">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
-        </div>
-        <p className="text-dark-text font-semibold text-base">Explorar</p>
-        <p className="text-dark-muted text-sm mt-1">Busque por pessoas, entradas, artigos ou tags.</p>
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
+        <div className="w-5 h-5 rounded-full border-2 border-accent border-t-transparent animate-spin" />
       </div>
     )
   }
+
+  if (!people.length && !entries.length) {
+    return (
+      <div style={{ padding: '56px 20px', textAlign: 'center', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 16, color: 'var(--ink-3)' }}>
+        Nada ainda para "{q}".
+      </div>
+    )
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-      <p className="text-dark-muted text-sm">Nenhum resultado para <span className="text-dark-text">"{query}"</span> em {tab.toLowerCase()}.</p>
-    </div>
+    <>
+      {people.length > 0 && (
+        <div style={{ marginBottom: 10 }}>
+          <SectionLabel>Pessoas</SectionLabel>
+          <div style={{ borderTop: '1px solid var(--line)' }}>
+            {people.map(u => <PersonRow key={u.id} person={u} />)}
+          </div>
+        </div>
+      )}
+      {entries.length > 0 && (
+        <div>
+          <SectionLabel>Entradas</SectionLabel>
+          <div style={{ borderTop: '1px solid var(--line)' }}>
+            {entries.map(p => <EntryCard key={p.id} post={p} showAuthor />)}
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
+// ── Main ──────────────────────────────────────────────────────────────────────
 export default function ExplorePage() {
-  const [query, setQuery] = useState('')
+  const [q, setQ] = useState('')
   const [results, setResults] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [tab, setTab] = useState('Tudo')
-  const debounceRef = useRef(null)
+  const [suggested, setSuggested] = useState([])
   const inputRef = useRef(null)
+  const debounceRef = useRef(null)
 
+  // Load suggested people for default state
   useEffect(() => {
-    inputRef.current?.focus()
+    api.get('/users/suggested').then(setSuggested).catch(() => {
+      // Fallback: load all users and filter non-following
+      api.get('/search?q=').then(d => setSuggested(d?.users ?? [])).catch(() => {})
+    })
   }, [])
 
+  // Live search
   useEffect(() => {
     clearTimeout(debounceRef.current)
-    if (query.trim().length < 2) {
-      setResults(null)
-      return
-    }
+    if (q.trim().length < 2) { setResults(null); return }
     setLoading(true)
     debounceRef.current = setTimeout(async () => {
       try {
-        const data = await api.get(`/search?q=${encodeURIComponent(query.trim())}`)
+        const data = await api.get(`/search?q=${encodeURIComponent(q.trim())}`)
         setResults(data)
       } catch {
         setResults({ users: [], posts: [], articles: [] })
@@ -136,123 +201,28 @@ export default function ExplorePage() {
       }
     }, 280)
     return () => clearTimeout(debounceRef.current)
-  }, [query])
+  }, [q])
 
-  const users = results?.users ?? []
-  const posts = results?.posts ?? []
-  const articles = results?.articles ?? []
-  const total = users.length + posts.length + articles.length
-
-  const tabCounts = {
-    Tudo: total,
-    Pessoas: users.length,
-    Entradas: posts.length,
-    Artigos: articles.length,
-  }
-
-  function renderResults() {
-    if (!results && !loading) return <EmptyState query={query} tab={tab} />
-    if (loading) {
-      return (
-        <div className="flex justify-center py-16">
-          <div className="w-5 h-5 rounded-full border-2 border-brand-rose border-t-transparent animate-spin" />
-        </div>
-      )
-    }
-    if (total === 0) return <EmptyState query={query} tab={tab} />
-
-    const showUsers = tab === 'Tudo' || tab === 'Pessoas'
-    const showPosts = tab === 'Tudo' || tab === 'Entradas'
-    const showArticles = tab === 'Tudo' || tab === 'Artigos'
-
-    return (
-      <div>
-        {showUsers && users.length > 0 && (
-          <section>
-            {tab === 'Tudo' && (
-              <p className="px-4 py-2 text-[11px] uppercase tracking-[0.16em] text-dark-muted font-bold border-b border-dark-border/40">
-                Pessoas
-              </p>
-            )}
-            {users.map(u => <UserCard key={u.id} user={u} />)}
-          </section>
-        )}
-
-        {showPosts && posts.length > 0 && (
-          <section>
-            {tab === 'Tudo' && (
-              <p className="px-4 py-2 text-[11px] uppercase tracking-[0.16em] text-dark-muted font-bold border-b border-dark-border/40 border-t border-t-dark-border/20 mt-2">
-                Entradas
-              </p>
-            )}
-            {posts.map(p => <PostRow key={p.id} post={p} />)}
-          </section>
-        )}
-
-        {showArticles && articles.length > 0 && (
-          <section>
-            {tab === 'Tudo' && (
-              <p className="px-4 py-2 text-[11px] uppercase tracking-[0.16em] text-dark-muted font-bold border-b border-dark-border/40 border-t border-t-dark-border/20 mt-2">
-                Artigos
-              </p>
-            )}
-            {articles.map(a => <PostRow key={a.id} post={a} />)}
-          </section>
-        )}
-
-        {tab !== 'Tudo' && tabCounts[tab] === 0 && (
-          <EmptyState query={query} tab={tab} />
-        )}
-      </div>
-    )
-  }
+  const searching = q.trim().length >= 2
 
   return (
-    <div>
-      {/* Header com busca */}
-      <div className="sticky top-0 z-10 bg-black/90 backdrop-blur-md border-b border-dark-border">
-        <div className="px-4 py-3">
-          <div className="flex items-center gap-3 bg-dark-card border border-dark-border rounded-xl px-3 py-2.5 focus-within:border-brand-rose transition-colors">
-            <svg className="shrink-0 text-dark-muted" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input
-              ref={inputRef}
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="Buscar pessoas, posts, tags..."
-              className="flex-1 bg-transparent text-dark-text placeholder-dark-muted text-[15px] focus:outline-none"
-            />
-            {query && (
-              <button onClick={() => setQuery('')} className="text-dark-muted hover:text-dark-text transition-colors">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-              </button>
-            )}
-          </div>
-        </div>
+    <div style={{ animation: 'fadeUp var(--dur-screen) var(--ease-out)' }}>
+      <AppBar
+        left={
+          <span style={{ fontFamily: 'var(--serif)', fontSize: 19, color: 'var(--ink)', fontStyle: 'italic' }}>
+            Explorar
+          </span>
+        }
+      />
 
-        {/* Tabs */}
-        {results && (
-          <div className="flex border-t border-dark-border/40 overflow-x-auto scrollbar-hide">
-            {TABS.map(t => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`filter-tab whitespace-nowrap flex-1 min-w-0 ${tab === t ? 'active' : ''}`}
-              >
-                {t}
-                {tabCounts[t] > 0 && (
-                  <span className="ml-1.5 text-[10px] text-dark-muted">({tabCounts[t]})</span>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
+      <div style={{ padding: '18px 20px 8px' }}>
+        <SearchField value={q} onChange={setQ} inputRef={inputRef} />
       </div>
 
-      {renderResults()}
+      {searching
+        ? <SearchResults q={q.trim()} results={results} loading={loading} />
+        : <DefaultState suggested={suggested} />
+      }
     </div>
   )
 }
