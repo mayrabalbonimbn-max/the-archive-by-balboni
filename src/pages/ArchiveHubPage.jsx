@@ -20,13 +20,16 @@ const SECTIONS = [
   { id: 'photography',  label: 'Fotos' },
 ]
 
-// ── Subnav ────────────────────────────────────────────────────────────────────
+// ── Subnav — mobile only ──────────────────────────────────────────────────────
 function Subnav({ active, onSelect }) {
   return (
-    <div style={{
-      position: 'sticky', top: 92, zIndex: 20,
-      background: '#000', borderBottom: '1px solid var(--line)',
-    }}>
+    <div
+      className="md:hidden"
+      style={{
+        position: 'sticky', top: 0, zIndex: 20,
+        background: '#000', borderBottom: '1px solid var(--line)',
+      }}
+    >
       <div style={{ display: 'flex', gap: 22, overflowX: 'auto', padding: '0 20px', scrollbarWidth: 'none' }}>
         {SECTIONS.map(s => {
           const on = s.id === active
@@ -67,6 +70,27 @@ function Spinner() {
   )
 }
 
+// ── Desktop page header (only shown on md+) ───────────────────────────────────
+function DPageHead({ eyebrow, title, italic, sub }) {
+  return (
+    <div className="hidden md:block" style={{ marginBottom: 28, paddingTop: 8 }}>
+      {eyebrow && (
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 11.5, letterSpacing: '0.16em', color: 'var(--accent)', marginBottom: 14 }}>
+          {eyebrow}
+        </div>
+      )}
+      <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 40, lineHeight: 1.05, color: 'var(--ink)', fontWeight: 400, letterSpacing: '-0.02em' }}>
+        {title}{italic && <span style={{ fontStyle: 'italic' }}> {italic}</span>}
+      </h1>
+      {sub && (
+        <p style={{ margin: '12px 0 0', fontFamily: 'var(--sans)', fontSize: 15, color: 'var(--ink-3)', maxWidth: 540 }}>
+          {sub}
+        </p>
+      )}
+    </div>
+  )
+}
+
 // ── Overview ──────────────────────────────────────────────────────────────────
 const FILTERS = [
   ['all', 'Tudo'],
@@ -89,7 +113,17 @@ function OverviewSection({ profile }) {
 
   return (
     <div>
-      <div style={{ padding: '20px 20px 14px', display: 'flex', alignItems: 'center', gap: 14 }}>
+      {/* Desktop page header */}
+      <div className="hidden md:block" style={{ padding: '0 20px 4px' }}>
+        <DPageHead
+          title="Seu"
+          italic="Arquivo"
+          sub="Um registro lento do que você lê, constrói e nota — guardado, não transmitido."
+        />
+      </div>
+
+      {/* Mobile identity row */}
+      <div className="md:hidden" style={{ padding: '20px 20px 14px', display: 'flex', alignItems: 'center', gap: 14 }}>
         <Avatar name={profile?.name} src={profile?.avatar} size={56} ring />
         <div style={{ minWidth: 0 }}>
           <div style={{ fontFamily: 'var(--serif)', fontSize: 22, color: 'var(--ink)', letterSpacing: '-0.01em' }}>
@@ -134,7 +168,17 @@ function MemoriesSection() {
 
   return (
     <div style={{ paddingTop: 6 }}>
-      <div style={{ padding: '18px 20px 8px' }}>
+      {/* Desktop header */}
+      <div className="hidden md:block" style={{ padding: '0 20px 4px' }}>
+        <DPageHead
+          eyebrow={`NESTE DIA · ${todayLabel}`}
+          title="O que você guardou,"
+          italic={`em outros ${today.toLocaleDateString('pt-BR', { month: 'long' })}s.`}
+        />
+      </div>
+
+      {/* Mobile header */}
+      <div className="md:hidden" style={{ padding: '18px 20px 8px' }}>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.14em', color: 'var(--accent)', marginBottom: 10 }}>
           NESTE DIA · {todayLabel}
         </div>
