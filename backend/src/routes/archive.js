@@ -637,27 +637,102 @@ router.get('/year-review/:year', async (req, res) => {
 router.get('/growth', async (req, res) => {
   try {
     const pid = req.user.profileId
-    const [firstPost, firstPhoto, firstArticle, firstProject, firstCapsule, firstReflection, profileRes] = await Promise.all([
+    const [
+      firstPost, firstPhoto, firstArticle, firstProject,
+      firstCapsule, firstReflection, profileRes,
+      mostActiveProjectRes, mostFrequentCategoryRes,
+      mostActiveYearRes, summaryRes, photosCountRes,
+    ] = await Promise.all([
       pool.query(`SELECT id, content, article_title, created_at FROM posts WHERE profile_id=$1 ORDER BY created_at ASC LIMIT 1`, [pid]),
       pool.query(`SELECT a.id, a.original_name, a.created_at FROM post_attachments a WHERE a.profile_id=$1 AND a.file_type='image' ORDER BY a.created_at ASC LIMIT 1`, [pid]),
-      pool.query(`SELECT id, article_title, created_at FROM posts WHERE profile_id=$1 AND is_article=true ORDER BY created_at ASC LIMIT 1`, [pid]),
+      pool.query(`SELECT id, article_title, content, created_at FROM posts WHERE profile_id=$1 AND is_article=true ORDER BY created_at ASC LIMIT 1`, [pid]),
       pool.query(`SELECT id, title, emoji, created_at FROM projects WHERE profile_id=$1 ORDER BY created_at ASC LIMIT 1`, [pid]),
-      pool.query(`SELECT id, content, created_at FROM posts WHERE profile_id=$1 AND is_time_capsule=true ORDER BY created_at ASC LIMIT 1`, [pid]),
+      pool.query(`SELECT id, created_at FROM posts WHERE profile_id=$1 AND is_time_capsule=true ORDER BY created_at ASC LIMIT 1`, [pid]),
       pool.query(`SELECT id, content, created_at FROM posts WHERE profile_id=$1 AND parent_memory_post_id IS NOT NULL ORDER BY created_at ASC LIMIT 1`, [pid]),
       pool.query(`SELECT created_at FROM profiles WHERE id=$1`, [pid]),
+      pool.query(
+        `SELECT pr.id, pr.title, pr.emoji, COUNT(*)::int AS post_count
+         FROM posts p JOIN projects pr ON pr.id = p.project_id
+         WHERE p.profile_id=$1 AND p.project_id IS NOT NULL
+           AND (p.is_time_capsule = false OR p.is_time_capsule IS NULL)
+         GROUP BY pr.id, pr.title, pr.emoji
+         ORDER BY post_count DESC LIMIT 1`,
+        [pid]
+      ),
+      pool.query(
+        `SELECT categoria, COUNT(*)::int AS count FROM posts
+         WHERE profile_id=$1 AND categoria IS NOT NULL
+         GROUP BY categoria ORDER BY count DESC LIMIT 1`,
+        [pid]
+      ),
+      pool.query(
+        `SELECT EXTRACT(YEAR FROM created_at)::int AS year, COUNT(*)::int AS count
+         FROM posts WHERE profile_id=$1
+           AND (is_time_capsule = false OR is_time_capsule IS NULL)
+         GROUP BY year ORDER BY count DESC LIMIT 1`,
+        [pid]
+      ),
+      pool.query(
+        `SELECT COUNT(*)::int AS total_posts,
+                COUNT(*) FILTER (WHERE is_article)::int AS total_articles,
+                COUNT(*) FILTER (WHERE code_language IS NOT NULL)::int AS total_codes
+         FROM posts WHERE profile_id=$1
+           AND (is_time_capsule = false OR is_time_capsule IS NULL)`,
+        [pid]
+      ),
+      pool.query(`SELECT COUNT(*)::int AS total_photos FROM post_attachments WHERE profile_id=$1 AND file_type='image'`, [pid]),
     ])
+
+    const fp  = firstPost.rows[0]
+    const fph = firstPhoto.rows[0]
+    const fa  = firstArticle.rows[0]
+    const fpr = firstProject.rows[0]
+    const fc  = firstCapsule.rows[0]
+    const fr  = firstReflection.rows[0]
+
     const milestones = []
-    const add = (type, label, row, description) => {
-      if (row) milestones.push({ type, label, date: row.created_at, description })
+    const add = (type, label, row, fields) => {
+      if (!row) return
+      milestones.push({
+        type,
+        label,
+        date: row.created_at,
+        description: fields.description || null,  // kept for GrowthPage compatibility
+        excerpt: fields.excerpt || null,
+        title: fields.title || null,
+        emoji: fields.emoji || null,
+      })
     }
-    add('first_post', 'Primeiro registro', firstPost.rows[0], firstPost.rows[0]?.content?.slice(0, 80))
-    add('first_photo', 'Primeira foto', firstPhoto.rows[0], firstPhoto.rows[0]?.original_name)
-    add('first_article', 'Primeiro ensaio', firstArticle.rows[0], firstArticle.rows[0]?.article_title)
-    add('first_project', 'Primeiro projeto', firstProject.rows[0], firstProject.rows[0]?.title)
-    add('first_capsule', 'Primeira cápsula do tempo', firstCapsule.rows[0], firstCapsule.rows[0]?.content?.slice(0, 80))
-    add('first_reflection', 'Primeira reflexão', firstReflection.rows[0], firstReflection.rows[0]?.content?.slice(0, 80))
+
+    add('first_post',       'Primeiro registro',        fp,  { description: fp?.content?.slice(0, 80),  excerpt: fp?.content?.slice(0, 150) })
+    add('first_photo',      'Primeira foto',             fph, { description: fph?.original_name })
+    add('first_article',    'Primeiro ensaio',           fa,  { description: fa?.article_title, title: fa?.article_title, excerpt: fa?.content?.slice(0, 150) })
+    add('first_project',    'Primeiro projeto',          fpr, { description: fpr?.title, title: fpr?.title, emoji: fpr?.emoji })
+    add('first_capsule',    'Primeira cápsula do tempo', fc,  {})  // no excerpt — capsules are sealed
+    add('first_reflection', 'Primeira reflexão',         fr,  { description: fr?.content?.slice(0, 80), excerpt: fr?.content?.slice(0, 150) })
+
     milestones.sort((a, b) => new Date(a.date) - new Date(b.date))
-    res.json({ accountCreatedAt: profileRes.rows[0]?.created_at || null, milestones })
+
+    const map = mostActiveProjectRes.rows[0] || null
+    const mfc = mostFrequentCategoryRes.rows[0] || null
+    const may = mostActiveYearRes.rows[0] || null
+    const sum = summaryRes.rows[0] || {}
+
+    res.json({
+      accountCreatedAt: profileRes.rows[0]?.created_at || null,
+      milestones,
+      insights: {
+        mostActiveProject:    map ? { id: map.id, title: map.title, emoji: map.emoji, postCount: map.post_count } : null,
+        mostFrequentCategory: mfc ? { name: mfc.categoria, count: Number(mfc.count) } : null,
+        mostActiveYear:       may ? { year: may.year, count: Number(may.count) } : null,
+        summary: {
+          totalPosts:    Number(sum.total_posts    || 0),
+          totalArticles: Number(sum.total_articles || 0),
+          totalCodes:    Number(sum.total_codes    || 0),
+          totalPhotos:   Number(photosCountRes.rows[0]?.total_photos || 0),
+        },
+      },
+    })
   } catch (err) {
     console.error('GET /archive/growth error:', err)
     res.status(500).json({ error: 'Erro interno.' })
