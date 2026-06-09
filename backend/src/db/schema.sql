@@ -310,6 +310,35 @@ ALTER TABLE post_reactions DROP CONSTRAINT IF EXISTS post_reactions_type_check;
 ALTER TABLE post_reactions ADD CONSTRAINT post_reactions_type_check
   CHECK (reaction_type IN ('heart', 'spark', 'save', 'inspirador', 'aprendizado', 'codigo', 'fotografia'));
 
--- Projects: dates
+-- Projects: dates (legacy)
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS start_date DATE;
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS end_date DATE;
+
+-- Projects: expanded fields
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS color VARCHAR(30);
+
+-- Project milestones (MARCOS)
+CREATE TABLE IF NOT EXISTS project_milestones (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  profile_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  title VARCHAR(200) NOT NULL,
+  description TEXT DEFAULT '',
+  reached_at DATE,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_project_milestones_project ON project_milestones(project_id, sort_order);
+
+-- Project learnings (APRENDIZADOS)
+CREATE TABLE IF NOT EXISTS project_learnings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  profile_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_project_learnings_project ON project_learnings(project_id);
