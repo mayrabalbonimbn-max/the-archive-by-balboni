@@ -9,7 +9,7 @@ router.use(requireAuth)
 router.get('/', async (req, res) => {
   try {
     const { q, type } = req.query
-    const conditions = ['a.profile_id = $1']
+    const conditions = ['a.profile_id = $1', "a.file_type != 'image'"]
     const params = [req.user.profileId]
     let i = 2
 

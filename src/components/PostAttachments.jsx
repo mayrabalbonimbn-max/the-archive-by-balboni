@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { attachmentBlob } from '../utils/api'
 import { useAttachmentUrl } from '../hooks/useAttachmentUrl'
+import CodeSandbox from './CodeSandbox'
 
 function formatSize(size) {
   return size >= 1024 * 1024 ? `${(size / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.ceil(size / 1024))} KB`
@@ -50,9 +51,19 @@ function ExifTag({ label, value }) {
   )
 }
 
+const SANDBOX_TYPES = ['python', 'code']
+const SANDBOX_EXTS = ['py', 'js', 'jsx', 'html', 'htm']
+
+function isSandboxable(attachment) {
+  if (SANDBOX_TYPES.includes(attachment.fileType)) return true
+  const ext = (attachment.originalName || '').split('.').pop().toLowerCase()
+  return SANDBOX_EXTS.includes(ext)
+}
+
 export default function PostAttachments({ attachments = [] }) {
   const [textModal, setTextModal] = useState(null)
   const [openImage, setOpenImage] = useState(null)
+  const [sandbox, setSandbox] = useState(null)
   const [error, setError] = useState('')
   const imageOpenedAt = useRef(0)
   const textOpenedAt = useRef(0)
@@ -84,6 +95,16 @@ export default function PostAttachments({ attachments = [] }) {
     }
   }
 
+  async function openSandboxFor(attachment) {
+    try {
+      const blob = await attachmentBlob(attachment.id)
+      const code = await blob.text()
+      setSandbox({ code, language: attachment.fileType, originalName: attachment.originalName })
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   const exif = openImage?.exifData
 
   return (
@@ -104,6 +125,9 @@ export default function PostAttachments({ attachments = [] }) {
                 <p className="text-dark-muted text-xs">{formatSize(attachment.size)}</p>
               </div>
               <button onClick={() => viewAttachment(attachment)} className="text-brand-rose text-xs hover:underline">Abrir</button>
+              {isSandboxable(attachment) && (
+                <button onClick={() => openSandboxFor(attachment)} className="text-[#3fb950] text-xs hover:underline font-medium">▶ Executar</button>
+              )}
               <button onClick={() => downloadAttachment(attachment).catch(err => setError(err.message))} className="text-dark-muted text-xs hover:text-dark-text">Baixar</button>
             </div>
           ))}
@@ -111,6 +135,7 @@ export default function PostAttachments({ attachments = [] }) {
       )}
 
       {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
+      {sandbox && <CodeSandbox code={sandbox.code} language={sandbox.language} originalName={sandbox.originalName} onClose={() => setSandbox(null)} />}
 
       {textModal && createPortal(
         <div className="fixed inset-0 bg-black/92 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: 999 }} onClick={() => { if (Date.now() - textOpenedAt.current < 400) return; setTextModal(null) }}>

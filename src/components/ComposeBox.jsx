@@ -39,7 +39,8 @@ const CREATE_TYPES = [
   { id: 'photo',    label: 'Foto',       icon: 'image',    hint: 'Uma imagem, um momento' },
   { id: 'pdf',      label: 'Documento',  icon: 'pdf',      hint: 'Envie um PDF' },
   { id: 'markdown', label: 'Markdown',   icon: 'markdown', hint: 'Envie um arquivo .md' },
-  { id: 'code',     label: 'Código',     icon: 'code',     hint: 'Um script ou trecho de código' },
+  { id: 'arquivo',  label: 'Arquivo',    icon: 'file',     hint: 'Envie um script Python, JS, HTML ou qualquer arquivo de código' },
+  { id: 'code',     label: 'Código',     icon: 'code',     hint: 'Escreva ou cole um trecho de código inline' },
 ]
 
 const PRIVACY = [
@@ -52,6 +53,7 @@ const FILE_ACCEPT = {
   photo:    'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp',
   pdf:      'application/pdf,.pdf',
   markdown: 'text/markdown,.md,.markdown',
+  arquivo:  '.py,.js,.jsx,.ts,.tsx,.html,.css,.json,.sql,.sh,.bash,.txt,.md,.markdown,application/pdf,.pdf',
   code:     '.py,.js,.jsx,.ts,.tsx,.html,.css,.json,.sql,.sh,.bash,.txt',
 }
 
@@ -89,9 +91,10 @@ export default function ComposeBox({ profile, onPost, onClose }) {
     getTags().then(list => setTagSuggestions(list)).catch(() => {})
   }, [])
 
-  const isFile = ['photo', 'pdf', 'markdown', 'code'].includes(entryType)
+  const isFile = ['photo', 'pdf', 'markdown', 'arquivo', 'code'].includes(entryType)
   const isArticle = entryType === 'article'
   const isCode = entryType === 'code'
+  const isArquivo = entryType === 'arquivo'
   const active = CREATE_TYPES.find(t => t.id === entryType)
 
   const detectedUrl = extractFirstUrl(body)
@@ -235,7 +238,7 @@ export default function ComposeBox({ profile, onPost, onClose }) {
           </div>
 
           {/* Drop zone for file types */}
-          {isFile && entryType !== 'code' && (
+          {isFile && !isCode && (
             <div
               onClick={openFilePicker}
               style={{
@@ -250,11 +253,19 @@ export default function ComposeBox({ profile, onPost, onClose }) {
                 <Icon name="upload" size={22} />
               </div>
               <div style={{ fontFamily: 'var(--serif)', fontSize: 16, fontStyle: 'italic', color: 'var(--ink)' }}>
-                Solte seu {entryType === 'photo' ? 'arquivo de imagem' : entryType === 'pdf' ? 'PDF' : 'arquivo Markdown'} aqui
+                {entryType === 'photo' ? 'Solte sua foto aqui'
+                  : entryType === 'pdf' ? 'Solte seu PDF aqui'
+                  : entryType === 'markdown' ? 'Solte seu arquivo .md aqui'
+                  : 'Solte seu arquivo aqui'}
               </div>
               <div style={{ fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink-3)' }}>
-                {isDesktop ? 'ou clique para navegar' : 'ou toque para navegar'}
+                {isArquivo ? '.py .js .jsx .ts .tsx .html .css .json .sql .sh .bash .txt .md .pdf' : isDesktop ? 'ou clique para navegar' : 'ou toque para navegar'}
               </div>
+              {isArquivo && (
+                <div style={{ fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--ink-3)' }}>
+                  {isDesktop ? 'ou clique para navegar' : 'ou toque para navegar'}
+                </div>
+              )}
             </div>
           )}
 
@@ -331,7 +342,7 @@ export default function ComposeBox({ profile, onPost, onClose }) {
           />
 
           {/* Body textarea / markdown preview */}
-          {!isFile && (
+          {(!isFile || isArquivo) && (
             <>
               {(isArticle || body.includes('#') || body.includes('**') || body.includes('- ') || body.includes('> ')) && (
                 <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>

@@ -1,20 +1,17 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { api, attachmentBlob } from '../utils/api'
-import { useAttachmentUrl } from '../hooks/useAttachmentUrl'
 import { formatRelativeTime } from '../utils/helpers'
 
 const FILE_TYPES = [
-  { key: 'all', label: 'Tudo' },
-  { key: 'image', label: 'Imagens' },
-  { key: 'pdf', label: 'PDFs' },
+  { key: 'all',      label: 'Tudo' },
+  { key: 'pdf',      label: 'PDFs' },
   { key: 'markdown', label: 'Markdown' },
-  { key: 'python', label: 'Python' },
-  { key: 'code', label: 'Código' },
+  { key: 'python',   label: 'Python' },
+  { key: 'code',     label: 'Código' },
 ]
 
 const FILE_META = {
-  image:    { label: 'Imagem',   badge: 'IMG',  color: 'text-fuchsia-300', bg: 'bg-fuchsia-400/10' },
   pdf:      { label: 'PDF',      badge: 'PDF',  color: 'text-red-300',     bg: 'bg-red-400/10' },
   markdown: { label: 'Markdown', badge: 'MD',   color: 'text-sky-300',     bg: 'bg-sky-400/10' },
   python:   { label: 'Python',   badge: 'PY',   color: 'text-blue-300',    bg: 'bg-blue-400/10' },
@@ -22,7 +19,6 @@ const FILE_META = {
 }
 
 const FALLBACK_TITLES = {
-  image:    'Imagem da biblioteca',
   pdf:      'Documento PDF',
   markdown: 'Nota em Markdown',
   python:   'Script Python',
@@ -115,86 +111,6 @@ function FileIcon({ type }) {
   )
 }
 
-function ImagePreview({ file, title, onOpen }) {
-  const url = useAttachmentUrl(file.id, file.hasThumbnail ? 'thumbnail' : 'view')
-
-  return (
-    <button
-      type="button"
-      onClick={() => onOpen(file)}
-      style={{ touchAction: 'manipulation' }}
-      className="block aspect-[4/3] w-full overflow-hidden bg-dark-hover"
-      aria-label={`Abrir ${title}`}
-    >
-      {url ? (
-        <img src={url} alt={title} className="h-full w-full object-cover transition-transform duration-300 hover:scale-[1.03]" />
-      ) : (
-        <div className="h-full w-full animate-pulse bg-dark-hover" />
-      )}
-    </button>
-  )
-}
-
-function ExifTag({ label, value }) {
-  return (
-    <span className="inline-flex items-center gap-1 text-[11px] text-dark-muted bg-dark-hover rounded px-2 py-0.5">
-      <span className="text-dark-muted/60">{label}</span>
-      <span className="text-dark-text/70">{value}</span>
-    </span>
-  )
-}
-
-function ImageLightbox({ file, onClose }) {
-  const url = useAttachmentUrl(file.id, 'view')
-  const exif = file.exifData
-  const openedAt = useRef(Date.now())
-
-  function handleClose() {
-    if (Date.now() - openedAt.current < 400) return
-    onClose()
-  }
-
-  return createPortal(
-    <div
-      className="fixed inset-0 bg-black/92 backdrop-blur-sm flex flex-col items-center justify-center p-4 gap-3"
-      style={{ zIndex: 999, touchAction: 'none' }}
-      onClick={handleClose}
-    >
-      <button
-        style={{ touchAction: 'manipulation' }}
-        className="absolute top-4 right-4 text-white bg-black/70 rounded-full px-3 py-2 text-sm"
-        onClick={handleClose}
-      >
-        Fechar
-      </button>
-      {url ? (
-        <img
-          src={url}
-          alt={file.originalName || 'Imagem'}
-          className="max-w-full max-h-[75vh] rounded-lg object-contain"
-          onClick={e => e.stopPropagation()}
-        />
-      ) : (
-        <div className="w-16 h-16 rounded-full border-2 border-brand-rose border-t-transparent animate-spin" />
-      )}
-      {exif && (
-        <div className="flex flex-wrap gap-2 justify-center max-w-lg" onClick={e => e.stopPropagation()}>
-          {exif.camera && <ExifTag label="câmera" value={exif.camera} />}
-          {exif.lens && <ExifTag label="lente" value={exif.lens} />}
-          {exif.focalLength && <ExifTag label="focal" value={exif.focalLength} />}
-          {exif.aperture && <ExifTag label="abertura" value={exif.aperture} />}
-          {exif.shutterSpeed && <ExifTag label="velocidade" value={exif.shutterSpeed} />}
-          {exif.iso && <ExifTag label="ISO" value={exif.iso} />}
-          {exif.dateTaken && <ExifTag label="data" value={exif.dateTaken} />}
-        </div>
-      )}
-      <p className="text-dark-muted text-xs" onClick={e => e.stopPropagation()}>
-        {file.originalName} · {formatSize(file.size)}
-      </p>
-    </div>,
-    document.body
-  )
-}
 
 function TextPreview({ file }) {
   const [lines, setLines] = useState(null)
@@ -258,7 +174,7 @@ function DocumentPreview({ file }) {
   )
 }
 
-function LibraryCard({ file, onOpenImage, onOpenText, onError }) {
+function LibraryCard({ file, onOpenText, onError }) {
   const [downloading, setDownloading] = useState(false)
   const [opening, setOpening] = useState(false)
   const title = displayTitle(file)
@@ -297,19 +213,15 @@ function LibraryCard({ file, onOpenImage, onOpenText, onError }) {
 
   return (
     <article className="group overflow-hidden rounded-lg border border-dark-border bg-dark-card transition-colors hover:border-dark-muted/70 animate-fade-in">
-      {file.fileType === 'image' ? (
-        <ImagePreview file={file} title={title} onOpen={onOpenImage} />
-      ) : (
-        <button
-          type="button"
-          onClick={handleView}
-          disabled={opening}
-          style={{ touchAction: 'manipulation' }}
-          className="block w-full text-left disabled:opacity-60"
-        >
-          <DocumentPreview file={file} />
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={handleView}
+        disabled={opening}
+        style={{ touchAction: 'manipulation' }}
+        className="block w-full text-left disabled:opacity-60"
+      >
+        <DocumentPreview file={file} />
+      </button>
 
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
@@ -330,17 +242,12 @@ function LibraryCard({ file, onOpenImage, onOpenText, onError }) {
             {file.articleTitle || humanizePostContent(file.postContent) || 'Documento salvo na biblioteca.'}
           </p>
         )}
-        {file.fileType === 'image' && (
-          <p className="mt-4 text-sm text-dark-text/70 line-clamp-2">
-            {file.articleTitle || humanizePostContent(file.postContent) || 'Imagem salva na biblioteca.'}
-          </p>
-        )}
 
         <div className="mt-4 flex items-center justify-between gap-2 border-t border-dark-border/60 pt-3">
           <span className="text-xs text-dark-muted">{meta.label}</span>
           <div className="flex items-center gap-2">
             <button
-              onClick={file.fileType === 'image' ? () => onOpenImage(file) : handleView}
+              onClick={handleView}
               disabled={opening}
               style={{ touchAction: 'manipulation' }}
               className="inline-flex items-center gap-1.5 rounded-full border border-dark-border px-3 py-1.5 text-xs font-medium text-brand-rose hover:bg-brand-rose/10 transition-colors disabled:opacity-60"
@@ -366,7 +273,7 @@ function LibraryCard({ file, onOpenImage, onOpenText, onError }) {
   )
 }
 
-function LibraryListItem({ file, onOpenImage, onOpenText, onError }) {
+function LibraryListItem({ file, onOpenText, onError }) {
   const [downloading, setDownloading] = useState(false)
   const [opening, setOpening] = useState(false)
   const title = displayTitle(file)
@@ -405,20 +312,14 @@ function LibraryListItem({ file, onOpenImage, onOpenText, onError }) {
 
   return (
     <article className="flex gap-3 border-b border-dark-border/60 px-4 py-3 hover:bg-dark-hover/30 transition-colors">
-      <div className="w-16 h-16 rounded-lg overflow-hidden border border-dark-border bg-dark-card shrink-0">
-        {file.fileType === 'image' ? (
-          <ImagePreview file={file} title={title} onOpen={onOpenImage} />
-        ) : (
-          <button
-            type="button"
-            style={{ touchAction: 'manipulation' }}
-            className={`${meta.color} h-full w-full flex items-center justify-center`}
-            onClick={handleView}
-          >
-            <FileIcon type={file.fileType} />
-          </button>
-        )}
-      </div>
+      <button
+        type="button"
+        style={{ touchAction: 'manipulation' }}
+        className={`w-16 h-16 rounded-lg overflow-hidden border border-dark-border bg-dark-card shrink-0 ${meta.color} flex items-center justify-center`}
+        onClick={handleView}
+      >
+        <FileIcon type={file.fileType} />
+      </button>
       <div className="min-w-0 flex-1">
         <h2 className="text-dark-text text-sm font-semibold truncate">{title}</h2>
         <p className="text-dark-muted text-xs mt-1 truncate">{meta.label} · {formatSize(file.size)} · {formatRelativeTime(file.createdAt)}</p>
@@ -426,7 +327,7 @@ function LibraryListItem({ file, onOpenImage, onOpenText, onError }) {
       </div>
       <div className="self-center flex gap-2">
         <button
-          onClick={file.fileType === 'image' ? () => onOpenImage(file) : handleView}
+          onClick={handleView}
           disabled={opening}
           style={{ touchAction: 'manipulation' }}
           className="rounded-full border border-dark-border px-3 py-1.5 text-xs text-brand-rose hover:bg-brand-rose/10 disabled:opacity-60"
@@ -485,7 +386,6 @@ export default function LibraryPage() {
   const [activeType, setActiveType] = useState('all')
   const [viewMode, setViewMode] = useState('gallery')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [openFile, setOpenFile] = useState(null)
   const [textModal, setTextModal] = useState(null)
   const [viewError, setViewError] = useState('')
 
@@ -514,7 +414,7 @@ export default function LibraryPage() {
       <div style={{ position: 'sticky', top: 'env(safe-area-inset-top, 0px)', zIndex: 10 }} className="bg-black/85 backdrop-blur-md border-b border-dark-border px-4 py-4">
         <div className="mb-4">
           <p className="text-[11px] uppercase tracking-[0.18em] text-dark-muted font-bold">Acervo pessoal</p>
-          <h1 className="font-bold text-2xl text-dark-text mt-1">Biblioteca</h1>
+          <h1 className="font-bold text-2xl text-dark-text mt-1">Arquivos</h1>
         </div>
         <input
           type="search"
@@ -550,34 +450,32 @@ export default function LibraryPage() {
             <FileIcon type="markdown" />
           </div>
           <p className="text-dark-text/70 font-medium">
-            {debouncedSearch ? 'Nenhum item encontrado' : 'Biblioteca vazia'}
+            {debouncedSearch ? 'Nenhum arquivo encontrado' : 'Nenhum arquivo ainda'}
           </p>
           <p className="text-dark-muted text-sm mt-1">
-            {debouncedSearch ? 'Tente buscar por outro título' : 'Anexe imagens, PDFs, Markdown e Python nos seus posts'}
+            {debouncedSearch ? 'Tente buscar por outro título' : 'Anexe PDFs, Markdown, Python e outros arquivos de código nos seus posts'}
           </p>
         </div>
       ) : (
         <section className="px-4 py-5">
           <p className="mb-4 text-dark-muted text-xs">
-            {files.length} {files.length === 1 ? 'item no acervo' : 'itens no acervo'}
+            {files.length} {files.length === 1 ? 'arquivo no acervo' : 'arquivos no acervo'}
           </p>
           {viewMode === 'gallery' ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {files.map(file => (
-                <LibraryCard key={file.id} file={file} onOpenImage={setOpenFile} onOpenText={setTextModal} onError={msg => { setViewError(msg); setTimeout(() => setViewError(''), 5000) }} />
+                <LibraryCard key={file.id} file={file} onOpenText={setTextModal} onError={msg => { setViewError(msg); setTimeout(() => setViewError(''), 5000) }} />
               ))}
             </div>
           ) : (
             <div className="border border-dark-border rounded-lg overflow-hidden bg-dark-card">
               {files.map(file => (
-                <LibraryListItem key={file.id} file={file} onOpenImage={setOpenFile} onOpenText={setTextModal} onError={msg => { setViewError(msg); setTimeout(() => setViewError(''), 5000) }} />
+                <LibraryListItem key={file.id} file={file} onOpenText={setTextModal} onError={msg => { setViewError(msg); setTimeout(() => setViewError(''), 5000) }} />
               ))}
             </div>
           )}
         </section>
       )}
-
-      {openFile && <ImageLightbox file={openFile} onClose={() => setOpenFile(null)} />}
 
       {textModal && createPortal(
         <div className="fixed inset-0 bg-black/92 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: 999 }} onClick={() => setTextModal(null)}>

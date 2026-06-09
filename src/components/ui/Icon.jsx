@@ -37,6 +37,8 @@ export default function Icon({ name, size = 22, stroke = 1.6, fill = false, clas
     feather:    <g {...p}><path d="M20 4C13 4 7 10 7 17l-3 3M9 15h7"/><path d="M20 4c0 6-4 11-11 11"/></g>,
     bell:       <g {...p}><path d="M6.5 9.5a5.5 5.5 0 0 1 11 0c0 4.2 1.6 5.5 2.3 6.2.3.3.1.8-.3.8H4.5c-.4 0-.6-.5-.3-.8.7-.7 2.3-2 2.3-6.2z"/><path d="M10 19.5a2 2 0 0 0 4 0"/></g>,
     upload:     <g {...p}><path d="M12 16V5M8 9l4-4 4 4"/><path d="M5 16v3h14v-3"/></g>,
+    file:       <g {...p}><path d="M6 2h9l4 4v16H6V2z"/><path d="M14 2v5h5"/><path d="M8 13h8M8 17h5"/></g>,
+    play:       <polygon points="6,3 20,12 6,21" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>,
   }
   return (
     <svg
