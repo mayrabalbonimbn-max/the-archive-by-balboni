@@ -25,7 +25,7 @@ const STATUS_COLORS = {
 function CopyLinkButton({ handle }) {
   const [copied, setCopied] = useState(false)
   function copy() {
-    const url = `${window.location.origin}/@${handle}`
+    const url = `${window.location.origin}/${handle.startsWith('@') ? handle : '@' + handle}`
     navigator.clipboard?.writeText(url).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
