@@ -85,13 +85,13 @@ export default function ComposeBox({ profile, onPost, onClose }) {
     getTags().then(list => setTagSuggestions(list)).catch(() => {})
   }, [])
 
-  const detectedUrl = extractFirstUrl(body)
-  const { preview: linkPreview } = useLinkPreview(!isFile && detectedUrl ? detectedUrl : null)
-
   const isFile = ['photo', 'pdf', 'markdown', 'code'].includes(entryType)
   const isArticle = entryType === 'article'
   const isCode = entryType === 'code'
   const active = CREATE_TYPES.find(t => t.id === entryType)
+
+  const detectedUrl = extractFirstUrl(body)
+  const { preview: linkPreview } = useLinkPreview(!isFile && detectedUrl ? detectedUrl : null)
 
   const hasContent = title.trim() || body.trim() || attachments.length > 0 || code.trim()
   const canPost = hasContent && !posting
