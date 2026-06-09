@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { api, attachmentBlob } from '../utils/api'
 import { useAttachmentUrl } from '../hooks/useAttachmentUrl'
 import { formatRelativeTime } from '../utils/helpers'
@@ -146,16 +147,23 @@ function ExifTag({ label, value }) {
 function ImageLightbox({ file, onClose }) {
   const url = useAttachmentUrl(file.id, 'view')
   const exif = file.exifData
-  return (
+  const openedAt = useRef(Date.now())
+
+  function handleClose() {
+    if (Date.now() - openedAt.current < 400) return
+    onClose()
+  }
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 bg-black/92 backdrop-blur-sm flex flex-col items-center justify-center p-4 gap-3"
-      style={{ touchAction: 'none' }}
-      onClick={onClose}
+      className="fixed inset-0 bg-black/92 backdrop-blur-sm flex flex-col items-center justify-center p-4 gap-3"
+      style={{ zIndex: 999, touchAction: 'none' }}
+      onClick={handleClose}
     >
       <button
         style={{ touchAction: 'manipulation' }}
         className="absolute top-4 right-4 text-white bg-black/70 rounded-full px-3 py-2 text-sm"
-        onClick={onClose}
+        onClick={handleClose}
       >
         Fechar
       </button>
@@ -183,7 +191,8 @@ function ImageLightbox({ file, onClose }) {
       <p className="text-dark-muted text-xs" onClick={e => e.stopPropagation()}>
         {file.originalName} · {formatSize(file.size)}
       </p>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -396,18 +405,20 @@ function LibraryListItem({ file, onOpenImage, onOpenText, onError }) {
 
   return (
     <article className="flex gap-3 border-b border-dark-border/60 px-4 py-3 hover:bg-dark-hover/30 transition-colors">
-      <button
-        type="button"
-        style={{ touchAction: 'manipulation' }}
-        className="w-16 h-16 rounded-lg overflow-hidden border border-dark-border bg-dark-card shrink-0 cursor-pointer p-0"
-        onClick={file.fileType === 'image' ? () => onOpenImage(file) : handleView}
-      >
+      <div className="w-16 h-16 rounded-lg overflow-hidden border border-dark-border bg-dark-card shrink-0">
         {file.fileType === 'image' ? (
           <ImagePreview file={file} title={title} onOpen={onOpenImage} />
         ) : (
-          <div className={`${meta.color} h-full flex items-center justify-center`}><FileIcon type={file.fileType} /></div>
+          <button
+            type="button"
+            style={{ touchAction: 'manipulation' }}
+            className={`${meta.color} h-full w-full flex items-center justify-center`}
+            onClick={handleView}
+          >
+            <FileIcon type={file.fileType} />
+          </button>
         )}
-      </button>
+      </div>
       <div className="min-w-0 flex-1">
         <h2 className="text-dark-text text-sm font-semibold truncate">{title}</h2>
         <p className="text-dark-muted text-xs mt-1 truncate">{meta.label} · {formatSize(file.size)} · {formatRelativeTime(file.createdAt)}</p>
@@ -568,8 +579,8 @@ export default function LibraryPage() {
 
       {openFile && <ImageLightbox file={openFile} onClose={() => setOpenFile(null)} />}
 
-      {textModal && (
-        <div className="fixed inset-0 z-50 bg-black/92 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setTextModal(null)}>
+      {textModal && createPortal(
+        <div className="fixed inset-0 bg-black/92 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: 999 }} onClick={() => setTextModal(null)}>
           <div className="bg-dark-card border border-dark-border rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 px-4 py-3 border-b border-dark-border">
               <p className="text-dark-text text-sm font-medium truncate flex-1">{displayTitle(textModal.file)}</p>
@@ -594,7 +605,8 @@ export default function LibraryPage() {
               <code>{textModal.content}</code>
             </pre>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {viewError && (

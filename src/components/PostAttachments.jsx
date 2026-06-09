@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { attachmentBlob } from '../utils/api'
 import { useAttachmentUrl } from '../hooks/useAttachmentUrl'
 
@@ -53,6 +54,8 @@ export default function PostAttachments({ attachments = [] }) {
   const [textModal, setTextModal] = useState(null)
   const [openImage, setOpenImage] = useState(null)
   const [error, setError] = useState('')
+  const imageOpenedAt = useRef(0)
+  const textOpenedAt = useRef(0)
 
   if (attachments.length === 0) return null
   const images = attachments.filter(item => item.fileType === 'image')
@@ -64,6 +67,7 @@ export default function PostAttachments({ attachments = [] }) {
     try {
       const blob = await attachmentBlob(attachment.id)
       if (attachment.fileType === 'python' || attachment.fileType === 'markdown' || attachment.fileType === 'code') {
+        textOpenedAt.current = Date.now()
         setTextModal({ attachment, content: await blob.text() })
         return
       }
@@ -86,7 +90,7 @@ export default function PostAttachments({ attachments = [] }) {
     <>
       {images.length > 0 && (
         <div className={`grid gap-1 mt-2.5 ${images.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-          {images.map(attachment => <ImageAttachment key={attachment.id} attachment={attachment} onOpen={setOpenImage} />)}
+          {images.map(attachment => <ImageAttachment key={attachment.id} attachment={attachment} onOpen={att => { imageOpenedAt.current = Date.now(); setOpenImage(att) }} />)}
         </div>
       )}
 
@@ -108,8 +112,8 @@ export default function PostAttachments({ attachments = [] }) {
 
       {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
 
-      {textModal && (
-        <div className="fixed inset-0 z-50 bg-black/92 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setTextModal(null)}>
+      {textModal && createPortal(
+        <div className="fixed inset-0 bg-black/92 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: 999 }} onClick={() => { if (Date.now() - textOpenedAt.current < 400) return; setTextModal(null) }}>
           <div className="bg-dark-card border border-dark-border rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 px-4 py-3 border-b border-dark-border">
               <p className="text-dark-text text-sm font-medium truncate flex-1">{textModal.attachment.originalName}</p>
@@ -118,12 +122,13 @@ export default function PostAttachments({ attachments = [] }) {
             </div>
             <pre className="p-4 overflow-auto text-sm text-dark-text whitespace-pre font-mono leading-relaxed"><code>{textModal.content}</code></pre>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {openImage && (
-        <div className="fixed inset-0 z-50 bg-black/92 backdrop-blur-sm flex flex-col items-center justify-center gap-3 p-4" onClick={() => setOpenImage(null)}>
-          <button className="absolute top-4 right-4 text-white bg-black/70 rounded-full px-3 py-2 text-sm" onClick={() => setOpenImage(null)}>Fechar</button>
+      {openImage && createPortal(
+        <div className="fixed inset-0 bg-black/92 backdrop-blur-sm flex flex-col items-center justify-center gap-3 p-4" style={{ zIndex: 999, touchAction: 'none' }} onClick={() => { if (Date.now() - imageOpenedAt.current < 400) return; setOpenImage(null) }}>
+          <button className="absolute top-4 right-4 text-white bg-black/70 rounded-full px-3 py-2 text-sm" style={{ touchAction: 'manipulation' }} onClick={() => setOpenImage(null)}>Fechar</button>
           <LightboxImage attachment={openImage} />
           {exif && (
             <div className="flex flex-wrap gap-2 justify-center max-w-lg" onClick={e => e.stopPropagation()}>
@@ -136,7 +141,8 @@ export default function PostAttachments({ attachments = [] }) {
               {exif.dateTaken && <ExifTag label="data" value={exif.dateTaken} />}
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )

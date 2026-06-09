@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { api } from '../utils/api'
 import { useAttachmentUrl } from '../hooks/useAttachmentUrl'
 
@@ -31,8 +32,19 @@ function ExifTag({ label, value }) {
 export default function PhotosPage() {
   const [photos, setPhotos] = useState(null)
   const [open, setOpen] = useState(null)
+  const openedAt = useRef(0)
 
   useEffect(() => { api.get('/archive/photos').then(setPhotos) }, [])
+
+  function openLightbox(photo) {
+    openedAt.current = Date.now()
+    setOpen(photo)
+  }
+
+  function closeLightbox() {
+    if (Date.now() - openedAt.current < 400) return
+    setOpen(null)
+  }
 
   const exif = open?.exifData
 
@@ -48,12 +60,12 @@ export default function PhotosPage() {
         <div className="py-16 text-center text-dark-muted text-sm">Nenhuma fotografia ainda.</div>
       ) : (
         <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {photos.map(photo => <PhotoTile key={photo.id} photo={photo} onOpen={setOpen} />)}
+          {photos.map(photo => <PhotoTile key={photo.id} photo={photo} onOpen={openLightbox} />)}
         </div>
       )}
-      {open && (
-        <div className="fixed inset-0 z-50 bg-black/92 backdrop-blur-sm flex flex-col items-center justify-center p-4 gap-3" style={{ touchAction: 'none' }} onClick={() => setOpen(null)}>
-          <button className="absolute top-4 right-4 text-white bg-black/70 rounded-full px-3 py-2 text-sm" onClick={() => setOpen(null)}>Fechar</button>
+      {open && createPortal(
+        <div className="fixed inset-0 bg-black/92 backdrop-blur-sm flex flex-col items-center justify-center p-4 gap-3" style={{ zIndex: 999, touchAction: 'none' }} onClick={closeLightbox}>
+          <button className="absolute top-4 right-4 text-white bg-black/70 rounded-full px-3 py-2 text-sm" style={{ touchAction: 'manipulation' }} onClick={closeLightbox}>Fechar</button>
           <LightboxImage photo={open} />
           {exif && (
             <div className="flex flex-wrap gap-2 justify-center max-w-lg" onClick={e => e.stopPropagation()}>
@@ -66,7 +78,8 @@ export default function PhotosPage() {
               {exif.dateTaken && <ExifTag label="data" value={exif.dateTaken} />}
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

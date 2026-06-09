@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import Avatar from './Avatar'
 import TypeTag from './TypeTag'
@@ -58,6 +59,7 @@ async function openPdf(attachment) {
 export default function EntryCard({ post, showAuthor = true, onLike, onSave, hairline = true }) {
   const navigate = useNavigate()
   const [lightboxId, setLightboxId] = useState(null)
+  const lightboxOpenedAt = useRef(0)
 
   const isArticle = post.isArticle || post.type === 'article'
 
@@ -127,7 +129,7 @@ export default function EntryCard({ post, showAuthor = true, onLike, onSave, hai
           id={att.id}
           hasThumbnail={att.hasThumbnail}
           alt={att.originalName || 'Imagem'}
-          onClick={e => { e.stopPropagation(); setLightboxId(att.id) }}
+          onClick={e => { e.stopPropagation(); lightboxOpenedAt.current = Date.now(); setLightboxId(att.id) }}
         />
       ))}
 
@@ -189,17 +191,18 @@ export default function EntryCard({ post, showAuthor = true, onLike, onSave, hai
       <ReactionRow post={post} onLike={onLike} onSave={onSave} onOpen={openDetail} />
 
       {/* Lightbox */}
-      {lightboxId && (
+      {lightboxId && createPortal(
         <div
-          onClick={e => { e.stopPropagation(); setLightboxId(null) }}
-          style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.93)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          onClick={e => { e.stopPropagation(); if (Date.now() - lightboxOpenedAt.current < 400) return; setLightboxId(null) }}
+          style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(0,0,0,0.93)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, touchAction: 'none' }}
         >
           <button
             onClick={e => { e.stopPropagation(); setLightboxId(null) }}
-            style={{ position: 'absolute', top: 16, right: 16, color: 'white', background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ position: 'absolute', top: 16, right: 16, color: 'white', background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}
           >×</button>
           <LightboxImage id={lightboxId} alt="Imagem" />
-        </div>
+        </div>,
+        document.body
       )}
     </article>
   )
