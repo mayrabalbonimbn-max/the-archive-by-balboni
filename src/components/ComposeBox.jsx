@@ -3,8 +3,6 @@ import MarkdownRenderer from './MarkdownRenderer'
 import TagInput from './TagInput'
 import LinkPreviewCard, { useLinkPreview, extractFirstUrl } from './LinkPreviewCard'
 import { getTags, api } from '../utils/api'
-import Editor from 'react-simple-code-editor'
-import { CODE_LANGUAGES, highlightCode } from '../utils/codeHighlight'
 import { useCollections } from '../hooks/useCollections'
 import Icon from './ui/Icon'
 import Chip from './ui/Chip'
@@ -125,6 +123,9 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
   const [categoriaManual, setCategoriaManual] = useState(false)
   const [categoriaPicker, setCategoriaPicker] = useState(false)
   const categoriaTimerRef = useRef(null)
+  // Code editor loaded on demand (avoids prismjs in initial bundle)
+  const [CodeEditorCmp, setCodeEditorCmp] = useState(null)
+  const [codeModules, setCodeModules] = useState(null)
   const fileInputRef = useRef(null)
   const titleRef = useRef(null)
   const bodyRef = useRef(null)
@@ -190,6 +191,18 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
   }, [])
 
   useEffect(() => { titleRef.current?.focus() }, [])
+
+  // Load code editor lazily when user picks "Código" type
+  useEffect(() => {
+    if (!isCode || CodeEditorCmp) return
+    Promise.all([
+      import('react-simple-code-editor'),
+      import('../utils/codeHighlight'),
+    ]).then(([{ default: EditorComponent }, mods]) => {
+      setCodeEditorCmp(() => EditorComponent)
+      setCodeModules(mods)
+    })
+  }, [isCode, CodeEditorCmp])
 
   // Auto-detect categoria from body text (debounced, skips if user already chose manually)
   useEffect(() => {
@@ -377,31 +390,41 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
             </div>
           )}
 
-          {/* Code editor */}
+          {/* Code editor — loaded on demand */}
           {isCode && (
             <div style={{ marginBottom: 18, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--line-strong)', background: 'rgba(255,255,255,0.02)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 13px', borderBottom: '1px solid var(--line)' }}>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink-3)' }}>Linguagem</span>
-                <select
-                  value={codeLanguage}
-                  onChange={e => setCodeLanguage(e.target.value)}
-                  style={{ background: 'transparent', border: '1px solid var(--line-strong)', borderRadius: 7, padding: '4px 8px', color: 'var(--ink)', fontFamily: 'var(--mono)', fontSize: 11, outline: 'none' }}
-                >
-                  {CODE_LANGUAGES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
-                </select>
+                {codeModules ? (
+                  <select
+                    value={codeLanguage}
+                    onChange={e => setCodeLanguage(e.target.value)}
+                    style={{ background: 'transparent', border: '1px solid var(--line-strong)', borderRadius: 7, padding: '4px 8px', color: 'var(--ink)', fontFamily: 'var(--mono)', fontSize: 11, outline: 'none' }}
+                  >
+                    {codeModules.CODE_LANGUAGES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+                  </select>
+                ) : (
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)', opacity: 0.5 }}>carregando…</span>
+                )}
               </div>
-              <Editor
-                value={code}
-                onValueChange={setCode}
-                highlight={v => highlightCode(v, codeLanguage)}
-                padding={14}
-                placeholder="Cole ou escreva seu código aqui…"
-                textareaClassName="focus:outline-none"
-                className="code-editor min-h-[180px] overflow-auto"
-                style={{ fontFamily: 'var(--mono)', fontSize: 13, lineHeight: 1.65, color: 'var(--ink-2)' }}
-                tabSize={2}
-                insertSpaces
-              />
+              {CodeEditorCmp && codeModules ? (
+                <CodeEditorCmp
+                  value={code}
+                  onValueChange={setCode}
+                  highlight={v => codeModules.highlightCode(v, codeLanguage)}
+                  padding={14}
+                  placeholder="Cole ou escreva seu código aqui…"
+                  textareaClassName="focus:outline-none"
+                  className="code-editor min-h-[180px] overflow-auto"
+                  style={{ fontFamily: 'var(--mono)', fontSize: 13, lineHeight: 1.65, color: 'var(--ink-2)' }}
+                  tabSize={2}
+                  insertSpaces
+                />
+              ) : (
+                <div style={{ minHeight: 180, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', opacity: 0.6 }} />
+                </div>
+              )}
             </div>
           )}
 

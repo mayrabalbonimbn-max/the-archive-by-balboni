@@ -1,47 +1,62 @@
+import { lazy, Suspense, useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import { useState } from 'react'
+
+// ── Always eager: shell + highest-traffic pages ────────────────────────────────
 import Layout from './components/Layout'
+import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
 import ProfilePage from './pages/ProfilePage'
-import DiaryPage from './pages/DiaryPage'
-import SavedPage from './pages/SavedPage'
-import SettingsPage from './pages/SettingsPage'
-import LoginPage from './pages/LoginPage'
-import CollectionsPage from './pages/CollectionsPage'
-import CollectionDetailPage from './pages/CollectionDetailPage'
-import LibraryPage from './pages/LibraryPage'
-import ArticlePage from './pages/ArticlePage'
-import PostDetailPage from './pages/PostDetailPage'
-import FriendsPage from './pages/FriendsPage'
-import NotificationsPage from './pages/NotificationsPage'
-import PublicProfilePage from './pages/PublicProfilePage'
-import TodayPage from './pages/TodayPage'
-import MemoriesPage from './pages/MemoriesPage'
-import CalendarPage from './pages/CalendarPage'
-import StatsPage from './pages/StatsPage'
-import PhotosPage from './pages/PhotosPage'
-import ArchiveListPage from './pages/ArchiveListPage'
 import ArchiveHubPage from './pages/ArchiveHubPage'
-import ExplorePage from './pages/ExplorePage'
-import MessagesPage from './pages/MessagesPage'
-import ConversationPage from './pages/ConversationPage'
-import CapsulesPage from './pages/CapsulesPage'
-import StoriesArchivePage from './pages/StoriesArchivePage'
-import ProjectDetailPage from './pages/ProjectDetailPage'
-import ProjectsPage from './pages/ProjectsPage'
-import LifeMapPage from './pages/LifeMapPage'
 import OnboardingTour from './components/OnboardingTour'
-import GraphPage from './pages/GraphPage'
-import DashboardPage from './pages/DashboardPage'
-import YearReviewPage from './pages/YearReviewPage'
-import KnowledgePage from './pages/KnowledgePage'
-import GrowthPage from './pages/GrowthPage'
-import AchievementsPage from './pages/AchievementsPage'
-import StoryPage from './pages/StoryPage'
 import { usePosts } from './hooks/usePosts'
 import { useProfile } from './hooks/useProfile'
 import { useSession } from './hooks/useSession'
 
+// ── Lazy: every other page ─────────────────────────────────────────────────────
+const PublicProfilePage    = lazy(() => import('./pages/PublicProfilePage'))
+const FriendsPage          = lazy(() => import('./pages/FriendsPage'))
+const NotificationsPage    = lazy(() => import('./pages/NotificationsPage'))
+const TodayPage            = lazy(() => import('./pages/TodayPage'))
+const MemoriesPage         = lazy(() => import('./pages/MemoriesPage'))
+const CalendarPage         = lazy(() => import('./pages/CalendarPage'))
+const StatsPage            = lazy(() => import('./pages/StatsPage'))
+const PhotosPage           = lazy(() => import('./pages/PhotosPage'))
+const ArchiveListPage      = lazy(() => import('./pages/ArchiveListPage'))
+const ExplorePage          = lazy(() => import('./pages/ExplorePage'))
+const DiaryPage            = lazy(() => import('./pages/DiaryPage'))
+const SavedPage            = lazy(() => import('./pages/SavedPage'))
+const SettingsPage         = lazy(() => import('./pages/SettingsPage'))
+const CollectionsPage      = lazy(() => import('./pages/CollectionsPage'))
+const CollectionDetailPage = lazy(() => import('./pages/CollectionDetailPage'))
+const LibraryPage          = lazy(() => import('./pages/LibraryPage'))
+const ArticlePage          = lazy(() => import('./pages/ArticlePage'))
+const PostDetailPage       = lazy(() => import('./pages/PostDetailPage'))
+const MessagesPage         = lazy(() => import('./pages/MessagesPage'))
+const ConversationPage     = lazy(() => import('./pages/ConversationPage'))
+const CapsulesPage         = lazy(() => import('./pages/CapsulesPage'))
+const StoriesArchivePage   = lazy(() => import('./pages/StoriesArchivePage'))
+const ProjectsPage         = lazy(() => import('./pages/ProjectsPage'))
+const ProjectDetailPage    = lazy(() => import('./pages/ProjectDetailPage'))
+const LifeMapPage          = lazy(() => import('./pages/LifeMapPage'))
+const GraphPage            = lazy(() => import('./pages/GraphPage'))
+const DashboardPage        = lazy(() => import('./pages/DashboardPage'))
+const YearReviewPage       = lazy(() => import('./pages/YearReviewPage'))
+const KnowledgePage        = lazy(() => import('./pages/KnowledgePage'))
+const GrowthPage           = lazy(() => import('./pages/GrowthPage'))
+const AchievementsPage     = lazy(() => import('./pages/AchievementsPage'))
+const StoryPage            = lazy(() => import('./pages/StoryPage'))
+
+// ── Suspense fallback ──────────────────────────────────────────────────────────
+function PageLoader() {
+  return (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
+      <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', opacity: 0.7, animation: 'pagePulse 1.1s ease-in-out infinite' }} />
+      <style>{`@keyframes pagePulse { 0%,100%{transform:scale(1);opacity:.7} 50%{transform:scale(1.6);opacity:1} }`}</style>
+    </div>
+  )
+}
+
+// ── App root ───────────────────────────────────────────────────────────────────
 export default function App() {
   const { session, login, logout } = useSession()
   if (!session) return <LoginPage onLogin={login} />
@@ -61,58 +76,60 @@ function AuthenticatedApp({ onLogout }) {
     )
   }
 
-  if (!profile) {
-    onLogout()
-    return null
-  }
+  if (!profile) { onLogout(); return null }
 
   const sharedProps = { posts, profile, onLike: toggleLike, onSave: toggleSave, onPin: togglePin, onDelete: deletePost }
 
   return (
     <>
-    {!profile.onboardingCompleted && <OnboardingTour onComplete={completeOnboarding} />}
-    <Layout profile={profile} posts={posts} searchQuery={searchQuery} onSearch={setSearchQuery} onLogout={onLogout} onPost={addPost}>
-      <Routes>
-        <Route path="/"        element={<HomePage {...sharedProps} searchQuery={searchQuery} onPost={addPost} />} />
-        <Route path="/profile" element={<ProfilePage {...sharedProps} onPost={addPost} />} />
-        <Route path="/profiles/:id" element={<PublicProfilePage {...sharedProps} />} />
-        <Route path="/friends" element={<FriendsPage />} />
-        <Route path="/notifications" element={<NotificationsPage />} />
-        <Route path="/today" element={<TodayPage />} />
-        <Route path="/memories" element={<MemoriesPage />} />
-        <Route path="/calendar" element={<CalendarPage />} />
-        <Route path="/stats" element={<StatsPage />} />
-        <Route path="/photos" element={<PhotosPage />} />
-        <Route path="/archive" element={<ArchiveHubPage />} />
-        <Route path="/explore" element={<ExplorePage />} />
-        <Route path="/tags/:tag" element={<ArchiveListPage kind="tag" />} />
-        <Route path="/backlinks/:title" element={<ArchiveListPage kind="backlink" />} />
-        <Route path="/diary"   element={<DiaryPage {...sharedProps} searchQuery={searchQuery} />} />
-        <Route path="/saved"   element={<SavedPage {...sharedProps} searchQuery={searchQuery} />} />
-        <Route path="/settings" element={
-          <SettingsPage profile={profile} posts={posts} onUpdateProfile={updateProfile} onUploadProfileMedia={uploadProfileMedia} onRemoveProfileMedia={removeProfileMedia} onImportPosts={importPosts} onLogout={onLogout} onResetOnboarding={resetOnboarding} />
-        } />
-        <Route path="/collections" element={<CollectionsPage />} />
-        <Route path="/collections/:id" element={<CollectionDetailPage {...sharedProps} />} />
-        <Route path="/library" element={<LibraryPage />} />
-        <Route path="/articles/:id" element={<ArticlePage profile={profile} onLike={toggleLike} onSave={toggleSave} onDelete={deletePost} />} />
-        <Route path="/posts/:id" element={<PostDetailPage profile={profile} onLike={toggleLike} onSave={toggleSave} onDelete={deletePost} />} />
-        <Route path="/messages" element={<MessagesPage />} />
-        <Route path="/messages/:id" element={<ConversationPage profile={profile} />} />
-        <Route path="/capsules" element={<CapsulesPage />} />
-        <Route path="/archive/stories" element={<StoriesArchivePage />} />
-        <Route path="/projects" element={<ProjectsPage />} />
-        <Route path="/projects/:slug" element={<ProjectDetailPage />} />
-        <Route path="/life-map" element={<LifeMapPage />} />
-        <Route path="/graph" element={<GraphPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/year-review/:year" element={<YearReviewPage />} />
-        <Route path="/knowledge" element={<KnowledgePage />} />
-        <Route path="/growth" element={<GrowthPage />} />
-        <Route path="/achievements" element={<AchievementsPage />} />
-        <Route path="/story" element={<StoryPage />} />
-      </Routes>
-    </Layout>
+      {!profile.onboardingCompleted && <OnboardingTour onComplete={completeOnboarding} />}
+      <Layout profile={profile} posts={posts} searchQuery={searchQuery} onSearch={setSearchQuery} onLogout={onLogout} onPost={addPost}>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Eager */}
+            <Route path="/"        element={<HomePage {...sharedProps} searchQuery={searchQuery} onPost={addPost} />} />
+            <Route path="/profile" element={<ProfilePage {...sharedProps} onPost={addPost} />} />
+            <Route path="/archive" element={<ArchiveHubPage />} />
+
+            {/* Lazy */}
+            <Route path="/profiles/:id"   element={<PublicProfilePage {...sharedProps} />} />
+            <Route path="/friends"        element={<FriendsPage />} />
+            <Route path="/notifications"  element={<NotificationsPage />} />
+            <Route path="/today"          element={<TodayPage />} />
+            <Route path="/memories"       element={<MemoriesPage />} />
+            <Route path="/calendar"       element={<CalendarPage />} />
+            <Route path="/stats"          element={<StatsPage />} />
+            <Route path="/photos"         element={<PhotosPage />} />
+            <Route path="/explore"        element={<ExplorePage />} />
+            <Route path="/tags/:tag"      element={<ArchiveListPage kind="tag" />} />
+            <Route path="/backlinks/:title" element={<ArchiveListPage kind="backlink" />} />
+            <Route path="/diary"          element={<DiaryPage {...sharedProps} searchQuery={searchQuery} />} />
+            <Route path="/saved"          element={<SavedPage {...sharedProps} searchQuery={searchQuery} />} />
+            <Route path="/settings"       element={
+              <SettingsPage profile={profile} posts={posts} onUpdateProfile={updateProfile} onUploadProfileMedia={uploadProfileMedia} onRemoveProfileMedia={removeProfileMedia} onImportPosts={importPosts} onLogout={onLogout} onResetOnboarding={resetOnboarding} />
+            } />
+            <Route path="/collections"      element={<CollectionsPage />} />
+            <Route path="/collections/:id"  element={<CollectionDetailPage {...sharedProps} />} />
+            <Route path="/library"          element={<LibraryPage />} />
+            <Route path="/articles/:id"     element={<ArticlePage profile={profile} onLike={toggleLike} onSave={toggleSave} onDelete={deletePost} />} />
+            <Route path="/posts/:id"        element={<PostDetailPage profile={profile} onLike={toggleLike} onSave={toggleSave} onDelete={deletePost} />} />
+            <Route path="/messages"         element={<MessagesPage />} />
+            <Route path="/messages/:id"     element={<ConversationPage profile={profile} />} />
+            <Route path="/capsules"         element={<CapsulesPage />} />
+            <Route path="/archive/stories"  element={<StoriesArchivePage />} />
+            <Route path="/projects"         element={<ProjectsPage />} />
+            <Route path="/projects/:slug"   element={<ProjectDetailPage />} />
+            <Route path="/life-map"         element={<LifeMapPage />} />
+            <Route path="/graph"            element={<GraphPage />} />
+            <Route path="/dashboard"        element={<DashboardPage />} />
+            <Route path="/year-review/:year" element={<YearReviewPage />} />
+            <Route path="/knowledge"        element={<KnowledgePage />} />
+            <Route path="/growth"           element={<GrowthPage />} />
+            <Route path="/achievements"     element={<AchievementsPage />} />
+            <Route path="/story"            element={<StoryPage />} />
+          </Routes>
+        </Suspense>
+      </Layout>
     </>
   )
 }
