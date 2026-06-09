@@ -1,44 +1,103 @@
 import { useState, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { exportPostsAsMarkdown } from '../utils/storage'
 import { api } from '../utils/api'
-
-const HEADER_COLORS = [
-  'linear-gradient(135deg, #c084fc, #f472b6)',
-  'linear-gradient(135deg, #f472b6, #f97316)',
-  'linear-gradient(135deg, #10b981, #1d9bf0)',
-  'linear-gradient(135deg, #f59e0b, #ef4444)',
-  'linear-gradient(135deg, #6366f1, #8b5cf6)',
-  'linear-gradient(135deg, #0ea5e9, #10b981)',
-  '#f472b6',
-  '#8b5cf6',
-  '#10b981',
-  '#f59e0b',
-]
+import AppBar from '../components/ui/AppBar'
+import Avatar from '../components/ui/Avatar'
+import Icon from '../components/ui/Icon'
 
 function exportPostsAsJSON(posts) {
   const blob = new Blob([JSON.stringify(posts, null, 2)], { type: 'application/json' })
-  const url  = URL.createObjectURL(blob)
-  const a    = document.createElement('a')
-  a.href     = url
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
   a.download = `the-archive-backup-${new Date().toISOString().split('T')[0]}.json`
   a.click()
   URL.revokeObjectURL(url)
 }
 
+// ── Shared field styles ────────────────────────────────────────────────────────
+const fieldLabel = {
+  fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '0.12em',
+  color: 'var(--ink-3)', textTransform: 'uppercase', display: 'block', marginBottom: 8,
+}
+
+const fieldInput = {
+  width: '100%', background: 'rgba(255,255,255,0.03)',
+  border: '1px solid var(--line-strong)', borderRadius: 10,
+  padding: '11px 14px', color: 'var(--ink)',
+  fontFamily: 'var(--sans)', fontSize: 14.5, outline: 'none',
+}
+
+function Field({ label, children }) {
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <label style={fieldLabel}>{label}</label>
+      {children}
+    </div>
+  )
+}
+
+function SectionHead({ label }) {
+  return (
+    <div style={{ marginBottom: 20, marginTop: 4 }}>
+      <div style={{ fontFamily: 'var(--serif)', fontSize: 20, color: 'var(--ink)', letterSpacing: '-0.01em' }}>{label}</div>
+      <div style={{ marginTop: 6, height: 1, background: 'var(--line)' }} />
+    </div>
+  )
+}
+
+function OutlineBtn({ onClick, children, danger = false, disabled = false }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        padding: '11px 18px', borderRadius: 11, cursor: disabled ? 'default' : 'pointer',
+        border: `1px solid ${danger ? 'rgba(248,113,113,0.4)' : 'var(--line-strong)'}`,
+        background: 'transparent',
+        color: danger ? '#f87171' : 'var(--ink)',
+        fontFamily: 'var(--sans)', fontSize: 13.5, fontWeight: 500,
+        opacity: disabled ? 0.5 : 1,
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
+function AccentBtn({ onClick, children, disabled = false, type = 'button' }) {
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        padding: '11px 24px', borderRadius: 11, cursor: disabled ? 'default' : 'pointer',
+        border: 'none', background: disabled ? 'var(--surface-3)' : 'var(--accent)',
+        color: disabled ? 'var(--ink-3)' : '#fff',
+        fontFamily: 'var(--sans)', fontSize: 13.5, fontWeight: 600,
+        opacity: disabled ? 0.7 : 1,
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
 export default function SettingsPage({ profile, posts, onUpdateProfile, onUploadProfileMedia, onRemoveProfileMedia, onImportPosts, onLogout }) {
+  const navigate = useNavigate()
   const [name, setName] = useState(profile.name)
   const [handle, setHandle] = useState(profile.handle)
-  const [bio, setBio] = useState(profile.bio)
-  const [interests, setInterests] = useState(profile.interests || '')
-  const [headerColor, setHeaderColor] = useState(profile.headerColor || HEADER_COLORS[0])
+  const [bio, setBio] = useState(profile.bio ?? '')
+  const [title, setTitle] = useState(profile.title ?? '')
+  const [location, setLocation] = useState(profile.location ?? '')
   const [saved, setSaved] = useState(false)
   const [importMode, setImportMode] = useState('merge')
   const [importStatus, setImportStatus] = useState(null)
   const fileInputRef = useRef(null)
   const avatarInputRef = useRef(null)
-  const coverInputRef = useRef(null)
 
-  // Password change state
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -47,29 +106,9 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
 
   async function handleSaveProfile() {
     try {
-      await onUpdateProfile({ name, handle, bio, headerColor, interests })
+      await onUpdateProfile({ name, handle, bio, title, location })
       setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
-    } catch (err) {
-      alert(err.message)
-    }
-  }
-
-  async function handleCoverUpload(e) {
-    const file = e.target.files[0]
-    if (!file) return
-    try {
-      await onUploadProfileMedia('cover', file)
-    } catch (err) {
-      alert(err.message)
-    } finally {
-      e.target.value = ''
-    }
-  }
-
-  async function handleRemoveCover() {
-    try {
-      await onRemoveProfileMedia('cover')
+      setTimeout(() => setSaved(false), 2500)
     } catch (err) {
       alert(err.message)
     }
@@ -78,28 +117,21 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
   async function handleAvatarUpload(e) {
     const file = e.target.files[0]
     if (!file) return
-    try {
-      await onUploadProfileMedia('avatar', file)
-    } catch (err) {
-      alert(err.message)
-    } finally {
-      e.target.value = ''
-    }
+    try { await onUploadProfileMedia('avatar', file) }
+    catch (err) { alert(err.message) }
+    finally { e.target.value = '' }
   }
 
   async function handleRemoveAvatar() {
-    try {
-      await onRemoveProfileMedia('avatar')
-    } catch (err) {
-      alert(err.message)
-    }
+    try { await onRemoveProfileMedia('avatar') }
+    catch (err) { alert(err.message) }
   }
 
   function handleImportFile(e) {
     const file = e.target.files[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = async ev => {
+    reader.onload = ev => {
       try {
         const data = JSON.parse(ev.target.result)
         if (!Array.isArray(data)) throw new Error('Formato inválido')
@@ -123,9 +155,7 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
     setPasswordLoading(true)
     try {
       await api.post('/me/password', { currentPassword, newPassword })
-      setCurrentPassword('')
-      setNewPassword('')
-      setConfirmPassword('')
+      setCurrentPassword(''); setNewPassword(''); setConfirmPassword('')
       setPasswordStatus({ ok: true, msg: 'Senha atualizada!' })
     } catch (err) {
       setPasswordStatus({ ok: false, msg: err.message })
@@ -135,71 +165,46 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
     }
   }
 
-  const SectionIcon = ({ d }) => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-brand-rose">
-      <path d={d} />
-    </svg>
-  )
-
   return (
-    <div>
-      <div className="sticky top-0 z-10 bg-black/80 backdrop-blur-md border-b border-dark-border px-4 py-3">
-        <h1 className="font-bold text-xl text-dark-text">Ajustes</h1>
-      </div>
+    <div style={{ animation: 'fadeUp var(--dur-screen) var(--ease-out)' }}>
+      <AppBar
+        left={
+          <button
+            onClick={() => navigate(-1)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink)', display: 'flex', alignItems: 'center' }}
+          >
+            <Icon name="back" size={22} />
+          </button>
+        }
+        title="Ajustes"
+      />
 
-      <div className="max-w-xl mx-auto px-4 py-6 space-y-8">
+      <div style={{ maxWidth: 560, margin: '0 auto', padding: '24px 20px 80px' }}>
 
-        {/* Profile */}
-        <section>
-          <h2 className="font-bold text-dark-text text-lg mb-4 flex items-center gap-2">
-            <SectionIcon d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 3a4 4 0 100 8 4 4 0 000-8z" />
-            Perfil
-          </h2>
-
-          {/* Cover image */}
-          <div className="mb-5">
-            <label className="block text-dark-muted text-xs mb-2 tracking-wide uppercase">Capa do perfil</label>
-            <div
-              className="relative h-24 rounded-xl overflow-hidden cursor-pointer group border border-dark-border hover:border-dark-muted/50 transition-colors"
-              style={{ background: profile.coverImage ? undefined : (profile.headerColor || 'linear-gradient(135deg, #8b5cf6, #1d9bf0)') }}
-              onClick={() => coverInputRef.current?.click()}
-            >
-              {profile.coverImage && (
-                <img src={profile.coverImage} alt="capa" className="w-full h-full object-cover" />
-              )}
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <span className="text-white text-sm font-medium">Trocar capa</span>
-              </div>
-            </div>
-            <div className="flex gap-3 mt-2">
-              <button onClick={() => coverInputRef.current?.click()} className="text-brand-rose text-sm hover:underline font-medium">
-                {profile.coverImage ? 'Trocar foto de capa' : 'Adicionar foto de capa'}
-              </button>
-              {profile.coverImage && (
-                <button onClick={handleRemoveCover} className="text-red-400 text-sm hover:underline">
-                  Remover
-                </button>
-              )}
-            </div>
-            <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
-          </div>
+        {/* ── Perfil ── */}
+        <div style={{ marginBottom: 40 }}>
+          <SectionHead label="Perfil" />
 
           {/* Avatar */}
-          <div className="flex items-center gap-4 mb-5">
-            <div className="w-16 h-16 rounded-full overflow-hidden cursor-pointer hover:opacity-80 transition-opacity ring-2 ring-dark-border" onClick={() => avatarInputRef.current?.click()}>
-              {profile.avatar
-                ? <img src={profile.avatar} alt="avatar" className="w-full h-full object-cover" />
-                : <div className="w-full h-full avatar-gradient flex items-center justify-center text-white font-bold text-2xl">
-                    {profile.name?.[0] || 'M'}
-                  </div>
-              }
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+            <div
+              onClick={() => avatarInputRef.current?.click()}
+              style={{ cursor: 'pointer', flexShrink: 0 }}
+            >
+              <Avatar name={profile.name} src={profile.avatar} size={64} ring />
             </div>
-            <div className="flex flex-col gap-1.5">
-              <button onClick={() => avatarInputRef.current?.click()} className="text-brand-rose text-sm hover:underline font-medium text-left">
+            <div>
+              <button
+                onClick={() => avatarInputRef.current?.click()}
+                style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              >
                 Trocar foto de perfil
               </button>
               {profile.avatar && (
-                <button onClick={handleRemoveAvatar} className="text-red-400 text-sm hover:underline text-left">
+                <button
+                  onClick={handleRemoveAvatar}
+                  style={{ display: 'block', marginTop: 4, fontFamily: 'var(--sans)', fontSize: 12.5, color: '#f87171', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
                   Remover foto
                 </button>
               )}
@@ -207,185 +212,141 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
             </div>
           </div>
 
-          {/* Header color */}
-          <div className="mb-5">
-            <label className="block text-dark-muted text-xs mb-2 tracking-wide uppercase">Cor do cabeçalho</label>
-            <div className="flex flex-wrap gap-2">
-              {HEADER_COLORS.map((color, i) => (
-                <button
-                  key={i}
-                  onClick={() => setHeaderColor(color)}
-                  className={`w-8 h-8 rounded-full transition-transform ${headerColor === color ? 'ring-2 ring-offset-2 ring-offset-black ring-brand-rose scale-110' : 'hover:scale-110'}`}
-                  style={{ background: color }}
-                />
-              ))}
-            </div>
-          </div>
+          <Field label="Nome">
+            <input value={name} onChange={e => setName(e.target.value)} style={fieldInput} placeholder="Seu nome" />
+          </Field>
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-dark-muted text-xs mb-1.5 tracking-wide uppercase">Nome</label>
-              <input value={name} onChange={e => setName(e.target.value)} className="input-dark" placeholder="Seu nome" />
-            </div>
-            <div>
-              <label className="block text-dark-muted text-xs mb-1.5 tracking-wide uppercase">@handle</label>
-              <input value={handle} onChange={e => setHandle(e.target.value)} className="input-dark" placeholder="@seu_handle" />
-            </div>
-            <div>
-              <label className="block text-dark-muted text-xs mb-1.5 tracking-wide uppercase">Bio</label>
-              <textarea value={bio} onChange={e => setBio(e.target.value)} className="input-dark resize-none" rows={3} placeholder="Sobre você..." />
-            </div>
-            <div>
-              <label className="block text-dark-muted text-xs mb-1.5 tracking-wide uppercase">Interesses</label>
-              <input
-                value={interests}
-                onChange={e => setInterests(e.target.value)}
-                className="input-dark"
-                placeholder="Python, Fotografia, Design, Leitura..."
-              />
-              <p className="text-dark-muted text-xs mt-1.5">Separe com vírgula. Aparece como tags no perfil.</p>
-            </div>
-          </div>
+          <Field label="@handle">
+            <input value={handle} onChange={e => setHandle(e.target.value)} style={fieldInput} placeholder="@handle" />
+          </Field>
 
-          <button
-            onClick={handleSaveProfile}
-            className={`mt-4 btn-primary transition-all ${saved ? '!bg-emerald-600 hover:!bg-emerald-600' : ''}`}
-          >
+          <Field label="Título">
+            <input value={title} onChange={e => setTitle(e.target.value)} style={fieldInput} placeholder="Ex: Escritora, Fotógrafa, Estudante…" />
+          </Field>
+
+          <Field label="Bio">
+            <textarea
+              value={bio}
+              onChange={e => setBio(e.target.value)}
+              style={{ ...fieldInput, resize: 'none' }}
+              rows={3}
+              placeholder="Sobre você…"
+            />
+          </Field>
+
+          <Field label="Localização">
+            <input value={location} onChange={e => setLocation(e.target.value)} style={fieldInput} placeholder="Ex: São Paulo, Brasil" />
+          </Field>
+
+          <AccentBtn onClick={handleSaveProfile}>
             {saved ? '✓ Salvo!' : 'Salvar perfil'}
-          </button>
-        </section>
+          </AccentBtn>
+        </div>
 
-        {/* Password */}
-        <section className="border-t border-dark-border pt-6">
-          <h2 className="font-bold text-dark-text text-lg mb-1 flex items-center gap-2">
-            <SectionIcon d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            Senha
-          </h2>
-          <p className="text-dark-muted text-sm mb-4">Altere a senha da sua conta.</p>
-
-          <form onSubmit={handleChangePassword} className="space-y-3">
-            <div>
-              <label className="block text-dark-muted text-xs mb-1.5 tracking-wide uppercase">Senha atual</label>
-              <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="input-dark" placeholder="Sua senha atual" />
-            </div>
-            <div>
-              <label className="block text-dark-muted text-xs mb-1.5 tracking-wide uppercase">Nova senha</label>
-              <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="input-dark" placeholder="Mínimo 6 caracteres" />
-            </div>
+        {/* ── Senha ── */}
+        <div style={{ marginBottom: 40 }}>
+          <SectionHead label="Senha" />
+          <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <Field label="Senha atual">
+              <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} style={fieldInput} placeholder="Senha atual" />
+            </Field>
+            <Field label="Nova senha">
+              <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} style={fieldInput} placeholder="Mínimo 6 caracteres" />
+            </Field>
             {newPassword && (
-              <div>
-                <label className="block text-dark-muted text-xs mb-1.5 tracking-wide uppercase">Confirmar</label>
-                <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="input-dark" placeholder="Repita a nova senha" />
+              <Field label="Confirmar">
+                <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={fieldInput} placeholder="Repita a nova senha" />
+              </Field>
+            )}
+            {passwordStatus && (
+              <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: passwordStatus.ok ? '#4ade80' : '#f87171' }}>
+                {passwordStatus.msg}
               </div>
             )}
-
-            {passwordStatus && (
-              <p className={`text-sm animate-fade-in ${passwordStatus.ok ? 'text-emerald-400' : 'text-red-400'}`}>
-                {passwordStatus.msg}
-              </p>
-            )}
-
-            <button type="submit" disabled={passwordLoading || !currentPassword || !newPassword} className="btn-primary text-sm py-2">
-              {passwordLoading ? 'Salvando...' : 'Atualizar senha'}
-            </button>
+            <AccentBtn type="submit" disabled={passwordLoading || !currentPassword || !newPassword}>
+              {passwordLoading ? 'Salvando…' : 'Atualizar senha'}
+            </AccentBtn>
           </form>
-        </section>
+        </div>
 
-        {/* Export */}
-        <section className="border-t border-dark-border pt-6">
-          <h2 className="font-bold text-dark-text text-lg mb-4 flex items-center gap-2">
-            <SectionIcon d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4 M7 10l5 5 5-5 M12 15V3" />
-            Exportar
-          </h2>
-          <p className="text-dark-muted text-sm mb-4">Faça backup dos seus {posts.length} posts.</p>
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => exportPostsAsJSON(posts)}
-              className="flex items-center gap-2 border border-dark-border text-dark-text px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-dark-hover transition-colors"
-            >
-              Exportar JSON
-            </button>
-            <button onClick={() => exportPostsAsMarkdown(posts)} className="flex items-center gap-2 border border-dark-border text-dark-text px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-dark-hover transition-colors">
-              Exportar Markdown
-            </button>
+        {/* ── Exportar ── */}
+        <div style={{ marginBottom: 40 }}>
+          <SectionHead label="Exportar" />
+          <div style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', marginBottom: 16 }}>
+            Backup dos seus {posts.length} registros.
           </div>
-        </section>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <OutlineBtn onClick={() => exportPostsAsJSON(posts)}>Exportar JSON</OutlineBtn>
+            <OutlineBtn onClick={() => exportPostsAsMarkdown(posts)}>Exportar Markdown</OutlineBtn>
+          </div>
+        </div>
 
-        {/* Import */}
-        <section className="border-t border-dark-border pt-6">
-          <h2 className="font-bold text-dark-text text-lg mb-4 flex items-center gap-2">
-            <SectionIcon d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4 M17 8l-5-5-5 5 M12 3v12" />
-            Importar
-          </h2>
-          <p className="text-dark-muted text-sm mb-4">Restaure posts de um arquivo JSON exportado anteriormente.</p>
-
-          <div className="flex gap-3 mb-4">
+        {/* ── Importar ── */}
+        <div style={{ marginBottom: 40 }}>
+          <SectionHead label="Importar" />
+          <div style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', marginBottom: 16 }}>
+            Restaure registros de um arquivo JSON exportado anteriormente.
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
             {['merge', 'replace'].map(mode => (
               <button
                 key={mode}
                 onClick={() => setImportMode(mode)}
-                className={`px-4 py-2 rounded-xl text-sm font-medium border transition-colors ${
-                  importMode === mode
-                    ? 'border-brand-rose bg-brand-rose/10 text-brand-rose'
-                    : 'border-dark-border text-dark-muted hover:border-dark-text'
-                }`}
+                style={{
+                  padding: '8px 16px', borderRadius: 10, cursor: 'pointer',
+                  border: `1px solid ${importMode === mode ? 'transparent' : 'var(--line-strong)'}`,
+                  background: importMode === mode ? 'var(--accent)' : 'transparent',
+                  color: importMode === mode ? '#fff' : 'var(--ink-2)',
+                  fontFamily: 'var(--sans)', fontSize: 13, fontWeight: 500,
+                }}
               >
                 {mode === 'merge' ? 'Mesclar' : 'Substituir'}
               </button>
             ))}
           </div>
-
           {importMode === 'replace' && (
-            <p className="text-amber-400 text-sm mb-3 flex items-center gap-1.5">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              Isso substituirá todos os posts deste perfil!
-            </p>
-          )}
-
-          <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 border border-dark-border text-dark-text px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-dark-hover transition-colors">
-            Escolher arquivo JSON
-          </button>
-          <input ref={fileInputRef} type="file" accept=".json,application/json" className="hidden" onChange={handleImportFile} />
-
-          {importStatus && (
-            <div className={`mt-3 px-4 py-3 rounded-xl text-sm font-medium ${importStatus.ok ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
-              {importStatus.ok ? `✓ ${importStatus.count} posts importados!` : `Erro: ${importStatus.msg}`}
+            <div style={{ fontFamily: 'var(--sans)', fontSize: 12.5, color: '#fbbf24', marginBottom: 12 }}>
+              Isso substituirá todos os registros deste perfil.
             </div>
           )}
-        </section>
+          <OutlineBtn onClick={() => fileInputRef.current?.click()}>Escolher arquivo JSON</OutlineBtn>
+          <input ref={fileInputRef} type="file" accept=".json,application/json" className="hidden" onChange={handleImportFile} />
+          {importStatus && (
+            <div style={{ marginTop: 12, padding: '11px 14px', borderRadius: 10, fontFamily: 'var(--sans)', fontSize: 13, color: importStatus.ok ? '#4ade80' : '#f87171', border: `1px solid ${importStatus.ok ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}`, background: importStatus.ok ? 'rgba(74,222,128,0.05)' : 'rgba(248,113,113,0.05)' }}>
+              {importStatus.ok ? `✓ ${importStatus.count} registros importados!` : `Erro: ${importStatus.msg}`}
+            </div>
+          )}
+        </div>
 
-        {/* Session / logout */}
-        <section className="border-t border-dark-border pt-6">
-          <h2 className="font-bold text-dark-text text-lg mb-4 flex items-center gap-2">
-            <SectionIcon d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4 M16 17l5-5-5-5 M21 12H9" />
-            Sessão
-          </h2>
-          <p className="text-dark-muted text-sm mb-4">
-            Logado como <span className="text-dark-text font-medium">{profile.handle}</span>
-          </p>
-          <button
-            onClick={onLogout}
-            className="flex items-center gap-2 border border-dark-border text-dark-muted px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/40 transition-all"
-          >
-            Sair do perfil
-          </button>
-        </section>
+        {/* ── Sessão ── */}
+        <div style={{ marginBottom: 40 }}>
+          <SectionHead label="Sessão" />
+          <div style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', marginBottom: 16 }}>
+            Logado como <span style={{ color: 'var(--ink)' }}>{profile.handle}</span>
+          </div>
+          <OutlineBtn onClick={onLogout}>Sair do perfil</OutlineBtn>
+        </div>
 
-        {/* Danger zone */}
-        <section className="border-t border-dark-border pt-6">
-          <h2 className="font-bold text-red-400 text-lg mb-4">Zona de Perigo</h2>
-          <p className="text-dark-muted text-sm mb-4">Ações irreversíveis. Tenha certeza antes de prosseguir.</p>
-          <button
+        {/* ── Perigo ── */}
+        <div>
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontFamily: 'var(--serif)', fontSize: 20, color: '#f87171', letterSpacing: '-0.01em' }}>Zona de perigo</div>
+            <div style={{ marginTop: 6, height: 1, background: 'rgba(248,113,113,0.2)' }} />
+          </div>
+          <div style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', marginBottom: 16 }}>
+            Ações irreversíveis. Tenha certeza antes de prosseguir.
+          </div>
+          <OutlineBtn
+            danger
             onClick={() => {
-              if (window.confirm('Deletar TODOS os posts deste perfil? Esta ação não pode ser desfeita.')) {
+              if (window.confirm('Deletar TODOS os registros deste perfil? Esta ação não pode ser desfeita.')) {
                 onImportPosts([], true)
               }
             }}
-            className="border border-red-500/50 text-red-400 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-red-500/10 transition-colors"
           >
-            Deletar todos os posts
-          </button>
-        </section>
+            Deletar todos os registros
+          </OutlineBtn>
+        </div>
 
       </div>
     </div>

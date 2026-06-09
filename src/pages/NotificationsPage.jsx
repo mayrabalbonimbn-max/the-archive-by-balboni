@@ -1,7 +1,147 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../utils/api'
-import { formatRelativeTime } from '../utils/helpers'
+import AppBar from '../components/ui/AppBar'
+import Icon from '../components/ui/Icon'
+import Avatar from '../components/ui/Avatar'
+import PhotoTile from '../components/ui/PhotoTile'
+
+function relTime(iso) {
+  if (!iso) return ''
+  const diff = (Date.now() - new Date(iso)) / 1000
+  if (diff < 60) return 'agora'
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`
+  return `${Math.floor(diff / 86400)}d`
+}
+
+function groupItems(items) {
+  const now = Date.now()
+  const groups = { 'Hoje': [], 'Esta semana': [], 'Antes': [] }
+  for (const item of items) {
+    const diff = (now - new Date(item.createdAt)) / 1000
+    if (diff < 86400) groups['Hoje'].push(item)
+    else if (diff < 604800) groups['Esta semana'].push(item)
+    else groups['Antes'].push(item)
+  }
+  return groups
+}
+
+const TYPE_VERB = {
+  react:   'apreciou sua entrada',
+  like:    'apreciou sua entrada',
+  comment: 'deixou uma nota em',
+  collect: 'guardou sua entrada em',
+  follow:  'adicionou você ao círculo',
+  mention: 'mencionou você em',
+}
+
+const TYPE_ICON = {
+  react: 'heart', like: 'heart',
+  comment: 'comment',
+  collect: 'collections',
+  follow: 'people',
+  mention: 'tag',
+}
+
+function NoticeRow({ item, onFollowBack }) {
+  const navigate = useNavigate()
+  const isMemory = item.type === 'memory'
+  const unread = !item.readAt
+  const actorName = item.actor?.name ?? 'Alguém'
+  const verb = TYPE_VERB[item.type] ?? item.message ?? ''
+  const target = item.postTitle ?? item.collectionName ?? item.target ?? ''
+  const iconName = TYPE_ICON[item.type]
+
+  function open() {
+    if (isMemory) navigate('/memories')
+    else if (item.postId) navigate(`/articles/${item.postId}`)
+    else if (item.actor?.id) navigate(`/profiles/${item.actor.id}`)
+  }
+
+  if (isMemory) {
+    return (
+      <div
+        onClick={open}
+        style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '15px 20px', borderBottom: '1px solid var(--line)', cursor: 'pointer' }}
+      >
+        <div style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(232,108,180,0.12)', color: 'var(--accent)' }}>
+          <Icon name="sparkle" size={20} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: 'var(--serif)', fontSize: 15, fontStyle: 'italic', color: 'var(--ink)' }}>{item.title ?? 'Memória do arquivo'}</div>
+          <div style={{ fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink-2)', marginTop: 2 }}>{item.message ?? 'Neste dia, em outro ano'}</div>
+        </div>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--ink-3)', flexShrink: 0 }}>{relTime(item.createdAt)}</span>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      onClick={open}
+      style={{ display: 'flex', alignItems: 'flex-start', gap: 13, padding: '15px 20px', borderBottom: '1px solid var(--line)', cursor: 'pointer', position: 'relative' }}
+    >
+      {unread && (
+        <div style={{ position: 'absolute', left: 8, top: 24, width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)' }} />
+      )}
+
+      {/* Avatar + badge */}
+      <div style={{ position: 'relative', flexShrink: 0 }}>
+        <Avatar name={actorName} src={item.actor?.avatar} size={40} />
+        {iconName && (
+          <div style={{
+            position: 'absolute', right: -2, bottom: -2,
+            width: 18, height: 18, borderRadius: '50%',
+            background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'var(--accent)',
+          }}>
+            <Icon name={iconName} size={11} fill={item.type === 'react' || item.type === 'like'} stroke={2} />
+          </div>
+        )}
+      </div>
+
+      {/* Text */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontFamily: 'var(--sans)', fontSize: 14, lineHeight: 1.45, color: 'var(--ink-2)' }}>
+          <span style={{ color: 'var(--ink)', fontWeight: 600 }}>{actorName}</span>{' '}
+          {verb}
+          {target && item.type !== 'follow' && (
+            <span style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', color: 'var(--ink)' }}> {target}</span>
+          )}
+          {'.'}
+        </div>
+
+        {item.quote && (
+          <div style={{
+            fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 13, lineHeight: 1.5,
+            color: 'var(--ink-3)', marginTop: 6, paddingLeft: 11,
+            borderLeft: '1px solid var(--line-strong)',
+          }}>
+            {item.quote}
+          </div>
+        )}
+
+        {item.type === 'follow' && (
+          <button
+            onClick={e => { e.stopPropagation(); onFollowBack?.(item.actor?.id) }}
+            style={{
+              marginTop: 9, padding: '6px 14px', borderRadius: 999, cursor: 'pointer',
+              fontFamily: 'var(--sans)', fontSize: 12.5, fontWeight: 600,
+              border: '1px solid var(--line-strong)', background: 'transparent', color: 'var(--ink)',
+            }}
+          >
+            Seguir de volta
+          </button>
+        )}
+      </div>
+
+      <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--ink-3)', flexShrink: 0 }}>
+        {relTime(item.createdAt)}
+      </span>
+    </div>
+  )
+}
 
 export default function NotificationsPage() {
   const navigate = useNavigate()
@@ -9,57 +149,81 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.get('/notifications')
-      .then(setItems)
-      .finally(() => setLoading(false))
+    api.get('/notifications').then(setItems).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
   async function markAllRead() {
-    await api.post('/notifications/read-all', {})
-    setItems(current => current.map(item => ({ ...item, readAt: item.readAt || new Date().toISOString() })))
+    await api.post('/notifications/read-all', {}).catch(() => {})
+    setItems(cur => cur.map(i => ({ ...i, readAt: i.readAt || new Date().toISOString() })))
   }
 
-  function openNotification(item) {
-    if (item.postId) navigate(`/articles/${item.postId}`)
-    else if (item.actor?.id) navigate(`/profiles/${item.actor.id}`)
+  async function followBack(actorId) {
+    if (!actorId) return
+    await api.post(`/follows/${actorId}`, {}).catch(() => {})
   }
+
+  const hasUnread = items.some(i => !i.readAt)
+  const groups = groupItems(items)
 
   return (
-    <div>
-      <div className="sticky top-0 z-10 bg-black/85 backdrop-blur-md border-b border-dark-border px-4 py-4 flex items-center justify-between">
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.18em] text-dark-muted font-bold">Atividade</p>
-          <h1 className="font-bold text-2xl text-dark-text mt-1">Notificações</h1>
+    <div style={{ animation: 'fadeUp var(--dur-screen) var(--ease-out)' }}>
+      <AppBar
+        left={
+          <button
+            onClick={() => navigate(-1)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink)', display: 'flex', alignItems: 'center' }}
+          >
+            <Icon name="back" size={22} />
+          </button>
+        }
+        title="Avisos"
+        right={
+          hasUnread ? (
+            <button
+              onClick={markAllRead}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--accent)', fontWeight: 500 }}
+            >
+              Marcar lidas
+            </button>
+          ) : null
+        }
+      />
+
+      <div style={{ padding: '16px 20px 8px' }}>
+        <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)' }}>
+          Novidades do seu círculo. Tranquilo de propósito — sem contadores, sem ruído.
         </div>
-        {items.some(item => !item.readAt) && (
-          <button onClick={markAllRead} className="text-xs text-dark-muted hover:text-dark-text">Marcar lidas</button>
-        )}
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-16">
-          <div className="w-6 h-6 rounded-full border-2 border-brand-rose border-t-transparent animate-spin" />
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
+          <div className="w-5 h-5 rounded-full border-2 border-accent border-t-transparent animate-spin" />
         </div>
       ) : items.length === 0 ? (
-        <div className="py-16 text-center text-dark-muted text-sm">Nenhuma notificação ainda.</div>
+        <div style={{ padding: '48px 20px', textAlign: 'center', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-3)' }}>
+          Nenhum aviso ainda.
+        </div>
       ) : (
-        <div className="divide-y divide-dark-border/60">
-          {items.map(item => (
-            <button
-              key={item.id}
-              onClick={() => openNotification(item)}
-              className="w-full text-left px-4 py-4 hover:bg-dark-hover/40 transition-colors"
-            >
-              <div className="flex gap-3">
-                <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${item.readAt ? 'bg-dark-border' : 'bg-brand-rose'}`} />
-                <div className="min-w-0">
-                  <p className="text-dark-text text-sm leading-relaxed">{item.message}</p>
-                  <p className="text-dark-muted text-xs mt-1">{formatRelativeTime(item.createdAt)}</p>
+        <>
+          {Object.entries(groups).map(([label, groupItems]) => {
+            if (!groupItems.length) return null
+            return (
+              <div key={label} style={{ marginTop: 14 }}>
+                <div style={{ padding: '10px 20px 4px', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.12em', color: 'var(--ink-3)', textTransform: 'uppercase' }}>
+                  {label}
+                </div>
+                <div style={{ borderTop: '1px solid var(--line)' }}>
+                  {groupItems.map(item => (
+                    <NoticeRow key={item.id} item={item} onFollowBack={followBack} />
+                  ))}
                 </div>
               </div>
-            </button>
-          ))}
-        </div>
+            )
+          })}
+          <div style={{ padding: '26px 20px', textAlign: 'center', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 14.5, color: 'var(--ink-3)' }}>
+            Você está em dia.
+          </div>
+        </>
       )}
     </div>
   )
