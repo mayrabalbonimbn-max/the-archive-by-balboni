@@ -201,8 +201,8 @@ router.get('/following', async (req, res) => {
 router.get('/guide', async (req, res) => {
   try {
     const { rows: [sys] } = await pool.query(
-      'SELECT id FROM profiles WHERE handle = $1 AND is_system = true',
-      ['thearchive']
+      "SELECT id FROM profiles WHERE TRIM(LEADING '@' FROM LOWER(handle)) = 'thearchive' AND is_system = true",
+      []
     )
     if (!sys) return res.json([])
 

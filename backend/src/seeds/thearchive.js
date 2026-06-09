@@ -179,10 +179,9 @@ O Archive acompanha quem você está se tornando.`,
 
 async function seedTheArchive(pool) {
   try {
-    // Check if @thearchive exists
+    // Check if @thearchive exists (handle may be stored with or without @)
     const { rows: [existing] } = await pool.query(
-      'SELECT id FROM profiles WHERE handle = $1',
-      ['thearchive']
+      "SELECT id FROM profiles WHERE TRIM(LEADING '@' FROM LOWER(handle)) = 'thearchive' AND is_system = true"
     )
 
     const hash = await bcrypt.hash('thearchive123', 12)
