@@ -38,9 +38,15 @@
   --ease-out:   cubic-bezier(.22, 1, .36, 1);
   --dur-fast:   .18s;
   --dur-screen: .34s;
+  --dur-sheet:  .32s;
 
   --safe-top:    env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@keyframes sheetUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
 }
 
 /* ============================================================
