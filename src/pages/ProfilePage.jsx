@@ -208,15 +208,11 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
           {[
-            { to: '/projects',      emoji: '🌱', label: 'Projetos' },
-            { to: '/dashboard',     emoji: '📊', label: 'Dashboard' },
-            { to: '/achievements',  emoji: '🏆', label: 'Conquistas' },
-            { to: '/graph',         emoji: '🕸️', label: 'Graph' },
-            { to: '/growth',        emoji: '📈', label: 'Crescimento' },
-            { to: '/story',         emoji: '📖', label: 'Minha História' },
-            { to: '/messages',      emoji: '💬', label: 'Mensagens' },
-            { to: '/capsules',      emoji: '📦', label: 'Cápsulas' },
-            { to: '/settings',      emoji: '⚙️', label: 'Ajustes' },
+            { to: '/projects',    emoji: '🌱', label: 'Projetos' },
+            { to: '/trajetoria',  emoji: '📖', label: 'Trajetória' },
+            { to: '/messages',    emoji: '💬', label: 'Mensagens' },
+            { to: '/capsules',    emoji: '📦', label: 'Cápsulas' },
+            { to: '/settings',    emoji: '⚙️', label: 'Ajustes' },
           ].map(({ to, emoji, label }) => (
             <button
               key={to}

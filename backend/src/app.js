@@ -31,5 +31,6 @@ app.use('/api', require('./routes/attachments'))
 app.use('/api/stories', require('./routes/stories'))
 app.use('/api/capsules', require('./routes/capsules'))
 app.use('/api/projects', require('./routes/projects'))
+app.use('/api/conversations', require('./routes/conversations'))
 
 module.exports = app

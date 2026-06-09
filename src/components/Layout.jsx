@@ -27,8 +27,8 @@ export default function Layout({ children, profile, posts, searchQuery, onSearch
   }
 
   return (
-    <div className="min-h-screen bg-black flex justify-center overflow-x-hidden">
-      <div className="flex w-full max-w-[1280px] overflow-x-hidden">
+    <div className="min-h-screen bg-black flex justify-center overflow-x-clip">
+      <div className="flex w-full max-w-[1280px] overflow-x-clip">
         {/* Desktop sidebar */}
         <Sidebar profile={profile} onLogout={onLogout} onCompose={() => openCompose()} />
 

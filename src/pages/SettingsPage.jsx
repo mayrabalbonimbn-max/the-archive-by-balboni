@@ -16,6 +16,15 @@ function exportPostsAsJSON(posts) {
   URL.revokeObjectURL(url)
 }
 
+function DiagRow({ ok, label }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{ color: ok ? '#4ade80' : '#f87171', fontSize: 13 }}>{ok ? '✓' : '✗'}</span>
+      <span style={{ color: ok ? 'var(--ink-2)' : 'var(--ink-3)' }}>{label}</span>
+    </div>
+  )
+}
+
 // ── Shared field styles ────────────────────────────────────────────────────────
 const fieldLabel = {
   fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '0.12em',
@@ -108,12 +117,24 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
   const [pushSubscribed, setPushSubscribed] = useState(false)
   const [pushLoading, setPushLoading] = useState(false)
   const [pushMsg, setPushMsg] = useState('')
+  const [pushDiag, setPushDiag] = useState(null) // { swOk, permOk, subOk }
 
   useEffect(() => {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
+    const swOk = 'serviceWorker' in navigator
+    const permOk = Notification?.permission === 'granted'
+    if (!swOk || !('PushManager' in window)) {
+      setPushDiag({ swOk: false, permOk, subOk: false })
+      return
+    }
     navigator.serviceWorker.ready.then(reg => {
-      reg.pushManager.getSubscription().then(sub => setPushSubscribed(!!sub))
-    }).catch(() => {})
+      reg.pushManager.getSubscription().then(sub => {
+        const subOk = !!sub
+        setPushSubscribed(subOk)
+        setPushDiag({ swOk: true, permOk, subOk })
+      })
+    }).catch(() => {
+      setPushDiag({ swOk: true, permOk, subOk: false })
+    })
   }, [])
 
   async function handleEnablePush() {
@@ -389,6 +410,23 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
         {/* ── Notificações Push ── */}
         <div style={{ marginBottom: 40 }}>
           <SectionHead label="Notificações" />
+
+          {/* Diagnostic checklist */}
+          {pushDiag && (
+            <div style={{ marginBottom: 16, padding: '12px 14px', borderRadius: 10, border: '1px solid var(--line)', background: 'rgba(255,255,255,0.02)', fontFamily: 'var(--mono)', fontSize: 11.5, lineHeight: 1.9 }}>
+              <DiagRow ok={pushDiag.swOk} label="Service worker registrado" />
+              <DiagRow ok={pushDiag.permOk} label="Permissão de notificações concedida" />
+              <DiagRow ok={pushDiag.subOk} label="Subscription ativa (salva no servidor)" />
+              {!pushDiag.subOk && pushDiag.swOk && (
+                <div style={{ marginTop: 4, color: 'var(--ink-3)', fontSize: 11 }}>
+                  {!pushDiag.permOk
+                    ? 'No iOS: instale o app na tela inicial e então ative as notificações aqui.'
+                    : 'Clique em "Ativar notificações push" para criar a subscription.'}
+                </div>
+              )}
+            </div>
+          )}
+
           <div style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', marginBottom: 16 }}>
             {!('serviceWorker' in navigator) || !('PushManager' in window)
               ? 'Seu navegador não suporta push notifications.'
@@ -399,7 +437,7 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
               : 'Receba notificações no celular ou navegador quando alguém interagir com suas entradas.'}
           </div>
           {pushMsg && (
-            <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: pushMsg.includes('negad') || pushMsg.includes('não') ? '#f87171' : '#4ade80', marginBottom: 12 }}>
+            <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: pushMsg.startsWith('✓') ? '#4ade80' : '#f87171', marginBottom: 12 }}>
               {pushMsg}
             </div>
           )}
@@ -409,13 +447,16 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
                 setPushLoading(true)
                 setPushMsg('')
                 try {
-                  await sendTestPush()
-                  setPushMsg('Notificação de teste enviada! Verifique seu dispositivo.')
+                  const result = await sendTestPush()
+                  const detail = result.total != null
+                    ? ` (${result.sent}/${result.total} entregue${result.total !== 1 ? 's' : ''})`
+                    : ''
+                  setPushMsg(`✓ Push enviado${detail}. Verifique seu celular.`)
                 } catch (err) {
                   setPushMsg(err.message || 'Erro ao enviar notificação de teste.')
                 } finally {
                   setPushLoading(false)
-                  setTimeout(() => setPushMsg(''), 5000)
+                  setTimeout(() => setPushMsg(''), 7000)
                 }
               }} disabled={pushLoading}>
                 {pushLoading ? 'Enviando…' : 'Enviar notificação de teste'}

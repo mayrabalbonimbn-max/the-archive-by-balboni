@@ -356,3 +356,25 @@ CREATE INDEX IF NOT EXISTS idx_attachments_fts ON post_attachments USING GIN (
 CREATE INDEX IF NOT EXISTS idx_collections_fts ON collections USING GIN (
   to_tsvector('portuguese', name)
 );
+
+-- Direct messages
+CREATE TABLE IF NOT EXISTS conversations (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  profile_a    UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  profile_b    UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  created_at   TIMESTAMPTZ DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_conversations_pair
+  ON conversations (
+    LEAST(profile_a::text, profile_b::text),
+    GREATEST(profile_a::text, profile_b::text)
+  );
+
+CREATE TABLE IF NOT EXISTS direct_messages (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id  UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  sender_id        UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  content          TEXT NOT NULL,
+  created_at       TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_direct_messages_conv ON direct_messages(conversation_id, created_at);

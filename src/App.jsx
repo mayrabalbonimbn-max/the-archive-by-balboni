@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 
 // ── Always eager: shell + highest-traffic pages ────────────────────────────────
 import Layout from './components/Layout'
@@ -42,9 +42,9 @@ const GraphPage            = lazy(() => import('./pages/GraphPage'))
 const DashboardPage        = lazy(() => import('./pages/DashboardPage'))
 const YearReviewPage       = lazy(() => import('./pages/YearReviewPage'))
 const KnowledgePage        = lazy(() => import('./pages/KnowledgePage'))
-const GrowthPage           = lazy(() => import('./pages/GrowthPage'))
 const AchievementsPage     = lazy(() => import('./pages/AchievementsPage'))
 const StoryPage            = lazy(() => import('./pages/StoryPage'))
+const TrajetoriaPage       = lazy(() => import('./pages/TrajetoriaPage'))
 
 // ── Suspense fallback ──────────────────────────────────────────────────────────
 function PageLoader() {
@@ -124,9 +124,10 @@ function AuthenticatedApp({ onLogout }) {
             <Route path="/dashboard"        element={<DashboardPage />} />
             <Route path="/year-review/:year" element={<YearReviewPage />} />
             <Route path="/knowledge"        element={<KnowledgePage />} />
-            <Route path="/growth"           element={<GrowthPage />} />
+            <Route path="/growth"           element={<Navigate to="/story" replace />} />
             <Route path="/achievements"     element={<AchievementsPage />} />
             <Route path="/story"            element={<StoryPage />} />
+            <Route path="/trajetoria"       element={<TrajetoriaPage />} />
           </Routes>
         </Suspense>
       </Layout>

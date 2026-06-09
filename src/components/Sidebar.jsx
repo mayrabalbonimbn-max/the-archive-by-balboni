@@ -295,15 +295,8 @@ export default function Sidebar({ profile, onLogout, onCompose }) {
             SUA TRAJETÓRIA
           </div>
           <nav style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <DSidebarItem icon="grid"    label="Projetos"           active={isPath('/projects*')}        onClick={() => navigate('/projects')} />
-            <DSidebarItem icon="list"    label="Dashboard"          active={isPath('/dashboard')}        onClick={() => navigate('/dashboard')} />
-            <DSidebarItem icon="link"    label="Graph"              active={isPath('/graph')}            onClick={() => navigate('/graph')} />
-            <DSidebarItem icon="note"    label="Minha História"     active={isPath('/story')}            onClick={() => navigate('/story')} />
-            <DSidebarItem icon="sparkle" label="Conquistas"         active={isPath('/achievements')}     onClick={() => navigate('/achievements')} />
-            <DSidebarItem icon="pin"     label="Trajetória"         active={isPath('/growth')}           onClick={() => navigate('/growth')} />
-            <DSidebarItem icon="library" label="Conhecimento"       active={isPath('/knowledge')}        onClick={() => navigate('/knowledge')} />
-            <DSidebarItem icon="calendar" label="Mapa da Vida"      active={isPath('/life-map')}         onClick={() => navigate('/life-map')} />
-            <DSidebarItem icon="feather" label={`Retrospectiva ${new Date().getFullYear()}`} active={isPath('/year-review*')} onClick={() => navigate(`/year-review/${new Date().getFullYear()}`)} />
+            <DSidebarItem icon="grid"    label="Projetos"    active={isPath('/projects*')}    onClick={() => navigate('/projects')} />
+            <DSidebarItem icon="note"    label="Trajetória"  active={isPath('/trajetoria')}   onClick={() => navigate('/trajetoria')} />
           </nav>
 
           <div style={{ height: 16 }} />

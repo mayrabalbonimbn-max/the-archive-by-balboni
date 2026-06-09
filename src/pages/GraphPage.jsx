@@ -21,7 +21,7 @@ const FILTERS = [
   { id: 'code', label: 'Código' },
 ]
 
-export default function GraphPage() {
+export default function GraphPage({ panel = false }) {
   const navigate = useNavigate()
   const canvasRef = useRef(null)
   const rafRef = useRef(null)
@@ -290,8 +290,8 @@ export default function GraphPage() {
   const isMobile = window.innerWidth < 768
 
   return (
-    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: '#080810', position: 'relative' }}>
-      <AppBar
+    <div style={{ height: panel ? '100%' : '100dvh', display: 'flex', flexDirection: 'column', background: '#080810', position: 'relative' }}>
+      {!panel && <AppBar
         left={
           <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-3)', padding: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
             <Icon name="back" size={18} /> <span style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Voltar</span>
@@ -300,7 +300,7 @@ export default function GraphPage() {
         right={
           <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Grafo</span>
         }
-      />
+      />}
 
       {/* Filter bar — top on desktop, bottom on mobile */}
       <div style={{

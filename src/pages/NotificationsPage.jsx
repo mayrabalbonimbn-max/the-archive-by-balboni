@@ -55,7 +55,9 @@ function NoticeRow({ item, onFollowBack }) {
 
   function open() {
     if (isMemory) navigate('/memories')
-    else if (item.postId) navigate(`/articles/${item.postId}`)
+    else if (item.type === 'comment' && item.postId) navigate(`/posts/${item.postId}?comment=${item.commentId ?? ''}`)
+    else if (item.type === 'reply' && item.postId) navigate(`/posts/${item.postId}?comment=${item.commentId ?? ''}`)
+    else if (item.postId) navigate(`/posts/${item.postId}`)
     else if (item.actor?.id) navigate(`/profiles/${item.actor.id}`)
   }
 

@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { api } from '../utils/api'
 import { formatRelativeTime } from '../utils/helpers'
 
-export default function CommentsBox({ postId, initialCount = 0 }) {
-  const [open, setOpen] = useState(false)
+export default function CommentsBox({ postId, initialCount = 0, autoOpen = false, highlightId = null }) {
+  const [open, setOpen] = useState(autoOpen)
   const [comments, setComments] = useState([])
   const [content, setContent] = useState('')
   const [replyingTo, setReplyingTo] = useState(null)
@@ -13,6 +13,7 @@ export default function CommentsBox({ postId, initialCount = 0 }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [count, setCount] = useState(initialCount)
+  const commentRefs = useRef({})
 
   async function load() {
     setLoading(true)
@@ -27,6 +28,19 @@ export default function CommentsBox({ postId, initialCount = 0 }) {
       setLoading(false)
     }
   }
+
+  // Auto-open: load comments immediately on mount when directed from notification
+  useEffect(() => {
+    if (autoOpen) load()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Scroll to and highlight the target comment after comments load
+  useEffect(() => {
+    if (!highlightId || comments.length === 0) return
+    const el = commentRefs.current[highlightId]
+    if (!el) return
+    setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120)
+  }, [comments, highlightId])
 
   async function toggleOpen() {
     const next = !open
@@ -122,70 +136,87 @@ export default function CommentsBox({ postId, initialCount = 0 }) {
           {loading && <p style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)', padding: '4px 0' }}>Carregando…</p>}
           {error && <p style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#f7768e', padding: '4px 0' }}>{error}</p>}
 
-          {comments.map((comment, i) => (
-            <div key={comment.id} style={{ ...S.comment, borderTop: i === 0 ? 'none' : '1px solid var(--line)', paddingTop: i === 0 ? 4 : 10, marginTop: i === 0 ? 0 : 8 }}>
-              <p style={S.meta}>{comment.author.name} · {formatRelativeTime(comment.createdAt)}</p>
+          {comments.map((comment, i) => {
+            const isHighlighted = highlightId === comment.id
+            return (
+              <div
+                key={comment.id}
+                ref={el => { commentRefs.current[comment.id] = el }}
+                style={{
+                  ...S.comment,
+                  borderTop: i === 0 ? 'none' : '1px solid var(--line)',
+                  paddingTop: i === 0 ? 4 : 10,
+                  marginTop: i === 0 ? 0 : 8,
+                  ...(isHighlighted ? {
+                    outline: '1.5px solid var(--accent)',
+                    outlineOffset: 6,
+                    borderRadius: 6,
+                  } : {}),
+                }}
+              >
+                <p style={S.meta}>{comment.author.name} · {formatRelativeTime(comment.createdAt)}</p>
 
-              {editing?.kind === 'comment' && editing.id === comment.id ? (
-                <div style={S.row}>
-                  <input value={editContent} onChange={e => setEditContent(e.target.value)} style={{ ...S.input, flex: 1 }} />
-                  <button onClick={saveEdit} style={{ ...S.sendBtn, background: 'var(--surface-3)', color: 'var(--ink)' }}>Salvar</button>
+                {editing?.kind === 'comment' && editing.id === comment.id ? (
+                  <div style={S.row}>
+                    <input value={editContent} onChange={e => setEditContent(e.target.value)} style={{ ...S.input, flex: 1 }} />
+                    <button onClick={saveEdit} style={{ ...S.sendBtn, background: 'var(--surface-3)', color: 'var(--ink)' }}>Salvar</button>
+                  </div>
+                ) : (
+                  <p style={S.text}>{comment.content}</p>
+                )}
+
+                <div style={S.actions}>
+                  <button style={S.action} onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}>
+                    {replyingTo === comment.id ? 'Cancelar' : 'Responder'}
+                  </button>
+                  {comment.canEdit && (
+                    <>
+                      <button style={S.action} onClick={() => { setEditing({ kind: 'comment', id: comment.id }); setEditContent(comment.content) }}>Editar</button>
+                      <button style={{ ...S.action, color: '#f7768e' }} onClick={() => removeComment(comment.id)}>Excluir</button>
+                    </>
+                  )}
                 </div>
-              ) : (
-                <p style={S.text}>{comment.content}</p>
-              )}
 
-              <div style={S.actions}>
-                <button style={S.action} onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}>
-                  {replyingTo === comment.id ? 'Cancelar' : 'Responder'}
-                </button>
-                {comment.canEdit && (
-                  <>
-                    <button style={S.action} onClick={() => { setEditing({ kind: 'comment', id: comment.id }); setEditContent(comment.content) }}>Editar</button>
-                    <button style={{ ...S.action, color: '#f7768e' }} onClick={() => removeComment(comment.id)}>Excluir</button>
-                  </>
+                {comment.replies?.length > 0 && (
+                  <div style={S.replies}>
+                    {comment.replies.map(reply => (
+                      <div key={reply.id} style={S.reply}>
+                        <p style={S.meta}>{reply.author.name} · {formatRelativeTime(reply.createdAt)}</p>
+                        {editing?.kind === 'reply' && editing.id === reply.id ? (
+                          <div style={S.row}>
+                            <input value={editContent} onChange={e => setEditContent(e.target.value)} style={{ ...S.input, flex: 1 }} />
+                            <button onClick={saveEdit} style={{ ...S.sendBtn, background: 'var(--surface-3)', color: 'var(--ink)' }}>Salvar</button>
+                          </div>
+                        ) : (
+                          <p style={S.text}>{reply.content}</p>
+                        )}
+                        {reply.canEdit && (
+                          <div style={S.actions}>
+                            <button style={S.action} onClick={() => { setEditing({ kind: 'reply', id: reply.id }); setEditContent(reply.content) }}>Editar</button>
+                            <button style={{ ...S.action, color: '#f7768e' }} onClick={() => removeReply(reply.id)}>Excluir</button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {replyingTo === comment.id && (
+                  <div style={S.replyRow}>
+                    <input
+                      value={replyContent}
+                      onChange={e => setReplyContent(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') addReply(comment.id) }}
+                      placeholder={`Responder ${comment.author.name}…`}
+                      style={{ ...S.input, flex: 1 }}
+                      autoFocus
+                    />
+                    <button onClick={() => addReply(comment.id)} style={S.sendBtn} disabled={!replyContent.trim()}>Enviar</button>
+                  </div>
                 )}
               </div>
-
-              {comment.replies?.length > 0 && (
-                <div style={S.replies}>
-                  {comment.replies.map(reply => (
-                    <div key={reply.id} style={S.reply}>
-                      <p style={S.meta}>{reply.author.name} · {formatRelativeTime(reply.createdAt)}</p>
-                      {editing?.kind === 'reply' && editing.id === reply.id ? (
-                        <div style={S.row}>
-                          <input value={editContent} onChange={e => setEditContent(e.target.value)} style={{ ...S.input, flex: 1 }} />
-                          <button onClick={saveEdit} style={{ ...S.sendBtn, background: 'var(--surface-3)', color: 'var(--ink)' }}>Salvar</button>
-                        </div>
-                      ) : (
-                        <p style={S.text}>{reply.content}</p>
-                      )}
-                      {reply.canEdit && (
-                        <div style={S.actions}>
-                          <button style={S.action} onClick={() => { setEditing({ kind: 'reply', id: reply.id }); setEditContent(reply.content) }}>Editar</button>
-                          <button style={{ ...S.action, color: '#f7768e' }} onClick={() => removeReply(reply.id)}>Excluir</button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {replyingTo === comment.id && (
-                <div style={S.replyRow}>
-                  <input
-                    value={replyContent}
-                    onChange={e => setReplyContent(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') addReply(comment.id) }}
-                    placeholder={`Responder ${comment.author.name}…`}
-                    style={{ ...S.input, flex: 1 }}
-                    autoFocus
-                  />
-                  <button onClick={() => addReply(comment.id)} style={S.sendBtn} disabled={!replyContent.trim()}>Enviar</button>
-                </div>
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

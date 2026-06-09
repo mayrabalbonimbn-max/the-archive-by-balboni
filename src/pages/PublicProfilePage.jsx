@@ -26,6 +26,8 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [dmBusy, setDmBusy] = useState(false)
+  const [dmError, setDmError] = useState('')
   const mediaUrls = useRef({ avatar: null })
 
   async function load() {
@@ -72,10 +74,17 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
   }
 
   async function startConversation() {
+    if (dmBusy) return
+    setDmBusy(true)
+    setDmError('')
     try {
       const conv = await api.post('/conversations', { recipientId: profile.id })
       navigate(`/messages/${conv.id}`)
-    } catch {}
+    } catch (err) {
+      setDmError(err.message || 'Não foi possível abrir a conversa')
+    } finally {
+      setDmBusy(false)
+    }
   }
 
   if (loading) {
@@ -165,9 +174,22 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
           >
             {profile.isFollowing ? 'Seguindo' : 'Seguir'}
           </button>
-          <button onClick={startConversation} style={{ width: 48, borderRadius: 13, cursor: 'pointer', border: '1px solid var(--line-strong)', background: 'transparent', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="comment" size={18} />
+          <button
+            onClick={startConversation}
+            disabled={dmBusy}
+            style={{ width: 48, borderRadius: 13, cursor: dmBusy ? 'default' : 'pointer', border: '1px solid var(--line-strong)', background: 'transparent', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: dmBusy ? 0.5 : 1, transition: 'opacity 0.15s' }}
+          >
+            {dmBusy
+              ? <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid var(--ink-3)', borderTopColor: 'var(--accent)', animation: 'spin 0.7s linear infinite' }} />
+              : <Icon name="comment" size={18} />
+            }
           </button>
+        </div>
+      )}
+
+      {dmError && (
+        <div style={{ padding: '0 20px 12px', fontFamily: 'var(--mono)', fontSize: 11, color: '#f7768e' }}>
+          {dmError}
         </div>
       )}
 

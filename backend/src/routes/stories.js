@@ -28,7 +28,7 @@ const upload = multer({
   limits: { fileSize: 20 * 1024 * 1024, files: 1 },
   fileFilter(req, file, cb) {
     const ext = path.extname(file.originalname).toLowerCase()
-    if (!imageTypes[ext]) return cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE'))
+    if (!imageTypes[ext]) return cb(new Error('Formato não suportado. Use JPG, PNG ou WebP.'))
     file.canonicalMimeType = imageTypes[ext]
     cb(null, true)
   },
@@ -148,8 +148,19 @@ router.post('/', upload.single('file'), async (req, res) => {
   } catch (err) {
     if (req.file) fs.unlink(path.join(uploadDir, req.file.filename)).catch(() => {})
     console.error('POST /stories error:', err)
-    res.status(500).json({ error: 'Erro interno.' })
+    res.status(500).json({ error: err.message || 'Erro interno.' })
   }
+})
+
+// Multer error handler — must be 4-arg to be treated as error middleware by express
+// eslint-disable-next-line no-unused-vars
+router.use((err, req, res, next) => {
+  if (req.file) fs.unlink(path.join(uploadDir, req.file.filename)).catch(() => {})
+  const msg = err instanceof multer.MulterError
+    ? 'Erro no upload do arquivo.'
+    : err?.message || 'Erro interno.'
+  console.error('[stories upload error]', err)
+  res.status(400).json({ error: msg })
 })
 
 // GET /api/stories/:id/media

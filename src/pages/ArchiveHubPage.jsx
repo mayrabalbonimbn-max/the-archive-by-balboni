@@ -18,9 +18,6 @@ const SECTIONS = [
   { id: 'collections',  label: 'Coleções' },
   { id: 'library',      label: 'Arquivos' },
   { id: 'photography',  label: 'Fotos' },
-  { id: 'knowledge',    label: 'Conhecimento' },
-  { id: 'life-map',     label: 'Mapa da Vida' },
-  { id: 'year-review',  label: 'Retrospectiva' },
   { id: 'stories',      label: 'Stories' },
 ]
 
@@ -645,9 +642,6 @@ export default function ArchiveHubPage() {
     // These have dedicated, richer pages — navigate there directly
     if (s === 'library')      { navigate('/library'); return }
     if (s === 'photography')  { navigate('/photos');  return }
-    if (s === 'knowledge')    { navigate('/knowledge'); return }
-    if (s === 'life-map')     { navigate('/life-map'); return }
-    if (s === 'year-review')  { navigate(`/year-review/${new Date().getFullYear()}`); return }
     if (s === 'stories')      { navigate('/archive/stories'); return }
     setSearchParams({ s })
   }

@@ -51,16 +51,49 @@ router.delete('/subscribe', async (req, res) => {
 })
 
 router.post('/test', async (req, res) => {
+  const pid = req.user.profileId
+
+  // Check VAPID config first so the test gives a clear error instead of silently succeeding
+  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+    return res.status(503).json({
+      error: 'VAPID não configurado no servidor. Defina VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY e VAPID_SUBJECT no .env de produção.',
+    })
+  }
+
+  let subs
   try {
-    await sendPushToUser(req.user.profileId, {
+    const { rows } = await pool.query(
+      'SELECT id, endpoint FROM push_subscriptions WHERE profile_id = $1',
+      [pid]
+    )
+    subs = rows
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao buscar subscriptions: ' + err.message })
+  }
+
+  if (subs.length === 0) {
+    return res.status(400).json({
+      error: 'Nenhuma subscription encontrada. Ative as notificações push primeiro.',
+    })
+  }
+
+  try {
+    const result = await sendPushToUser(pid, {
       title: 'The Archive',
-      body: 'Notificações push estão funcionando! ✓',
+      body: 'Push funcionando! ✓',
       url: '/notifications',
       tag: 'push-test',
     })
-    res.json({ ok: true })
+    if (result.sent === 0 && result.failed > 0) {
+      return res.status(500).json({
+        error: `Push falhou nas ${result.failed} subscription(s). Veja os logs do servidor (pm2 logs) para detalhes.`,
+        subscriptions: subs.length,
+        ...result,
+      })
+    }
+    res.json({ ok: true, subscriptions: subs.length, ...result })
   } catch (err) {
-    console.error('push test error:', err)
+    console.error('[push] test error:', err)
     res.status(500).json({ error: err.message })
   }
 })

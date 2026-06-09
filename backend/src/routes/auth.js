@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
 const pool = require('../db')
+const { sendPushToUser } = require('../utils/push')
 
 const router = express.Router()
 const resetAttempts = new Map()
@@ -64,13 +65,24 @@ function databaseErrorResponse(err, res) {
 }
 
 async function notifyNetworkJoin(newProfile) {
-  await pool.query(
+  const { rows } = await pool.query(
     `INSERT INTO notifications (profile_id, actor_id, type, message)
      SELECT id, $1, 'join', $2
      FROM profiles
-     WHERE id != $1 AND password_hash IS NOT NULL`,
+     WHERE id != $1 AND password_hash IS NOT NULL
+     RETURNING profile_id`,
     [newProfile.id, `${newProfile.name} entrou no The Archive.`]
   )
+  // Fire push to each profile that received the notification (fire-and-forget).
+  // Only profiles with an active push subscription will actually receive anything.
+  for (const row of rows) {
+    sendPushToUser(row.profile_id, {
+      title: 'The Archive',
+      body: `${newProfile.name} entrou no The Archive.`,
+      url: '/notifications',
+      tag: `join-${newProfile.id}`,
+    }).catch(() => {})
+  }
 }
 
 // POST /api/auth/register

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { api } from '../utils/api'
 import { formatFullDate, TYPE_CONFIG, CATEGORIA_CONFIG } from '../utils/helpers'
 import PostAttachments from '../components/PostAttachments'
@@ -61,6 +61,8 @@ function countdown(unlockAt) {
 export default function PostDetailPage({ profile, onLike, onSave, onDelete }) {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const highlightCommentId = searchParams.get('comment') || null
   const [post, setPost] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -279,7 +281,7 @@ export default function PostDetailPage({ profile, onLike, onSave, onDelete }) {
           )}
         </div>
 
-        <CommentsBox postId={post.id} initialCount={post.commentCount} />
+        <CommentsBox postId={post.id} initialCount={post.commentCount} autoOpen={Boolean(highlightCommentId)} highlightId={highlightCommentId} />
       </article>
     </div>
   )
