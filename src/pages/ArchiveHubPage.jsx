@@ -590,15 +590,19 @@ export default function ArchiveHubPage() {
   const { profile } = useProfile()
 
   const section = searchParams.get('s') ?? 'overview'
-  function setSection(s) { setSearchParams({ s }) }
+
+  function setSection(s) {
+    // These have dedicated, richer pages — navigate there directly
+    if (s === 'library')     { navigate('/library'); return }
+    if (s === 'photography') { navigate('/photos');  return }
+    setSearchParams({ s })
+  }
 
   const SectionBody = {
     overview:    () => <OverviewSection profile={profile} />,
     memories:    () => <MemoriesSection />,
     calendar:    () => <CalendarSection />,
     collections: () => <CollectionsSection />,
-    library:     () => <LibrarySection />,
-    photography: () => <PhotographySection />,
   }[section] ?? (() => <OverviewSection profile={profile} />)
 
   return (

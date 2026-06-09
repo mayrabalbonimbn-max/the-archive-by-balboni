@@ -431,6 +431,15 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
           )}
         </div>
 
+        {/* ── Estatísticas ── */}
+        <div style={{ marginBottom: 40 }}>
+          <SectionHead label="Estatísticas" />
+          <div style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', marginBottom: 16 }}>
+            Veja um resumo do seu uso e do seu arquivo ao longo do tempo.
+          </div>
+          <OutlineBtn onClick={() => navigate('/stats')}>Ver estatísticas</OutlineBtn>
+        </div>
+
         {/* ── Sessão ── */}
         <div style={{ marginBottom: 40 }}>
           <SectionHead label="Sessão" />
