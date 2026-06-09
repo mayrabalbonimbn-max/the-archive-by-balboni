@@ -1,185 +1,154 @@
 const bcrypt = require('bcryptjs')
 
-const GUIDE_POSTS = [
+const SHOWCASE_POSTS = [
+  // ── notas / pensamentos ──────────────────────────────────────────────────────
+
   {
-    content: `Bem-vinda ao Archive.
+    content: `primeiro registro.
 
-Aqui você guarda o que importa — pensamentos, projetos, fotos, ensaios, código. Tudo no mesmo lugar, organizado do jeito que funciona para você.
+não é pra ninguém ver — é pra mim daqui a um ano lembrar de quando isso era só uma ideia solta num caderno.`,
+    type: 'pensamento',
+    categoria: 'memória',
+  },
 
-Explore à vontade.`,
+  {
+    content: `descobri que escrevo melhor quando não tô tentando impressionar ninguém.
+
+talvez seja por isso que esse lugar funciona pra mim.`,
     type: 'pensamento',
     categoria: 'reflexão',
   },
-  {
-    content: `Para escrever uma nota: toque em ⊕ ou pressione N.
 
-Escolha o tipo — pensamento, ideia, diário — e escreva. A entrada fica privada por padrão. Você decide quem vê: só você, seus amigos ou o Archive todo.`,
+  {
+    content: `acordei às 6h sem motivo. fiquei olhando o teto uns vinte minutos e pensei em tudo que ainda não comecei.
+
+escrevi aqui em vez de ficar rolando o feed. foi melhor.`,
+    type: 'diário',
+    categoria: 'observação',
+    is_diary: true,
+  },
+
+  {
+    content: `três projetos abertos ao mesmo tempo.
+
+nenhum terminado. todos importantes. escolher qual continuar é a parte que ninguém ensina.`,
     type: 'pensamento',
-    categoria: 'aprendizado',
+    categoria: 'reflexão',
   },
+
   {
-    content: `Ensaios têm espaço próprio aqui.
+    content: `relí uma nota que escrevi há oito meses sobre um projeto que abandonei.
 
-Ative "Ensaio" no compose para escrever com título e corpo longo. Suporte a Markdown: **negrito**, *itálico*, # títulos, \`\`\`código\`\`\`.
-
-Publique quando estiver pronto — ou deixe no arquivo para sempre.`,
-    type: 'ensaio',
-    categoria: 'aprendizado',
-    is_article: true,
-    article_title: 'Como escrever um ensaio',
+estranhei a versão de mim que acreditava tão certo naquilo. não de um jeito triste — de um jeito de: olha quanta coisa aconteceu desde então.`,
+    type: 'pensamento',
+    categoria: 'memória',
   },
+
   {
-    content: `Fotos ficam no seu arquivo visual.
+    content: `guardei um story hoje só porque o céu tava absurdo.
 
-Ao criar uma entrada, toque no ícone de clipe e escolha uma imagem. O Archive gera miniaturas automaticamente e organiza tudo em /fotos.
-
-Adicione título e descrição se quiser contextualizar o momento.`,
+some do feed amanhã, mas fica comigo pra sempre — que é o ponto.`,
     type: 'pensamento',
     categoria: 'observação',
   },
-  {
-    content: `PDFs, imagens, arquivos — tudo cabe em uma entrada.
 
-Toque no ícone de clipe ao escrever e escolha o arquivo. Fica armazenado com segurança no seu archive. Você pode adicionar título e descrição a cada anexo para encontrar mais tarde.`,
+  {
+    content: `às vezes o ato de registrar muda o que aconteceu.
+
+escrevo "foi um dia difícil" e percebo que não foi — foi um dia cheio. as palavras exatas importam.`,
+    type: 'pensamento',
+    categoria: 'reflexão',
+  },
+
+  {
+    content: `escrevi uma cápsula hoje pra abrir daqui um ano.
+
+não vou lembrar o que escrevi. é esse o ponto — deixar algo pra me surpreender quando eu for uma pessoa um pouco diferente.`,
+    type: 'pensamento',
+    categoria: 'memória',
+  },
+
+  {
+    content: `em algum momento parei de curtir o twitter — não de uma vez, foi saindo aos poucos.
+
+o problema não era o conteúdo. era eu verificando curtidas como se fossem algum tipo de prova de que eu existia.`,
+    type: 'pensamento',
+    categoria: 'reflexão',
+  },
+
+  {
+    content: `li isso e fiquei pensando o dia inteiro: "os melhores produtos nascem de quem resolve a própria dor."
+
+é o que eu quero lembrar quando perder a fé no que tô construindo.
+
+https://paulgraham.com/startupideas.html`,
     type: 'pensamento',
     categoria: 'aprendizado',
+    link_preview: {
+      url: 'https://paulgraham.com/startupideas.html',
+      title: 'How to Get Startup Ideas',
+      description: 'The way to get startup ideas is not to try to think of startup ideas. It\'s to look for problems, preferably problems you have yourself.',
+      image: null,
+      siteName: 'paulgraham.com',
+    },
   },
+
+  // ── código ───────────────────────────────────────────────────────────────────
+
   {
-    content: `O Archive tem um sandbox embutido.
-
-Escreva código em Python, JavaScript ou HTML e rode direto no app — sem abrir terminal. Perfeito para testar snippets, scripts e experimentos rápidos.
-
-Escolha o tipo "Código" ao criar uma entrada e ative o modo sandbox.`,
+    content: `travei meia hora num bug idiota de encoding. quando rodou, quis registrar — porque mês que vem vou esquecer que já foi difícil.`,
     type: 'código',
     categoria: 'aprendizado',
+    code_language: 'python',
+    code_content: `def limpar_texto(texto):
+    return texto.encode('utf-8', errors='ignore').decode('utf-8').strip()
+
+# simples. mas eu não sabia. agora sei.`,
   },
+
   {
-    content: `Categorias dão contexto ao que você escreve.
-
-Além do tipo de entrada, marque com uma categoria: reflexão, aprendizado, decisão, memória, observação, meta.
-
-O Archive usa isso para organizar e descobrir padrões no seu arquivo ao longo do tempo.`,
-    type: 'pensamento',
+    content: `sempre esqueço como escrever debounce. sempre pesquiso de novo. agora tá aqui.`,
+    type: 'código',
     categoria: 'aprendizado',
+    code_language: 'javascript',
+    code_content: `const debounce = (fn, ms) => {
+  let timer
+  return (...args) => {
+    clearTimeout(timer)
+    timer = setTimeout(() => fn(...args), ms)
+  }
+}`,
   },
+
+  // ── ensaios ──────────────────────────────────────────────────────────────────
+
   {
-    content: `/projetos é o seu espaço de trabalho.
+    content: `guardo coisas que não tenho com quem dividir. não porque sejam secretas — às vezes só porque não quero diluir antes de entender.
 
-Crie um projeto, adicione descrição, status e tags. Vincule entradas diretamente a ele. O Archive mostra o progresso ao longo do tempo — tudo o que você escreveu, criou e aprendeu naquele contexto.`,
-    type: 'pensamento',
-    categoria: 'aprendizado',
-  },
-  {
-    content: `Em cada projeto você pode registrar marcos e aprendizados.
+há uma diferença entre processar sozinha e guardar. processar é transitório. guardar é dizer: isso importou.
 
-Marcos são conquistas com data — o dia que lançou, que terminou, que decidiu. Aprendizados são insights que você quer guardar separado do diário geral.
-
-Acesse em /projetos → seu projeto → aba Marcos.`,
-    type: 'pensamento',
-    categoria: 'aprendizado',
-  },
-  {
-    content: `Cápsulas do tempo são entradas que só abrem no futuro.
-
-Escreva para a versão de você daqui a 6 meses, 1 ano, 5 anos. Defina a data de abertura. O Archive bloqueia o conteúdo até lá.
-
-Acesse em /cápsulas.`,
-    type: 'pensamento',
-    categoria: 'memória',
-  },
-  {
-    content: `O Archive guarda tudo com carimbo de data.
-
-Em /memórias você vê entradas antigas em modo "neste dia, há X anos". Em /hoje você tem a visão diária com contexto. Em /calendário, a navegação temporal completa.
-
-A linha do tempo é sua.`,
-    type: 'pensamento',
-    categoria: 'memória',
-  },
-  {
-    content: `Tags conectam ideias entre si.
-
-Use #tag ao escrever para categorizar. Use [[título]] para linkar uma entrada a outra. O grafo em /trajetória → Conexões mostra como tudo se relaciona visualmente.
-
-Backlinks funcionam como hiperlinks do seu pensamento.`,
-    type: 'pensamento',
-    categoria: 'aprendizado',
-  },
-  {
-    content: `O Graph é o mapa do que você pensou.
-
-Em /trajetória → Conexões você vê um grafo interativo de entradas, projetos e tags. Cada nó é algo que você criou. As arestas são as conexões que você fez.
-
-Zoom in e explore.`,
-    type: 'pensamento',
-    categoria: 'observação',
-  },
-  {
-    content: `Busca global: ⌘K ou Ctrl+K.
-
-Pesquise entradas, arquivos, pessoas, artigos — tudo de uma vez. A busca entende texto, título, tag e nome. É a forma mais rápida de navegar pelo seu arquivo.
-
-Também disponível em /explorar.`,
-    type: 'pensamento',
-    categoria: 'aprendizado',
-  },
-  {
-    content: `Cada entrada tem sua própria audiência.
-
-Privado: só você vê. Amigos: visível para quem você adicionou. Público: qualquer pessoa no Archive pode ver.
-
-Você pode mudar a visibilidade a qualquer momento — antes ou depois de publicar.`,
-    type: 'pensamento',
-    categoria: 'aprendizado',
-  },
-  {
-    content: `Entradas públicas e de amigos aceitam comentários.
-
-Toque em "Comentar" abaixo de uma entrada. Você pode responder comentários, editar e excluir os seus. O autor da entrada recebe uma notificação.
-
-Conversas acontecem no contexto do que foi escrito.`,
-    type: 'pensamento',
-    categoria: 'aprendizado',
-  },
-  {
-    content: `Além de curtir, o Archive tem reações com intenção.
-
-♥ Coração — gostei. ✦ Faísca — me inspirou. 💾 Salvar — quero reler. Também: Inspirador, Aprendizado, Código, Fotografia.
-
-Cada reação é um sinal diferente. Use o que faz mais sentido para o que você está sentindo.`,
-    type: 'pensamento',
-    categoria: 'aprendizado',
-  },
-  {
-    content: `Mensagens diretas ficam em /mensagens.
-
-Envie uma mensagem privada para qualquer pessoa. A conversa fica salva e é acessível só para vocês dois. Sem algoritmo, sem feed público — só conversa.`,
-    type: 'pensamento',
-    categoria: 'aprendizado',
-  },
-  {
-    content: `Stories duram 24 horas — mas ficam arquivados.
-
-Crie um story de texto ou foto para compartilhar algo do momento. Depois das 24h ele some do feed de histórias, mas você acessa tudo em /arquivo → Stories.
-
-Seu story é sua memória efêmera que não some de verdade.`,
-    type: 'pensamento',
-    categoria: 'memória',
-  },
-  {
-    content: `Trajetória é o seu painel de progresso.
-
-Em /trajetória você vê: Narrativa (como você escreve sobre si), Marcos (conquistas em linha do tempo), Números (posts, dias ativos, sequências), Conexões (grafo) e Retrospectiva (revisão por ano).
-
-O Archive acompanha quem você está se tornando.`,
-    type: 'pensamento',
+esse lugar é pra o que importou.`,
+    type: 'ensaio',
     categoria: 'reflexão',
+    is_article: true,
+    article_title: 'o que guardo',
+  },
+
+  {
+    content: `não foi uma decisão dramática. foi acumulando: a sensação de que cada coisa que eu escrevia virava imediatamente uma questão de alcance.
+
+um pensamento incompleto tem valor. mas o feed não deixa nada ser incompleto — ele transforma tudo em declaração pública, em performance de quem você quer parecer.
+
+aqui escrevo antes de saber o que acho. isso muda tudo.`,
+    type: 'ensaio',
+    categoria: 'reflexão',
+    is_article: true,
+    article_title: 'por que saí do twitter',
   },
 ]
 
 async function seedTheArchive(pool) {
   try {
-    // Check if @thearchive exists (handle may be stored with or without @)
     const { rows: [existing] } = await pool.query(
       "SELECT id FROM profiles WHERE TRIM(LEADING '@' FROM LOWER(handle)) = 'thearchive' AND is_system = true"
     )
@@ -194,19 +163,18 @@ async function seedTheArchive(pool) {
         `INSERT INTO profiles (name, handle, bio, is_system, onboarding_completed, password_hash)
          VALUES ($1, $2, $3, true, true, $4)
          RETURNING id`,
-        ['The Archive', '@thearchive', 'Guia silencioso do Archive.', hash]
+        ['The Archive', '@thearchive', 'um lugar para guardar o que importa.', hash]
       )
       profileId = created.id
       console.log('✓ @thearchive profile created')
     }
 
-    // Always sync handle format, password_hash and is_system (idempotent)
     await pool.query(
-      "UPDATE profiles SET is_system = true, password_hash = $2, handle = '@thearchive' WHERE id = $1",
+      "UPDATE profiles SET is_system = true, password_hash = $2, handle = '@thearchive', bio = 'um lugar para guardar o que importa.' WHERE id = $1",
       [profileId, hash]
     )
 
-    // Create posts that don't exist yet — keyed by first 60 chars of content
+    // Idempotent: key by first 60 chars of content
     const { rows: existing_posts } = await pool.query(
       'SELECT LEFT(content, 60) AS key FROM posts WHERE profile_id = $1',
       [profileId]
@@ -214,27 +182,32 @@ async function seedTheArchive(pool) {
     const existingKeys = new Set(existing_posts.map(r => r.key.trim()))
 
     let created = 0
-    for (const post of GUIDE_POSTS) {
+    for (const post of SHOWCASE_POSTS) {
       const key = post.content.trim().slice(0, 60)
       if (existingKeys.has(key)) continue
 
       await pool.query(
         `INSERT INTO posts
-           (profile_id, content, type, is_private, visibility, categoria, is_article, article_title)
-         VALUES ($1, $2, $3, false, 'public', $4, $5, $6)`,
+           (profile_id, content, type, is_private, is_diary, visibility, categoria,
+            is_article, article_title, code_language, code_content, link_preview)
+         VALUES ($1, $2, $3, false, $4, 'public', $5, $6, $7, $8, $9, $10)`,
         [
           profileId,
           post.content,
           post.type,
+          post.is_diary || false,
           post.categoria || null,
           post.is_article || false,
           post.article_title || null,
+          post.code_language || null,
+          post.code_content || null,
+          post.link_preview ? JSON.stringify(post.link_preview) : null,
         ]
       )
       created++
     }
 
-    if (created > 0) console.log(`✓ @thearchive: ${created} guide posts created`)
+    if (created > 0) console.log(`✓ @thearchive: ${created} showcase posts created`)
   } catch (err) {
     console.error('✗ @thearchive seed failed:', err.message)
   }

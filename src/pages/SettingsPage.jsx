@@ -268,7 +268,7 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
         title="Ajustes"
       />
 
-      <div style={{ maxWidth: 560, margin: '0 auto', padding: '24px 20px 80px' }}>
+      <div style={{ maxWidth: 560, margin: '0 auto', padding: '24px 20px', paddingBottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}>
 
         {/* ── Perfil ── */}
         <div style={{ marginBottom: 40 }}>

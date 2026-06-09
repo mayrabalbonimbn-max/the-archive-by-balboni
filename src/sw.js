@@ -3,6 +3,10 @@ import { registerRoute } from 'workbox-routing'
 import { CacheFirst } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 
+// Activate new SW immediately — prevents browser mode from getting stuck on old cached code
+self.addEventListener('install', () => self.skipWaiting())
+self.addEventListener('activate', e => e.waitUntil(clients.claim()))
+
 cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
 
