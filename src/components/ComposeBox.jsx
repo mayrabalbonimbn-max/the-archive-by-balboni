@@ -12,11 +12,15 @@ import Chip from './ui/Chip'
 const MAX_IMAGE_SIZE = 25 * 1024 * 1024
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp']
-const ALLOWED_EXTENSIONS = ['py', 'md', 'pdf', ...IMAGE_EXTENSIONS]
+const ALLOWED_EXTENSIONS = [
+  ...IMAGE_EXTENSIONS,
+  'pdf', 'py', 'md', 'markdown',
+  'js', 'jsx', 'ts', 'tsx', 'html', 'css', 'json', 'sql', 'sh', 'bash', 'txt',
+]
 
 function validateFile(file) {
   const ext = file.name.split('.').pop()?.toLowerCase()
-  if (!ALLOWED_EXTENSIONS.includes(ext)) return 'Formato inválido. Use PY, MD, PDF, JPG, PNG ou WebP.'
+  if (!ALLOWED_EXTENSIONS.includes(ext)) return 'Formato inválido. Use PDF, imagens (JPG, PNG, WebP), Markdown, Python ou código (JS, TS, HTML, CSS, JSON, SQL, SH, TXT).'
   const isImage = IMAGE_EXTENSIONS.includes(ext)
   const limit = isImage ? MAX_IMAGE_SIZE : MAX_FILE_SIZE
   if (file.size > limit) {
@@ -47,8 +51,8 @@ const PRIVACY = [
 const FILE_ACCEPT = {
   photo:    'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp',
   pdf:      'application/pdf,.pdf',
-  markdown: 'text/markdown,.md',
-  code:     'text/x-python,.py',
+  markdown: 'text/markdown,.md,.markdown',
+  code:     '.py,.js,.jsx,.ts,.tsx,.html,.css,.json,.sql,.sh,.bash,.txt',
 }
 
 function useIsDesktop() {

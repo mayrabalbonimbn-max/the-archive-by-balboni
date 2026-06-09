@@ -26,7 +26,7 @@ export default function Layout({ children, profile, posts, searchQuery, onSearch
         <Sidebar profile={profile} onLogout={onLogout} onCompose={() => setComposeOpen(true)} />
 
         {/* Main content — pb-24 on mobile clears the fixed TabBar */}
-        <main className="flex-1 min-w-0 border-x border-dark-border pb-24 md:pb-0">
+        <main style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }} className="flex-1 min-w-0 border-x border-dark-border pb-24 md:pb-0">
           {children}
         </main>
 

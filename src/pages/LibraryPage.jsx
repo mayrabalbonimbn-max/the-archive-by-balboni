@@ -9,20 +9,23 @@ const FILE_TYPES = [
   { key: 'pdf', label: 'PDFs' },
   { key: 'markdown', label: 'Markdown' },
   { key: 'python', label: 'Python' },
+  { key: 'code', label: 'Código' },
 ]
 
 const FILE_META = {
-  image: { label: 'Imagem', badge: 'IMG', color: 'text-fuchsia-300', bg: 'bg-fuchsia-400/10' },
-  pdf: { label: 'PDF', badge: 'PDF', color: 'text-red-300', bg: 'bg-red-400/10' },
-  markdown: { label: 'Markdown', badge: 'MD', color: 'text-sky-300', bg: 'bg-sky-400/10' },
-  python: { label: 'Python', badge: 'PY', color: 'text-blue-300', bg: 'bg-blue-400/10' },
+  image:    { label: 'Imagem',   badge: 'IMG',  color: 'text-fuchsia-300', bg: 'bg-fuchsia-400/10' },
+  pdf:      { label: 'PDF',      badge: 'PDF',  color: 'text-red-300',     bg: 'bg-red-400/10' },
+  markdown: { label: 'Markdown', badge: 'MD',   color: 'text-sky-300',     bg: 'bg-sky-400/10' },
+  python:   { label: 'Python',   badge: 'PY',   color: 'text-blue-300',    bg: 'bg-blue-400/10' },
+  code:     { label: 'Código',   badge: 'CODE', color: 'text-yellow-300',  bg: 'bg-yellow-400/10' },
 }
 
 const FALLBACK_TITLES = {
-  image: 'Imagem da biblioteca',
-  pdf: 'Documento PDF',
+  image:    'Imagem da biblioteca',
+  pdf:      'Documento PDF',
   markdown: 'Nota em Markdown',
-  python: 'Script Python',
+  python:   'Script Python',
+  code:     'Arquivo de código',
 }
 
 function formatSize(size) {
@@ -82,7 +85,7 @@ function previewLines(text, type) {
     .split('\n')
     .map(line => line.trimEnd())
     .filter(line => line.trim())
-    .slice(0, type === 'python' ? 5 : 4)
+    .slice(0, (type === 'python' || type === 'code') ? 5 : 4)
 
   if (type === 'markdown') {
     return lines.map(line => line.replace(/^#{1,6}\s*/, '').replace(/^[-*]\s+/, ''))
@@ -117,7 +120,8 @@ function ImagePreview({ file, title, onOpen }) {
   return (
     <button
       type="button"
-      onClick={() => url && onOpen(url)}
+      onClick={() => onOpen(file)}
+      style={{ touchAction: 'manipulation' }}
       className="block aspect-[4/3] w-full overflow-hidden bg-dark-hover"
       aria-label={`Abrir ${title}`}
     >
@@ -127,6 +131,59 @@ function ImagePreview({ file, title, onOpen }) {
         <div className="h-full w-full animate-pulse bg-dark-hover" />
       )}
     </button>
+  )
+}
+
+function ExifTag({ label, value }) {
+  return (
+    <span className="inline-flex items-center gap-1 text-[11px] text-dark-muted bg-dark-hover rounded px-2 py-0.5">
+      <span className="text-dark-muted/60">{label}</span>
+      <span className="text-dark-text/70">{value}</span>
+    </span>
+  )
+}
+
+function ImageLightbox({ file, onClose }) {
+  const url = useAttachmentUrl(file.id, 'view')
+  const exif = file.exifData
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/92 backdrop-blur-sm flex flex-col items-center justify-center p-4 gap-3"
+      style={{ touchAction: 'none' }}
+      onClick={onClose}
+    >
+      <button
+        style={{ touchAction: 'manipulation' }}
+        className="absolute top-4 right-4 text-white bg-black/70 rounded-full px-3 py-2 text-sm"
+        onClick={onClose}
+      >
+        Fechar
+      </button>
+      {url ? (
+        <img
+          src={url}
+          alt={file.originalName || 'Imagem'}
+          className="max-w-full max-h-[75vh] rounded-lg object-contain"
+          onClick={e => e.stopPropagation()}
+        />
+      ) : (
+        <div className="w-16 h-16 rounded-full border-2 border-brand-rose border-t-transparent animate-spin" />
+      )}
+      {exif && (
+        <div className="flex flex-wrap gap-2 justify-center max-w-lg" onClick={e => e.stopPropagation()}>
+          {exif.camera && <ExifTag label="câmera" value={exif.camera} />}
+          {exif.lens && <ExifTag label="lente" value={exif.lens} />}
+          {exif.focalLength && <ExifTag label="focal" value={exif.focalLength} />}
+          {exif.aperture && <ExifTag label="abertura" value={exif.aperture} />}
+          {exif.shutterSpeed && <ExifTag label="velocidade" value={exif.shutterSpeed} />}
+          {exif.iso && <ExifTag label="ISO" value={exif.iso} />}
+          {exif.dateTaken && <ExifTag label="data" value={exif.dateTaken} />}
+        </div>
+      )}
+      <p className="text-dark-muted text-xs" onClick={e => e.stopPropagation()}>
+        {file.originalName} · {formatSize(file.size)}
+      </p>
+    </div>
   )
 }
 
@@ -159,7 +216,7 @@ function TextPreview({ file }) {
     return <p className="mt-4 text-sm text-dark-muted">Sem preview disponível.</p>
   }
 
-  if (file.fileType === 'python') {
+  if (file.fileType === 'python' || file.fileType === 'code') {
     return (
       <pre className="mt-4 max-h-32 overflow-hidden rounded-lg bg-black/45 border border-dark-border/70 px-3 py-2 text-[11px] leading-relaxed text-dark-text/80 font-mono">
         <code>{lines.join('\n')}</code>
@@ -186,14 +243,15 @@ function DocumentPreview({ file }) {
       </div>
       <div>
         <p className={`text-[11px] font-bold uppercase tracking-[0.14em] ${meta.color}`}>{meta.label}</p>
-        <p className="mt-1 text-xs text-dark-muted">{file.fileType === 'python' ? 'Código com preview' : file.fileType === 'markdown' ? 'Texto com preview' : 'Ícone e título'}</p>
+        <p className="mt-1 text-xs text-dark-muted">{(file.fileType === 'python' || file.fileType === 'code') ? 'Código com preview' : file.fileType === 'markdown' ? 'Texto com preview' : 'Ícone e título'}</p>
       </div>
     </div>
   )
 }
 
-function LibraryCard({ file, onOpenImage, onOpenText }) {
+function LibraryCard({ file, onOpenImage, onOpenText, onError }) {
   const [downloading, setDownloading] = useState(false)
+  const [opening, setOpening] = useState(false)
   const title = displayTitle(file)
   const meta = FILE_META[file.fileType] || FILE_META.markdown
 
@@ -208,16 +266,24 @@ function LibraryCard({ file, onOpenImage, onOpenText }) {
       a.download = downloadName(file)
       a.click()
       setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (err) {
+      onError?.(err.message || 'Erro ao baixar arquivo.')
     } finally {
       setDownloading(false)
     }
   }
 
   async function handleView() {
+    if (opening) return
+    setOpening(true)
     try {
       const text = await viewFile(file)
       if (text !== null && text !== undefined) onOpenText({ file, content: text })
-    } catch {}
+    } catch (err) {
+      onError?.(err.message || 'Não foi possível abrir o arquivo.')
+    } finally {
+      setOpening(false)
+    }
   }
 
   return (
@@ -225,7 +291,13 @@ function LibraryCard({ file, onOpenImage, onOpenText }) {
       {file.fileType === 'image' ? (
         <ImagePreview file={file} title={title} onOpen={onOpenImage} />
       ) : (
-        <button type="button" onClick={handleView} className="block w-full text-left">
+        <button
+          type="button"
+          onClick={handleView}
+          disabled={opening}
+          style={{ touchAction: 'manipulation' }}
+          className="block w-full text-left disabled:opacity-60"
+        >
           <DocumentPreview file={file} />
         </button>
       )}
@@ -239,11 +311,11 @@ function LibraryCard({ file, onOpenImage, onOpenText }) {
             </p>
           </div>
           <span className={`shrink-0 rounded px-2 py-1 text-[10px] font-bold ${meta.color} ${meta.bg}`}>
-            {meta.badge}
+            {file.fileType === 'code' ? ((file.originalName || '').match(/\.([a-z0-9]+)$/i)?.[1]?.toUpperCase() || 'CODE') : meta.badge}
           </span>
         </div>
 
-        {(file.fileType === 'markdown' || file.fileType === 'python') && <TextPreview file={file} />}
+        {(file.fileType === 'markdown' || file.fileType === 'python' || file.fileType === 'code') && <TextPreview file={file} />}
         {file.fileType === 'pdf' && (
           <p className="mt-4 text-sm text-dark-text/70 line-clamp-2">
             {file.articleTitle || humanizePostContent(file.postContent) || 'Documento salvo na biblioteca.'}
@@ -258,14 +330,14 @@ function LibraryCard({ file, onOpenImage, onOpenText }) {
         <div className="mt-4 flex items-center justify-between gap-2 border-t border-dark-border/60 pt-3">
           <span className="text-xs text-dark-muted">{meta.label}</span>
           <div className="flex items-center gap-2">
-            {file.fileType !== 'image' && (
-              <button
-                onClick={handleView}
-                className="inline-flex items-center gap-1.5 rounded-full border border-dark-border px-3 py-1.5 text-xs font-medium text-brand-rose hover:bg-brand-rose/10 transition-colors"
-              >
-                Abrir
-              </button>
-            )}
+            <button
+              onClick={file.fileType === 'image' ? () => onOpenImage(file) : handleView}
+              disabled={opening}
+              style={{ touchAction: 'manipulation' }}
+              className="inline-flex items-center gap-1.5 rounded-full border border-dark-border px-3 py-1.5 text-xs font-medium text-brand-rose hover:bg-brand-rose/10 transition-colors disabled:opacity-60"
+            >
+              {opening ? 'Abrindo…' : 'Abrir'}
+            </button>
             <button
               onClick={handleDownload}
               disabled={downloading}
@@ -285,8 +357,9 @@ function LibraryCard({ file, onOpenImage, onOpenText }) {
   )
 }
 
-function LibraryListItem({ file, onOpenImage, onOpenText }) {
+function LibraryListItem({ file, onOpenImage, onOpenText, onError }) {
   const [downloading, setDownloading] = useState(false)
+  const [opening, setOpening] = useState(false)
   const title = displayTitle(file)
   const meta = FILE_META[file.fileType] || FILE_META.markdown
 
@@ -301,42 +374,60 @@ function LibraryListItem({ file, onOpenImage, onOpenText }) {
       a.download = downloadName(file)
       a.click()
       setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (err) {
+      onError?.(err.message || 'Erro ao baixar arquivo.')
     } finally {
       setDownloading(false)
     }
   }
 
   async function handleView() {
+    if (opening) return
+    setOpening(true)
     try {
       const text = await viewFile(file)
       if (text !== null && text !== undefined) onOpenText({ file, content: text })
-    } catch {}
+    } catch (err) {
+      onError?.(err.message || 'Não foi possível abrir o arquivo.')
+    } finally {
+      setOpening(false)
+    }
   }
 
   return (
     <article className="flex gap-3 border-b border-dark-border/60 px-4 py-3 hover:bg-dark-hover/30 transition-colors">
-      <div
-        className="w-16 h-16 rounded-lg overflow-hidden border border-dark-border bg-dark-card shrink-0 cursor-pointer"
-        onClick={file.fileType === 'image' ? undefined : handleView}
+      <button
+        type="button"
+        style={{ touchAction: 'manipulation' }}
+        className="w-16 h-16 rounded-lg overflow-hidden border border-dark-border bg-dark-card shrink-0 cursor-pointer p-0"
+        onClick={file.fileType === 'image' ? () => onOpenImage(file) : handleView}
       >
         {file.fileType === 'image' ? (
           <ImagePreview file={file} title={title} onOpen={onOpenImage} />
         ) : (
           <div className={`${meta.color} h-full flex items-center justify-center`}><FileIcon type={file.fileType} /></div>
         )}
-      </div>
+      </button>
       <div className="min-w-0 flex-1">
         <h2 className="text-dark-text text-sm font-semibold truncate">{title}</h2>
         <p className="text-dark-muted text-xs mt-1 truncate">{meta.label} · {formatSize(file.size)} · {formatRelativeTime(file.createdAt)}</p>
         <p className="text-dark-text/60 text-xs mt-1 line-clamp-1">{file.description || file.articleTitle || humanizePostContent(file.postContent) || file.originalName}</p>
       </div>
       <div className="self-center flex gap-2">
-        {file.fileType !== 'image' && (
-          <button onClick={handleView} className="rounded-full border border-dark-border px-3 py-1.5 text-xs text-brand-rose hover:bg-brand-rose/10">
-            Abrir
-          </button>
-        )}
-        <button onClick={handleDownload} disabled={downloading} className="rounded-full border border-dark-border px-3 py-1.5 text-xs text-dark-text hover:bg-dark-hover disabled:opacity-40">
+        <button
+          onClick={file.fileType === 'image' ? () => onOpenImage(file) : handleView}
+          disabled={opening}
+          style={{ touchAction: 'manipulation' }}
+          className="rounded-full border border-dark-border px-3 py-1.5 text-xs text-brand-rose hover:bg-brand-rose/10 disabled:opacity-60"
+        >
+          {opening ? '…' : 'Abrir'}
+        </button>
+        <button
+          onClick={handleDownload}
+          disabled={downloading}
+          style={{ touchAction: 'manipulation' }}
+          className="rounded-full border border-dark-border px-3 py-1.5 text-xs text-dark-text hover:bg-dark-hover disabled:opacity-40"
+        >
           Baixar
         </button>
       </div>
@@ -346,25 +437,34 @@ function LibraryListItem({ file, onOpenImage, onOpenText }) {
 
 async function viewFile(file) {
   if (file.fileType === 'image') return
-  const windowRef = file.fileType === 'pdf' ? window.open('', '_blank') : null
-  try {
-    const blob = await attachmentBlob(file.id)
-    if (file.fileType === 'python' || file.fileType === 'markdown') {
-      return blob.text()
+
+  if (file.fileType === 'pdf') {
+    // Pre-open blank window synchronously — required so iOS doesn't block the popup.
+    // If it returns null (popup blocker active), fall back to download.
+    const windowRef = window.open('', '_blank')
+    try {
+      const blob = await attachmentBlob(file.id)
+      const url = URL.createObjectURL(blob)
+      if (windowRef) {
+        windowRef.opener = null
+        windowRef.location = url
+      } else {
+        const a = document.createElement('a')
+        a.href = url
+        a.download = file.originalName || 'documento.pdf'
+        a.click()
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } catch (err) {
+      windowRef?.close()
+      throw err
     }
-    const url = URL.createObjectURL(blob)
-    if (windowRef) {
-      windowRef.opener = null
-      windowRef.location = url
-    } else {
-      window.open(url, '_blank', 'noopener,noreferrer')
-    }
-    setTimeout(() => URL.revokeObjectURL(url), 60_000)
     return null
-  } catch (err) {
-    windowRef?.close()
-    throw err
   }
+
+  // Text / code / markdown / python — return content for modal display
+  const blob = await attachmentBlob(file.id)
+  return blob.text()
 }
 
 export default function LibraryPage() {
@@ -374,7 +474,7 @@ export default function LibraryPage() {
   const [activeType, setActiveType] = useState('all')
   const [viewMode, setViewMode] = useState('gallery')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [imageUrl, setImageUrl] = useState(null)
+  const [openFile, setOpenFile] = useState(null)
   const [textModal, setTextModal] = useState(null)
   const [viewError, setViewError] = useState('')
 
@@ -400,7 +500,7 @@ export default function LibraryPage() {
 
   return (
     <div>
-      <div className="sticky top-0 z-10 bg-black/85 backdrop-blur-md border-b border-dark-border px-4 py-4">
+      <div style={{ position: 'sticky', top: 'env(safe-area-inset-top, 0px)', zIndex: 10 }} className="bg-black/85 backdrop-blur-md border-b border-dark-border px-4 py-4">
         <div className="mb-4">
           <p className="text-[11px] uppercase tracking-[0.18em] text-dark-muted font-bold">Acervo pessoal</p>
           <h1 className="font-bold text-2xl text-dark-text mt-1">Biblioteca</h1>
@@ -453,25 +553,20 @@ export default function LibraryPage() {
           {viewMode === 'gallery' ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {files.map(file => (
-                <LibraryCard key={file.id} file={file} onOpenImage={setImageUrl} onOpenText={setTextModal} />
+                <LibraryCard key={file.id} file={file} onOpenImage={setOpenFile} onOpenText={setTextModal} onError={msg => { setViewError(msg); setTimeout(() => setViewError(''), 5000) }} />
               ))}
             </div>
           ) : (
             <div className="border border-dark-border rounded-lg overflow-hidden bg-dark-card">
               {files.map(file => (
-                <LibraryListItem key={file.id} file={file} onOpenImage={setImageUrl} onOpenText={setTextModal} />
+                <LibraryListItem key={file.id} file={file} onOpenImage={setOpenFile} onOpenText={setTextModal} onError={msg => { setViewError(msg); setTimeout(() => setViewError(''), 5000) }} />
               ))}
             </div>
           )}
         </section>
       )}
 
-      {imageUrl && (
-        <div className="fixed inset-0 z-50 bg-black/92 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setImageUrl(null)}>
-          <button className="absolute top-4 right-4 text-white bg-black/70 rounded-full px-3 py-2" onClick={() => setImageUrl(null)}>Fechar</button>
-          <img src={imageUrl} alt="Imagem da biblioteca" className="max-w-full max-h-[90vh] rounded-lg object-contain" onClick={event => event.stopPropagation()} />
-        </div>
-      )}
+      {openFile && <ImageLightbox file={openFile} onClose={() => setOpenFile(null)} />}
 
       {textModal && (
         <div className="fixed inset-0 z-50 bg-black/92 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setTextModal(null)}>

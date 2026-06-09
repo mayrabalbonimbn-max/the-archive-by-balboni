@@ -146,6 +146,7 @@ pre code { color: #e6edf3; }
   button {
     font-family: 'Hanken Grotesk', system-ui, sans-serif;
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
 
   input::placeholder, textarea::placeholder { color: var(--ink-3); opacity: 1; }

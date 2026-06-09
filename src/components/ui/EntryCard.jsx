@@ -64,7 +64,7 @@ export default function EntryCard({ post, showAuthor = true, onLike, onSave, hai
   // Use correct API field names (fileType, originalName — NOT kind/filename)
   const images = post.attachments?.filter(a => a.fileType === 'image') ?? []
   const pdfs   = post.attachments?.filter(a => a.fileType === 'pdf') ?? []
-  const texts  = post.attachments?.filter(a => a.fileType === 'markdown' || a.fileType === 'python') ?? []
+  const texts  = post.attachments?.filter(a => a.fileType === 'markdown' || a.fileType === 'python' || a.fileType === 'code') ?? []
   const hasCode = !!post.codeBlock?.code
 
   function openDetail(e) {
@@ -177,8 +177,8 @@ export default function EntryCard({ post, showAuthor = true, onLike, onSave, hai
             border: '1px solid var(--line-strong)', background: 'rgba(255,255,255,0.02)',
           }}
         >
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: att.fileType === 'python' ? '#7AA2F7' : '#73DACA', background: att.fileType === 'python' ? 'rgba(122,162,247,0.15)' : 'rgba(115,218,202,0.15)', padding: '4px 7px', borderRadius: 6 }}>
-            {att.fileType === 'python' ? 'PY' : 'MD'}
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: att.fileType === 'python' ? '#7AA2F7' : att.fileType === 'code' ? '#E5C07B' : '#73DACA', background: att.fileType === 'python' ? 'rgba(122,162,247,0.15)' : att.fileType === 'code' ? 'rgba(229,192,123,0.15)' : 'rgba(115,218,202,0.15)', padding: '4px 7px', borderRadius: 6 }}>
+            {att.fileType === 'python' ? 'PY' : att.fileType === 'markdown' ? 'MD' : (att.originalName || '').match(/\.([a-z0-9]+)$/i)?.[1]?.toUpperCase() || 'FILE'}
           </div>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
             {att.originalName || att.title || 'Arquivo'}

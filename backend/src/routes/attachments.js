@@ -25,13 +25,25 @@ const THUMB_QUALITY = 80
 const OPT_QUALITY = 85
 
 const allowed = {
-  '.py': { mimeType: 'text/x-python; charset=utf-8', fileType: 'python' },
-  '.md': { mimeType: 'text/markdown; charset=utf-8', fileType: 'markdown' },
-  '.pdf': { mimeType: 'application/pdf', fileType: 'pdf' },
-  '.jpg': { mimeType: 'image/jpeg', fileType: 'image' },
-  '.jpeg': { mimeType: 'image/jpeg', fileType: 'image' },
-  '.png': { mimeType: 'image/png', fileType: 'image' },
-  '.webp': { mimeType: 'image/webp', fileType: 'image' },
+  '.py':       { mimeType: 'text/x-python; charset=utf-8',   fileType: 'python' },
+  '.md':       { mimeType: 'text/markdown; charset=utf-8',    fileType: 'markdown' },
+  '.markdown': { mimeType: 'text/markdown; charset=utf-8',    fileType: 'markdown' },
+  '.pdf':      { mimeType: 'application/pdf',                 fileType: 'pdf' },
+  '.jpg':      { mimeType: 'image/jpeg',                      fileType: 'image' },
+  '.jpeg':     { mimeType: 'image/jpeg',                      fileType: 'image' },
+  '.png':      { mimeType: 'image/png',                       fileType: 'image' },
+  '.webp':     { mimeType: 'image/webp',                      fileType: 'image' },
+  '.js':       { mimeType: 'text/javascript; charset=utf-8',  fileType: 'code' },
+  '.jsx':      { mimeType: 'text/javascript; charset=utf-8',  fileType: 'code' },
+  '.ts':       { mimeType: 'text/typescript; charset=utf-8',  fileType: 'code' },
+  '.tsx':      { mimeType: 'text/typescript; charset=utf-8',  fileType: 'code' },
+  '.html':     { mimeType: 'text/html; charset=utf-8',        fileType: 'code' },
+  '.css':      { mimeType: 'text/css; charset=utf-8',         fileType: 'code' },
+  '.json':     { mimeType: 'application/json; charset=utf-8', fileType: 'code' },
+  '.sql':      { mimeType: 'text/plain; charset=utf-8',       fileType: 'code' },
+  '.sh':       { mimeType: 'text/plain; charset=utf-8',       fileType: 'code' },
+  '.bash':     { mimeType: 'text/plain; charset=utf-8',       fileType: 'code' },
+  '.txt':      { mimeType: 'text/plain; charset=utf-8',       fileType: 'code' },
 }
 
 function attachmentJson(row) {
@@ -63,7 +75,7 @@ async function removeUploadedFiles(files = []) {
 async function hasValidContent(file) {
   const data = await fs.readFile(file.path)
   if (file.fileType === 'pdf') return data.subarray(0, 5).toString() === '%PDF-'
-  if (file.fileType === 'python' || file.fileType === 'markdown') return !data.includes(0)
+  if (file.fileType === 'python' || file.fileType === 'markdown' || file.fileType === 'code') return !data.includes(0)
   if (file.canonicalMimeType === 'image/jpeg') return data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff
   if (file.canonicalMimeType === 'image/png') return data.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
   if (file.canonicalMimeType === 'image/webp') return data.subarray(0, 4).toString() === 'RIFF' && data.subarray(8, 12).toString() === 'WEBP'
@@ -220,7 +232,7 @@ router.post('/posts/:id/attachments', requireAuth, ownedPost, (req, res) => {
         ? 'Arquivo muito grande. Imagens: máx. 25 MB. PDFs e scripts: máx. 10 MB.'
         : err.code === 'LIMIT_FILE_COUNT'
           ? 'Máximo de 3 anexos por post.'
-          : 'Tipo de arquivo inválido. Use PY, MD, PDF, JPG, PNG ou WebP.'
+          : 'Tipo de arquivo inválido. Use PDF, imagens (JPG, PNG, WebP), Markdown (MD), Python (PY) ou código (JS, TS, HTML, CSS, JSON, SQL, SH, TXT).'
       return res.status(400).json({ error: message })
     }
 

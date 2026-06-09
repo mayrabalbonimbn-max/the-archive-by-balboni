@@ -27,6 +27,7 @@ router.get('/', async (req, res) => {
     const result = await pool.query(
       `SELECT
          a.id, a.post_id, a.original_name, a.title, a.description, a.mime_type, a.size, a.file_type, a.visibility, a.created_at,
+         a.thumbnail_path, a.optimized_path, a.exif_data,
          p.content AS post_content, p.created_at AS post_created_at,
          p.is_article, p.article_title
        FROM post_attachments a
@@ -47,6 +48,9 @@ router.get('/', async (req, res) => {
       fileType: row.file_type,
       visibility: row.visibility,
       createdAt: row.created_at,
+      hasThumbnail: !!row.thumbnail_path,
+      hasOptimized: !!row.optimized_path,
+      exifData: row.exif_data || null,
       postContent: row.post_content,
       postCreatedAt: row.post_created_at,
       isArticle: row.is_article,

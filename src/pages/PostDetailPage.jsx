@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { api } from '../utils/api'
 import { formatFullDate, TYPE_CONFIG } from '../utils/helpers'
 import PostAttachments from '../components/PostAttachments'
@@ -81,9 +81,10 @@ export default function PostDetailPage({ profile, onLike, onSave, onDelete }) {
 
   return (
     <div>
-      <div className="sticky top-0 z-10 bg-black/80 backdrop-blur-md border-b border-dark-border px-4 py-3 flex items-center gap-3">
+      <div style={{ position: 'sticky', top: 'env(safe-area-inset-top, 0px)', zIndex: 10 }} className="bg-black/80 backdrop-blur-md border-b border-dark-border px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => navigate(-1)}
+          style={{ touchAction: 'manipulation' }}
           className="text-dark-muted hover:text-dark-text transition-colors p-1 -ml-1 rounded-full hover:bg-dark-hover"
         >
           <BackIcon />
@@ -134,9 +135,9 @@ export default function PostDetailPage({ profile, onLike, onSave, onDelete }) {
         {post.tags?.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-6">
             {post.tags.map(tag => (
-              <a key={tag} href={`/tags/${tag}`} className="text-[12px] font-mono text-brand-rose/70 hover:text-brand-rose border border-brand-rose/20 rounded-md px-2 py-0.5 hover:bg-brand-rose/5 transition-colors">
+              <Link key={tag} to={`/tags/${tag}`} style={{ touchAction: 'manipulation' }} className="text-[12px] font-mono text-brand-rose/70 hover:text-brand-rose border border-brand-rose/20 rounded-md px-2 py-0.5 hover:bg-brand-rose/5 transition-colors">
                 #{tag}
-              </a>
+              </Link>
             ))}
           </div>
         )}
@@ -159,6 +160,7 @@ export default function PostDetailPage({ profile, onLike, onSave, onDelete }) {
               onLike?.(post.id)
               setPost(p => ({ ...p, liked: !p.liked, likeCount: p.liked ? p.likeCount - 1 : p.likeCount + 1 }))
             }}
+            style={{ touchAction: 'manipulation' }}
             className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all duration-200 text-sm font-medium ${post.liked ? 'border-brand-rose bg-brand-rose/10 text-brand-rose' : 'border-dark-border text-dark-muted hover:border-brand-rose hover:text-brand-rose'}`}
           >
             <HeartIcon filled={post.liked} />
@@ -169,6 +171,7 @@ export default function PostDetailPage({ profile, onLike, onSave, onDelete }) {
               onSave?.(post.id)
               setPost(p => ({ ...p, saved: !p.saved }))
             }}
+            style={{ touchAction: 'manipulation' }}
             className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all duration-200 text-sm font-medium ${post.saved ? 'border-brand-rose bg-brand-rose/10 text-brand-rose' : 'border-dark-border text-dark-muted hover:border-brand-rose hover:text-brand-rose'}`}
           >
             <BookmarkIcon filled={post.saved} />
@@ -182,6 +185,7 @@ export default function PostDetailPage({ profile, onLike, onSave, onDelete }) {
                   navigate(-1)
                 }
               }}
+              style={{ touchAction: 'manipulation' }}
               className="ml-auto text-dark-muted hover:text-red-400 transition-colors text-sm"
             >
               Excluir

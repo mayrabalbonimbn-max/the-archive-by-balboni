@@ -6,7 +6,7 @@ function PhotoTile({ photo, onOpen }) {
   const thumb = useAttachmentUrl(photo.id, photo.hasThumbnail ? 'thumbnail' : 'view')
   const title = photo.title || photo.articleTitle || photo.originalName || 'Fotografia'
   return (
-    <button onClick={() => thumb && onOpen(photo)} className="group aspect-square rounded-lg overflow-hidden border border-dark-border bg-dark-card text-left">
+    <button onClick={() => onOpen(photo)} style={{ touchAction: 'manipulation' }} className="group aspect-square rounded-lg overflow-hidden border border-dark-border bg-dark-card text-left">
       {thumb ? <img src={thumb} alt={title} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform" /> : <div className="w-full h-full animate-pulse bg-dark-hover" />}
     </button>
   )
@@ -38,7 +38,7 @@ export default function PhotosPage() {
 
   return (
     <div>
-      <div className="sticky top-0 z-10 bg-black/85 backdrop-blur-md border-b border-dark-border px-4 py-4">
+      <div style={{ position: 'sticky', top: 'env(safe-area-inset-top, 0px)', zIndex: 10 }} className="bg-black/85 backdrop-blur-md border-b border-dark-border px-4 py-4">
         <p className="text-[11px] uppercase tracking-[0.18em] text-dark-muted font-bold">Arquivo visual</p>
         <h1 className="font-bold text-2xl text-dark-text mt-1">Fotografias</h1>
       </div>
@@ -52,7 +52,7 @@ export default function PhotosPage() {
         </div>
       )}
       {open && (
-        <div className="fixed inset-0 z-50 bg-black/92 backdrop-blur-sm flex flex-col items-center justify-center p-4 gap-3" onClick={() => setOpen(null)}>
+        <div className="fixed inset-0 z-50 bg-black/92 backdrop-blur-sm flex flex-col items-center justify-center p-4 gap-3" style={{ touchAction: 'none' }} onClick={() => setOpen(null)}>
           <button className="absolute top-4 right-4 text-white bg-black/70 rounded-full px-3 py-2 text-sm" onClick={() => setOpen(null)}>Fechar</button>
           <LightboxImage photo={open} />
           {exif && (

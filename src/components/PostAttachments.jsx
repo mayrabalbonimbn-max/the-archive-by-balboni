@@ -6,6 +6,14 @@ function formatSize(size) {
   return size >= 1024 * 1024 ? `${(size / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.ceil(size / 1024))} KB`
 }
 
+function fileExtBadge(attachment) {
+  if (attachment.fileType === 'pdf') return 'PDF'
+  if (attachment.fileType === 'markdown') return 'MD'
+  if (attachment.fileType === 'python') return 'PY'
+  const m = (attachment.originalName || '').match(/\.([a-z0-9]+)$/i)
+  return m ? m[1].toUpperCase() : 'FILE'
+}
+
 async function downloadAttachment(attachment) {
   const blob = await attachmentBlob(attachment.id, 'download')
   const url = URL.createObjectURL(blob)
@@ -55,7 +63,7 @@ export default function PostAttachments({ attachments = [] }) {
     const windowRef = attachment.fileType === 'pdf' ? window.open('', '_blank') : null
     try {
       const blob = await attachmentBlob(attachment.id)
-      if (attachment.fileType === 'python' || attachment.fileType === 'markdown') {
+      if (attachment.fileType === 'python' || attachment.fileType === 'markdown' || attachment.fileType === 'code') {
         setTextModal({ attachment, content: await blob.text() })
         return
       }
@@ -86,7 +94,7 @@ export default function PostAttachments({ attachments = [] }) {
         <div className="mt-2.5 space-y-2">
           {files.map(attachment => (
             <div key={attachment.id} className="flex items-center gap-3 border border-dark-border/60 bg-dark-hover/30 rounded-xl px-3 py-2.5">
-              <span className="text-brand-rose text-[11px] font-bold uppercase w-8">{attachment.fileType === 'markdown' ? 'MD' : attachment.fileType === 'python' ? 'PY' : 'PDF'}</span>
+              <span className="text-brand-rose text-[11px] font-bold uppercase w-8">{fileExtBadge(attachment)}</span>
               <div className="min-w-0 flex-1">
                 <p className="text-dark-text text-sm truncate">{attachment.originalName}</p>
                 <p className="text-dark-muted text-xs">{formatSize(attachment.size)}</p>
