@@ -342,3 +342,6 @@ CREATE TABLE IF NOT EXISTS project_learnings (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_project_learnings_project ON project_learnings(project_id);
+
+-- Post categoria (semantic nature of the content)
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS categoria VARCHAR(40) DEFAULT NULL;

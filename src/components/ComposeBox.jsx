@@ -9,6 +9,38 @@ import { useCollections } from '../hooks/useCollections'
 import Icon from './ui/Icon'
 import Chip from './ui/Chip'
 
+// ── Categoria detection ────────────────────────────────────────────────────────
+
+export const CATEGORIAS = [
+  { id: 'pensamento',  label: 'Pensamento',  color: '#E86CB4' },
+  { id: 'reflexão',    label: 'Reflexão',    color: '#6C98E8' },
+  { id: 'ideia',       label: 'Ideia',       color: '#82D96C' },
+  { id: 'aprendizado', label: 'Aprendizado', color: '#6CE8C8' },
+  { id: 'decisão',     label: 'Decisão',     color: '#E8A86C' },
+  { id: 'observação',  label: 'Observação',  color: '#A86CE8' },
+  { id: 'memória',     label: 'Memória',     color: '#E8D06C' },
+  { id: 'citação',     label: 'Citação',     color: '#A0A0A0' },
+  { id: 'meta',        label: 'Meta',        color: '#6CE882' },
+]
+
+function detectCategoria(text) {
+  if (!text || text.trim().length < 15) return null
+  const t = text.toLowerCase().trim()
+  const words = t.split(/\s+/).filter(Boolean).length
+
+  if (/^["«"'"]/.test(t) || /[—–]\s+[a-záéíóúâêîôûãõç]/i.test(t)) return 'citação'
+  if (/\b(aprendi|descobri|entendi|resolvi o|consegui resolver|bug|erro que|funcionou|não funcionava|a solução foi|sintaxe|algoritmo|framework|biblioteca|instalei|configurei|descoberta|lição aprendida)\b/.test(t)) return 'aprendizado'
+  if (/\b(e se |tive uma ideia|ideia:|poderia (ser|fazer|criar|virar)|seria interessante|quero criar|quero fazer|que tal |imagina se|e se eu|tenho uma ideia)\b/.test(t)) return 'ideia'
+  if (/\b(decidi|resolvi que|escolhi|vou parar|a partir de agora|não vou mais|vou começar a|tomei a decisão|optei por|decidi que)\b/.test(t)) return 'decisão'
+  if (/\b(objetivo|minha meta|meu objetivo|meta:|quero chegar|em \d+ (dias|semanas|meses)|até (dezembro|janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro)|daqui a)\b/.test(t)) return 'meta'
+  if (/\b(lembro|lembrei|me lembro de|quando eu tinha|naquela época|foi o dia|anos atrás|meses atrás|hoje faz|voltei a pensar|aquela vez|de repente lembrei)\b/.test(t)) return 'memória'
+  if (/\b(notei|percebi que|é interessante como|curioso|coincidência|incrível como|fascinante|me surpreendeu|impressionante que|estranho que|nunca tinha percebido|só agora percebi)\b/.test(t)) return 'observação'
+  if (/\b(me pergunto|será que|por que eu|não sei se|começo a entender|fico pensando|tenho pensado|às vezes me|me faz pensar|comecei a pensar|cada vez mais|tenho a sensação)\b/.test(t)) return 'reflexão'
+  if (words > 60) return 'reflexão'
+  if (words <= 25) return 'pensamento'
+  return 'reflexão'
+}
+
 const MAX_IMAGE_SIZE = 25 * 1024 * 1024
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp']
@@ -89,6 +121,10 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
   const [tagSuggestions, setTagSuggestions] = useState([])
   const [mentionUsers, setMentionUsers] = useState([])
   const [mentionQuery, setMentionQuery] = useState(null)
+  const [categoria, setCategoria] = useState(null)
+  const [categoriaManual, setCategoriaManual] = useState(false)
+  const [categoriaPicker, setCategoriaPicker] = useState(false)
+  const categoriaTimerRef = useRef(null)
   const fileInputRef = useRef(null)
   const titleRef = useRef(null)
   const bodyRef = useRef(null)
@@ -155,6 +191,16 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
 
   useEffect(() => { titleRef.current?.focus() }, [])
 
+  // Auto-detect categoria from body text (debounced, skips if user already chose manually)
+  useEffect(() => {
+    if (categoriaManual) return
+    clearTimeout(categoriaTimerRef.current)
+    categoriaTimerRef.current = setTimeout(() => {
+      setCategoria(detectCategoria(body))
+    }, 400)
+    return () => clearTimeout(categoriaTimerRef.current)
+  }, [body, categoriaManual])
+
   function openFilePicker() {
     if (fileInputRef.current) {
       fileInputRef.current.accept = FILE_ACCEPT[entryType] || ''
@@ -218,6 +264,7 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
         unlockAt: isCapsule ? unlockAt : undefined,
         projectId: projectId || undefined,
         parentMemoryPostId: parentMemoryPostId || undefined,
+        categoria: categoria || undefined,
       })
       onClose?.()
     } catch (err) {
@@ -475,6 +522,87 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
               )}
             </>
           )}
+          {/* Categoria chip — auto-detected, user can override */}
+          {!isFile && categoria && (() => {
+            const cat = CATEGORIAS.find(c => c.id === categoria)
+            if (!cat) return null
+            return (
+              <div style={{ position: 'relative', marginTop: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => setCategoriaPicker(p => !p)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '5px 11px 5px 9px', borderRadius: 999, cursor: 'pointer',
+                    border: `1px solid ${cat.color}44`,
+                    background: `${cat.color}12`,
+                    fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.06em',
+                    color: cat.color,
+                    transition: 'background .15s, border-color .15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = `${cat.color}20`; e.currentTarget.style.borderColor = `${cat.color}88` }}
+                  onMouseLeave={e => { e.currentTarget.style.background = `${cat.color}12`; e.currentTarget.style.borderColor = `${cat.color}44` }}
+                >
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill={categoriaManual ? cat.color : 'none'} stroke={cat.color} strokeWidth="1.4" style={{ flexShrink: 0 }}>
+                    <circle cx="5" cy="5" r="4" />
+                  </svg>
+                  {cat.label}
+                  {!categoriaManual && (
+                    <span style={{ opacity: 0.5, fontSize: 10 }}>· auto</span>
+                  )}
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ marginLeft: 1, opacity: 0.6 }}>
+                    <polyline points="2,3.5 5,6.5 8,3.5" />
+                  </svg>
+                </button>
+
+                {categoriaPicker && (
+                  <>
+                    {/* Close on outside click */}
+                    <div
+                      style={{ position: 'fixed', inset: 0, zIndex: 59 }}
+                      onClick={() => setCategoriaPicker(false)}
+                    />
+                    <div style={{
+                      position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, zIndex: 60,
+                      background: 'var(--surface-2)', border: '1px solid var(--line-strong)',
+                      borderRadius: 14, padding: '10px 10px 8px',
+                      boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+                      display: 'flex', flexDirection: 'column', gap: 2, minWidth: 190,
+                    }}>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.14em', color: 'var(--ink-3)', padding: '0 6px 6px', borderBottom: '1px solid var(--line)' }}>
+                        NATUREZA DO REGISTRO
+                      </div>
+                      <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        {CATEGORIAS.map(c => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => { setCategoria(c.id); setCategoriaManual(true); setCategoriaPicker(false) }}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 8,
+                              padding: '8px 10px', borderRadius: 8, cursor: 'pointer',
+                              border: 'none', textAlign: 'left', width: '100%',
+                              background: categoria === c.id ? `${c.color}18` : 'transparent',
+                              transition: 'background .12s',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = `${c.color}18`}
+                            onMouseLeave={e => e.currentTarget.style.background = categoria === c.id ? `${c.color}18` : 'transparent'}
+                          >
+                            <svg width="8" height="8" viewBox="0 0 8 8" fill={categoria === c.id ? c.color : 'none'} stroke={c.color} strokeWidth="1.5" style={{ flexShrink: 0 }}>
+                              <circle cx="4" cy="4" r="3" />
+                            </svg>
+                            <span style={{ fontFamily: 'var(--sans)', fontSize: 13, color: categoria === c.id ? c.color : 'var(--ink-2)', fontWeight: categoria === c.id ? 500 : 400 }}>
+                              {c.label}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )
+          })()}
         </div>
 
         {/* Link preview */}

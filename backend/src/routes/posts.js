@@ -249,7 +249,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   const client = await pool.connect()
   try {
-    const { content, type, isDiary, isPrivate, visibility, hasAttachments, codeBlock, isArticle, articleTitle, collectionId, tags, linkPreview, isTimeCapsule, unlockAt, projectId, parentMemoryPostId } = req.body
+    const { content, type, isDiary, isPrivate, visibility, hasAttachments, codeBlock, isArticle, articleTitle, collectionId, tags, linkPreview, isTimeCapsule, unlockAt, projectId, parentMemoryPostId, categoria } = req.body
 
     const cleanContent = (content || '').trim()
     const cleanCode = typeof codeBlock?.code === 'string' ? codeBlock.code.trimEnd() : ''
@@ -314,9 +314,12 @@ router.post('/', async (req, res) => {
       if (!isNaN(d.getTime()) && d > new Date()) cleanUnlockAt = d.toISOString()
     }
 
+    const VALID_CATEGORIAS = new Set(['pensamento','reflexão','ideia','aprendizado','decisão','observação','memória','citação','meta'])
+    const cleanCategoria = typeof categoria === 'string' && VALID_CATEGORIAS.has(categoria) ? categoria : null
+
     const result = await client.query(
-      `INSERT INTO posts (profile_id, content, type, is_diary, is_private, visibility, code_language, code_content, is_article, article_title, collection_id, link_preview, is_time_capsule, unlock_at, project_id, parent_memory_post_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      `INSERT INTO posts (profile_id, content, type, is_diary, is_private, visibility, code_language, code_content, is_article, article_title, collection_id, link_preview, is_time_capsule, unlock_at, project_id, parent_memory_post_id, categoria)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
        RETURNING *`,
       [
         req.user.profileId, cleanContent, type || 'pensamento', isDiary === true,
@@ -325,7 +328,7 @@ router.post('/', async (req, res) => {
         isArticle === true, cleanTitle || null, validCollectionId,
         cleanLinkPreview ? JSON.stringify(cleanLinkPreview) : null,
         isCapsule ? true : false, cleanUnlockAt, validProjectId,
-        validParentMemoryPostId,
+        validParentMemoryPostId, cleanCategoria,
       ]
     )
     const postId = result.rows[0].id
