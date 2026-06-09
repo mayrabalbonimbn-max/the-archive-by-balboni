@@ -1,182 +1,584 @@
 # The Archive by Balboni
 
-> Um arquivo pessoal. Silencioso, editorial, permanente.
+> Um arquivo pessoal, silencioso, editorial e permanente.
 
-O Archive é um espaço para guardar aquilo que importa — pensamentos, projetos, memórias, fotografias, arquivos, código, reflexões — e acompanhar sua evolução ao longo do tempo. Não existe algoritmo, não existe disputa por atenção. Apenas você e aquilo que você constrói.
-
+**Status:** MVP funcional em desenvolvimento ativo  
 **Produção:** https://social.balbonilab.com
+
+The Archive é um espaço para guardar aquilo que importa: pensamentos, projetos, memórias, fotografias, arquivos, código e reflexões.
+
+Ele combina diário digital, biblioteca pessoal, portfólio vivo e documentação de trajetória — sem algoritmo, sem disputa por atenção e sem a lógica de feed infinito das redes sociais tradicionais.
 
 ---
 
 ## O que é o Archive
 
-O Archive não é uma rede social. É um diário criativo com camadas: você registra, organiza em projetos, revisita memórias, escreve para o futuro e acompanha quem você está se tornando.
+O Archive não é uma rede social tradicional.
 
-Com o tempo, todos esses registros formam uma narrativa — gerada automaticamente a partir do que você cria.
+É um espaço para registrar ideias, acompanhar projetos, organizar conhecimento, preservar memórias e documentar a própria evolução ao longo do tempo.
+
+Você pode usá-lo como:
+
+- Diário digital
+- Biblioteca pessoal
+- Portfólio vivo
+- Arquivo fotográfico
+- Base de conhecimento
+- Documentação de projetos
+- Espaço de reflexão
+
+Com o tempo, todos esses registros formam uma narrativa construída automaticamente a partir daquilo que você cria.
 
 ---
 
-## Stack
+## Principais recursos
+
+- Publicação de notas, ensaios, fotos, documentos, código e arquivos
+- Projetos com timeline, status, marcos e aprendizados
+- Cápsulas do tempo
+- Memórias e calendário
+- Stories arquiváveis
+- Comentários, respostas e menções
+- Reações temáticas
+- Sandbox para Python, JavaScript e HTML
+- Dashboard de evolução
+- Mapa de conexões (Graph)
+- Conquistas
+- História automática do usuário
+- Base de conhecimento
+- PWA mobile-first
+
+---
+
+# Stack
 
 | Camada | Tecnologia |
-|---|---|
-| Frontend | React 18 + Vite + Tailwind CSS v3 |
+|----------|----------|
+| Frontend | React 18 |
+| Build Tool | Vite |
+| UI | Tailwind CSS v3 |
 | Roteamento | React Router v6 |
 | PWA | vite-plugin-pwa |
-| Backend | Express + PostgreSQL |
-| Gerenciador de processos | PM2 (`mayra-social-api`) |
-| Servidor | VPS Linux + Nginx + PM2 |
+| Backend | Node.js + Express |
+| Banco de Dados | PostgreSQL |
+| Process Manager | PM2 |
+| Servidor | VPS Linux + Nginx |
 
 ---
 
-## Identidade visual
+# Filosofia
 
-- **Superfície:** preto puro `#000000`. Separação por hairlines (`rgba(255,255,255,0.08)`), não por preenchimentos.
-- **Destaque:** rosa `#E86CB4` — CTAs, estados ativos, links, contadores.
-- **Tipografia:** Newsreader (serif, títulos e leitura), Hanken Grotesk (sans, interface), JetBrains Mono (mono, datas e código).
-- **Tinta:** off-whites quentes — `#F2EDE6` / `#ABA49A` / `#6C665E`.
-- **Motion:** fade-up suave na entrada de telas; modal centralizado no desktop; full-screen no mobile.
+O Archive foi construído para ser um lugar de registro, não de competição.
 
----
+Não existe algoritmo de descoberta baseado em engajamento.
 
-## Layout
+Não existe feed infinito otimizado para retenção.
 
-### Mobile (< 768px)
-- `AppBar` fixo no topo por tela (respeita safe area do iOS)
-- `TabBar` fixo no rodapé: Hoje · Arquivo · + · Explorar · Você
-- Compose: sheet full-screen com slide-up
-- Seção "SEU ESPAÇO" no perfil com atalhos para todas as rotas
+Não existe pressão para produzir conteúdo constantemente.
 
-### Desktop (≥ 768px)
-- Sidebar esquerda de 264px com duas seções de navegação:
-  - **Navegação principal:** Hoje, Explorar, Pessoas, Avisos, Mensagens, Cápsulas
-  - **SEU ARQUIVO:** Visão geral, Memórias, Calendário, Coleções, Arquivos, Fotografia, Stories
-  - **SUA TRAJETÓRIA:** Projetos, Dashboard, Graph, Minha História, Conquistas, Trajetória, Conhecimento, Mapa da Vida, Retrospectiva
-- A área de navegação rola independentemente; o chip de usuário fica sempre visível no rodapé
-- Coluna central (flex-1, max ~880–1140px)
-- Painel direito contextual de 300px
+O objetivo é simples:
+
+> Guardar aquilo que importa.
+
+Uma ideia.
+
+Uma fotografia.
+
+Um projeto.
+
+Uma memória.
+
+Um aprendizado.
 
 ---
 
-## Rotas
+# Identidade Visual
 
-### Arquivo diário
-| Rota | Tela |
-|---|---|
-| `/` | Hoje — prompt diário, strip de memórias, feed do círculo |
-| `/archive` | Hub do arquivo — visão geral + subnavegação |
-| `/archive?s=memories` | Memórias — "neste dia em outros anos" |
-| `/archive?s=calendar` | Calendário — navegação por data |
-| `/archive?s=collections` | Coleções |
-| `/library` | Arquivos — PDFs, markdowns, scripts |
-| `/photos` | Fotografia — galeria com metadados EXIF |
-| `/archive/stories` | Stories arquivados |
-| `/capsules` | Cápsulas do tempo |
+### Superfície
 
-### Trajetória pessoal
-| Rota | Tela |
-|---|---|
-| `/projects` | Projetos — cards com status, marcos e aprendizados |
-| `/projects/:slug` | Detalhe do projeto — milestones, learnings, edição |
-| `/dashboard` | Dashboard — gráficos de atividade (30 dias / 12 meses) |
-| `/graph` | Graph — visualização force-directed de posts, projetos, tags |
-| `/story` | Minha História — narrativa em prosa gerada automaticamente |
-| `/achievements` | Conquistas — 17 badges baseadas em atividade real |
-| `/growth` | Trajetória — timeline vertical dos primeiros marcos |
-| `/knowledge` | Base de Conhecimento — conteúdo pesquisável por categoria |
-| `/life-map` | Mapa da Vida — calendário anual com intensidade por período |
-| `/year-review/:year` | Retrospectiva — resumo editorial do ano |
+Preto puro:
 
-### Social e configurações
-| Rota | Tela |
-|---|---|
-| `/explore` | Explorar — busca, temas, arquivos públicos |
-| `/profile` | Perfil — stats, streak, projetos, atalhos |
-| `/profiles/:id` | Perfil público |
-| `/friends` | Pessoas — círculo, seguidores |
-| `/notifications` | Avisos — atividade agrupada |
-| `/messages` | Mensagens — lista de conversas |
-| `/messages/:id` | Conversa individual |
-| `/settings` | Ajustes — perfil, senha, export/import, onboarding |
-
----
-
-## Funcionalidades principais
-
-### Registros
-Tipos suportados no compose: Nota, Ensaio (artigo longo com editor rich text), Foto, Documento (PDF), Código (com sandbox Python/JS/HTML), Arquivo (markdown, scripts), Link (preview automático).
-
-Privacidade por entrada: Privado · Círculo · Público.
-
-### Projetos
-Cada projeto tem: título, emoji, descrição, status (ideia / ativo / pausado / concluído / arquivado), URL do GitHub, URL do site, tags, cover image, datas de início e conclusão.
-
-Dentro do projeto: **MARCOS** (milestones com datas) e **APRENDIZADOS** (learnings textuais editáveis).
-
-### Cápsulas
-Mensagens seladas com data de abertura. Permanece bloqueada até a data configurada.
-
-### Streaks
-Contagem de dias consecutivos com pelo menos um registro. Calculado no backend com forward pass nas datas.
-
-### Onboarding editorial
-8 capítulos que ensinam a filosofia do Archive — não um tour de interface. Suporte a teclado (setas + Enter + Escape), swipe no mobile, progresso persistido no backend.
-
-### Evolução automática
-Dashboard, Graph, Conquistas, Story e Growth são gerados automaticamente a partir dos registros existentes. Nenhuma ação manual necessária.
-
----
-
-## Componentes relevantes
-
-### Shell
-- **Layout** — sidebar + main + right panel + listener global de compose
-- **Sidebar** — seções SEU ARQUIVO e SUA TRAJETÓRIA; nav rola, chip de usuário fixo
-- **ComposeBox** — modal centralizado no desktop; sheet full-screen no mobile
-- **StoriesBar** — carousel de stories com upload por câmera ou galeria
-
-### UI (`src/components/ui/`)
-| Componente | Descrição |
-|---|---|
-| `AppBar` | Barra topo mobile com safe area |
-| `TabBar` | Barra de navegação inferior mobile |
-| `Avatar` | Círculo com fallback de iniciais |
-| `EntryCard` | Card de entrada com reações |
-| `PersonRow` | Avatar + nome + botão seguir |
-| `Icon` | SVG inline (stroke, 24×24, currentColor) |
-
----
-
-## Desenvolvimento local
-
-```bash
-# Frontend
-npm install
-npm run dev        # http://localhost:5173
-
-# Backend
-cd backend
-npm install
-npm run dev        # http://localhost:3001
+```css
+#000000
 ```
 
-Copie `.env.example` para `.env` e preencha a URL do banco e o JWT secret.
+Separação por hairlines:
+
+```css
+rgba(255,255,255,0.08)
+```
+
+### Cor de destaque
+
+```css
+#E86CB4
+```
+
+Utilizada em:
+
+- Links
+- CTAs
+- Estados ativos
+- Indicadores
+- Contadores
+
+### Tipografia
+
+| Fonte | Uso |
+|---------|---------|
+| Newsreader | Títulos e leitura |
+| Hanken Grotesk | Interface |
+| JetBrains Mono | Código e datas |
+
+### Paleta de texto
+
+```css
+#F2EDE6
+#ABA49A
+#6C665E
+```
 
 ---
 
-## Deploy
+# Layout
 
-Build local e push para o repositório. O servidor puxa a atualização, faz o build e reinicia o processo via PM2.
+## Mobile
+
+- AppBar fixa
+- Safe Area iOS
+- Bottom Navigation
+- Compose em fullscreen
+- Navegação otimizada para PWA
+
+### Bottom Navigation
+
+- Hoje
+- Arquivo
+- Criar
+- Explorar
+- Você
 
 ---
 
-## Segurança
+## Desktop
 
-Nunca comitar:
-- `.env` ou `backend/.env`
-- `backend/storage/uploads/` (manter apenas `.gitkeep`)
-- `dist/` ou `node_modules/`
+Sidebar esquerda dividida em três grupos.
+
+### Principal
+
+- Hoje
+- Explorar
+- Pessoas
+- Avisos
+- Mensagens
+- Cápsulas
+
+### Seu Arquivo
+
+- Visão Geral
+- Memórias
+- Calendário
+- Coleções
+- Arquivos
+- Fotografia
+- Stories
+
+### Sua Trajetória
+
+- Projetos
+- Dashboard
+- Mapa de Conexões
+- Minha História
+- Conquistas
+- Trajetória
+- Conhecimento
+- Mapa da Vida
+- Retrospectiva
 
 ---
 
-*The Archive by Balboni — guardado, não transmitido.*
+# Rotas
+
+## Arquivo
+
+| Rota | Descrição |
+|----------|----------|
+| / | Hoje |
+| /archive | Hub principal |
+| /archive?s=memories | Memórias |
+| /archive?s=calendar | Calendário |
+| /archive?s=collections | Coleções |
+| /library | Arquivos |
+| /photos | Fotografias |
+| /archive/stories | Stories arquivados |
+| /capsules | Cápsulas |
+
+---
+
+## Trajetória
+
+| Rota | Descrição |
+|----------|----------|
+| /projects | Projetos |
+| /projects/:slug | Projeto individual |
+| /dashboard | Dashboard |
+| /graph | Mapa de Conexões |
+| /story | Minha História |
+| /achievements | Conquistas |
+| /growth | Trajetória |
+| /knowledge | Base de Conhecimento |
+| /life-map | Mapa da Vida |
+| /year-review/:year | Retrospectiva anual |
+
+---
+
+## Social
+
+| Rota | Descrição |
+|----------|----------|
+| /explore | Explorar |
+| /profile | Perfil |
+| /profiles/:id | Perfil público |
+| /friends | Pessoas |
+| /notifications | Avisos |
+| /messages | Mensagens |
+| /messages/:id | Conversa |
+| /settings | Ajustes |
+
+---
+
+# Registros
+
+O Archive suporta diferentes tipos de entrada.
+
+### Nota
+
+Texto rápido.
+
+### Ensaio
+
+Texto longo com editor rico.
+
+### Foto
+
+Imagem com suporte a metadados EXIF.
+
+### Documento
+
+PDF.
+
+### Código
+
+Editor com sandbox.
+
+### Arquivo
+
+Markdown, scripts e documentos técnicos.
+
+### Link
+
+Preview automático.
+
+---
+
+# Privacidade
+
+Cada registro pode ser:
+
+- Privado
+- Círculo
+- Público
+
+---
+
+# Projetos
+
+Projetos agrupam registros relacionados.
+
+Cada projeto possui:
+
+- Emoji
+- Nome
+- Descrição
+- Status
+- Tags
+- GitHub
+- Website
+- Datas
+- Cover
+
+### Status
+
+- Ideia
+- Ativo
+- Pausado
+- Concluído
+- Arquivado
+
+### Estrutura interna
+
+#### Marcos
+
+Milestones com data.
+
+#### Aprendizados
+
+Notas permanentes sobre o projeto.
+
+---
+
+# Stories
+
+Stories rápidos para compartilhamento cotidiano.
+
+Suportam:
+
+- Texto
+- Foto
+
+Após expirarem:
+
+- Saem da área pública
+- Permanecem no arquivo pessoal
+
+---
+
+# Cápsulas do Tempo
+
+Mensagens seladas para o futuro.
+
+Podem ser abertas:
+
+- Em uma data específica
+- Em alguns meses
+- Em alguns anos
+
+Enquanto fechadas:
+
+- Não aparecem no feed
+- Não aparecem no perfil
+- Não podem ser acessadas
+
+---
+
+# Fotografias
+
+Galeria visual organizada.
+
+Suporte para:
+
+- Thumbnail automática
+- Versão otimizada
+- EXIF
+
+Metadados:
+
+- Câmera
+- Lente
+- ISO
+- Abertura
+- Velocidade
+- Data original
+
+---
+
+# Código e Sandbox
+
+O Archive permite armazenar e executar código diretamente no navegador.
+
+### Python
+
+Executado via Pyodide.
+
+### JavaScript
+
+Executado em Web Worker isolado.
+
+### HTML
+
+Executado em iframe sandbox.
+
+---
+
+# Sistema Social
+
+## Comentários
+
+Comentários encadeados.
+
+## Respostas
+
+Respostas em comentários.
+
+## Menções
+
+```text
+@usuario
+```
+
+## Reações
+
+- ❤️ Gostei
+- ✨ Inspirador
+- 📚 Aprendizado
+- 💻 Código
+- 📷 Fotografia
+
+## Amizades
+
+Relacionamento bidirecional.
+
+## Seguidores
+
+Relacionamento unidirecional.
+
+---
+
+# Memórias
+
+O sistema relembra registros antigos automaticamente.
+
+### Neste Dia
+
+Mostra registros da mesma data em anos anteriores.
+
+### Reflexões
+
+Cada memória pode gerar uma nova reflexão conectada ao registro original.
+
+---
+
+# Dashboard
+
+Visualização da atividade do usuário.
+
+Inclui:
+
+- Quantidade de registros
+- Evolução temporal
+- Distribuição por tipo
+- Atividade recente
+
+---
+
+# Conquistas
+
+Marcos importantes da jornada.
+
+Exemplos:
+
+- Primeira Entrada
+- Primeira Foto
+- Primeira Cápsula
+- Primeira Reflexão
+- 100 Registros
+
+---
+
+# Minha História
+
+Narrativa automática construída a partir dos registros do usuário.
+
+Transforma:
+
+- projetos
+- memórias
+- reflexões
+- cápsulas
+- marcos
+
+em uma linha narrativa contínua.
+
+---
+
+# Desenvolvimento Local
+
+## Frontend
+
+```bash
+npm install
+npm run dev
+```
+
+Servidor:
+
+```text
+http://localhost:5173
+```
+
+---
+
+## Backend
+
+```bash
+cd backend
+
+npm install
+
+npm run dev
+```
+
+Servidor:
+
+```text
+http://localhost:3001
+```
+
+---
+
+# Variáveis de Ambiente
+
+Copie:
+
+```bash
+.env.example
+```
+
+para:
+
+```bash
+.env
+```
+
+e configure:
+
+- DATABASE_URL
+- JWT_SECRET
+- demais credenciais necessárias
+
+---
+
+# Deploy
+
+Fluxo atual:
+
+1. Commit
+2. Push
+3. Pull no servidor
+4. Build
+5. Restart via PM2
+
+---
+
+# Segurança
+
+Nunca versionar:
+
+```text
+.env
+backend/.env
+backend/storage/uploads/
+dist/
+node_modules/
+```
+
+---
+
+## Licença
+
+Projeto pessoal de pesquisa e desenvolvimento.
+
+---
+
+> The Archive by Balboni  
+> Guardado, não transmitido.
