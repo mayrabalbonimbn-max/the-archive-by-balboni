@@ -265,7 +265,7 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
         content: body.trim(),
         type: isArticle ? 'article' : 'pensamento',
         isArticle,
-        articleTitle: isArticle ? title.trim() : undefined,
+        articleTitle: title.trim() || undefined,
         visibility: isCapsule ? 'private' : privacy,
         isPrivate: isCapsule ? true : privacy === 'private',
         collectionId: collectionId || undefined,
