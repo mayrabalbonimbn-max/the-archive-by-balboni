@@ -31,6 +31,9 @@ function fileJson(row) {
     createdAt: row.created_at,
     postContent: row.post_content || '',
     articleTitle: row.article_title || null,
+    exifData: row.exif_data || null,
+    hasThumbnail: !!row.thumbnail_path,
+    hasOptimized: !!row.optimized_path,
   }
 }
 
@@ -258,15 +261,41 @@ router.get('/photos', async (req, res) => {
   }
 })
 
+router.get('/tags', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT t.id, t.name, t.slug, COUNT(pt.post_id)::int AS count
+       FROM tags t
+       LEFT JOIN post_tags pt ON pt.tag_id = t.id
+       WHERE t.profile_id = $1
+       GROUP BY t.id ORDER BY count DESC, t.name`,
+      [req.user.profileId]
+    )
+    res.json(result.rows)
+  } catch (err) {
+    console.error('GET /archive/tags error:', err)
+    res.status(500).json({ error: 'Erro interno do servidor.' })
+  }
+})
+
 router.get('/tags/:tag', async (req, res) => {
   try {
     const tag = req.params.tag.replace(/^#/, '')
     const result = await pool.query(
       `SELECT p.*, c.name AS collection_name
-       FROM posts p LEFT JOIN collections c ON c.id = p.collection_id
-       WHERE p.profile_id = $1 AND (p.content ILIKE $2 OR p.code_content ILIKE $2)
+       FROM posts p
+       LEFT JOIN collections c ON c.id = p.collection_id
+       WHERE p.profile_id = $1
+         AND (
+           EXISTS (
+             SELECT 1 FROM post_tags pt JOIN tags t ON t.id = pt.tag_id
+             WHERE pt.post_id = p.id AND t.slug = $2 AND t.profile_id = p.profile_id
+           )
+           OR p.content ILIKE $3
+           OR p.code_content ILIKE $3
+         )
        ORDER BY p.created_at DESC`,
-      [req.user.profileId, `%#${tag}%`]
+      [req.user.profileId, tag, `%#${tag}%`]
     )
     res.json(result.rows.map(postJson))
   } catch (err) {

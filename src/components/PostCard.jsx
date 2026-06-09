@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { formatRelativeTime, formatFullDate, TYPE_CONFIG } from '../utils/helpers'
 import PostAttachments from './PostAttachments'
 import CodeBlock from './CodeBlock'
+import LinkPreviewCard from './LinkPreviewCard'
 import { api } from '../utils/api'
 
 const HeartIcon = ({ filled }) => (
@@ -374,12 +375,15 @@ export default function PostCard({ post, profile, onLike, onSave, onPin, onDelet
           </p>
           <ContentLinks text={post.content} />
 
+          {/* Link preview */}
+          {post.linkPreview && <LinkPreviewCard preview={post.linkPreview} compact />}
+
           {post.codeBlock && <CodeBlock language={post.codeBlock.language} code={post.codeBlock.code} />}
 
           <PostAttachments attachments={post.attachments} />
 
-          {/* Type badge */}
-          <div className="mt-2.5 flex items-center gap-1.5 animate-badge-in">
+          {/* Type badge + tags */}
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 animate-badge-in">
             <span className={`pill-badge ${typeConfig.color}`}>
               {typeConfig.label}
             </span>
@@ -388,6 +392,15 @@ export default function PostCard({ post, profile, onLike, onSave, onPin, onDelet
                 Diário
               </span>
             )}
+            {post.tags?.map(tag => (
+              <button
+                key={tag}
+                onClick={e => { e.stopPropagation(); navigate(`/tags/${tag}`) }}
+                className="text-[11px] font-mono text-brand-rose/70 hover:text-brand-rose transition-colors"
+              >
+                #{tag}
+              </button>
+            ))}
           </div>
 
           {/* Actions */}

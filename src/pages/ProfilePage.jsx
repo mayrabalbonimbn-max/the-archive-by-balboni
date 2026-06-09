@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppBar from '../components/ui/AppBar'
 import Icon from '../components/ui/Icon'
@@ -16,14 +16,42 @@ function Stat({ n, label }) {
   )
 }
 
+const TYPE_FILTERS = [
+  { id: 'all', label: 'Tudo' },
+  { id: 'article', label: 'Artigos' },
+  { id: 'code', label: 'Código' },
+  { id: 'diary', label: 'Diário' },
+  { id: 'media', label: 'Fotos' },
+]
+
 export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }) {
   const navigate = useNavigate()
   const { collections } = useCollections()
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [tagFilter, setTagFilter] = useState(null)
 
   const sorted = useMemo(
     () => [...posts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
     [posts]
   )
+
+  const pinned = useMemo(() => sorted.filter(p => p.pinned).sort((a, b) => (a.pinOrder || 0) - (b.pinOrder || 0)), [sorted])
+
+  const allTags = useMemo(() => {
+    const map = new Map()
+    posts.forEach(p => p.tags?.forEach(tag => map.set(tag, (map.get(tag) || 0) + 1)))
+    return [...map.entries()].sort((a, b) => b[1] - a[1]).map(([tag]) => tag)
+  }, [posts])
+
+  const filtered = useMemo(() => {
+    let list = sorted
+    if (typeFilter === 'article') list = list.filter(p => p.isArticle)
+    else if (typeFilter === 'code') list = list.filter(p => p.codeBlock)
+    else if (typeFilter === 'diary') list = list.filter(p => p.isDiary)
+    else if (typeFilter === 'media') list = list.filter(p => p.attachments?.some(a => a.fileType === 'image'))
+    if (tagFilter) list = list.filter(p => p.tags?.includes(tagFilter))
+    return list
+  }, [sorted, typeFilter, tagFilter])
 
   const daysKept = profile.createdAt
     ? Math.max(1, Math.floor((Date.now() - new Date(profile.createdAt)) / 86400000))
@@ -139,16 +167,63 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
         </div>
       )}
 
-      {/* Recent entries */}
+      {/* Pinned */}
+      {pinned.length > 0 && (
+        <div style={{ marginTop: 26 }}>
+          <SectionLabel>Fixados</SectionLabel>
+          <div style={{ borderTop: '1px solid var(--line)' }}>
+            {pinned.map(p => (
+              <EntryCard key={p.id} post={p} showAuthor={false} onLike={() => onLike?.(p.id)} onSave={() => onSave?.(p.id)} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Filter chips */}
       <div style={{ marginTop: 26 }}>
-        <SectionLabel>Recentes</SectionLabel>
+        <div style={{ padding: '0 20px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* Type filters */}
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none' }}>
+            {TYPE_FILTERS.map(f => (
+              <button key={f.id} onClick={() => setTypeFilter(f.id)} style={{
+                flexShrink: 0, padding: '6px 14px', borderRadius: 20,
+                border: `1px solid ${typeFilter === f.id ? 'var(--accent)' : 'var(--line-strong)'}`,
+                background: typeFilter === f.id ? 'rgba(232,108,180,0.12)' : 'transparent',
+                color: typeFilter === f.id ? 'var(--accent)' : 'var(--ink-3)',
+                fontFamily: 'var(--sans)', fontSize: 12.5, cursor: 'pointer', transition: 'all .15s',
+              }}>{f.label}</button>
+            ))}
+          </div>
+          {/* Tag filters */}
+          {allTags.length > 0 && (
+            <div style={{ display: 'flex', gap: 7, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2 }}>
+              {tagFilter && (
+                <button onClick={() => setTagFilter(null)} style={{
+                  flexShrink: 0, padding: '4px 10px', borderRadius: 20,
+                  border: '1px solid var(--accent)', background: 'rgba(232,108,180,0.12)',
+                  color: 'var(--accent)', fontFamily: 'var(--mono)', fontSize: 11, cursor: 'pointer',
+                }}>× limpar</button>
+              )}
+              {allTags.map(tag => (
+                <button key={tag} onClick={() => setTagFilter(tagFilter === tag ? null : tag)} style={{
+                  flexShrink: 0, padding: '4px 10px', borderRadius: 20,
+                  border: `1px solid ${tagFilter === tag ? 'var(--accent)' : 'rgba(232,108,180,0.2)'}`,
+                  background: tagFilter === tag ? 'rgba(232,108,180,0.12)' : 'transparent',
+                  color: tagFilter === tag ? 'var(--accent)' : 'var(--ink-3)',
+                  fontFamily: 'var(--mono)', fontSize: 11, cursor: 'pointer', transition: 'all .15s',
+                }}>#{tag}</button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div style={{ borderTop: '1px solid var(--line)' }}>
-          {sorted.length === 0 ? (
+          {filtered.length === 0 ? (
             <p style={{ padding: '32px 20px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-3)' }}>
-              Nenhuma entrada ainda.
+              {posts.length === 0 ? 'Nenhuma entrada ainda.' : 'Nenhuma entrada para este filtro.'}
             </p>
           ) : (
-            sorted.map(p => (
+            filtered.map(p => (
               <EntryCard
                 key={p.id}
                 post={p}

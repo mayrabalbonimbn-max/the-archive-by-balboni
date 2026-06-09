@@ -25,6 +25,8 @@ app.use('/api', require('./routes/comments'))
 app.use('/api/notifications', require('./routes/notifications'))
 app.use('/api/push', require('./routes/push'))
 app.use('/api/search', require('./routes/search'))
+app.use('/api/tags', require('./routes/tags'))
+app.use('/api/link-preview', require('./routes/link-preview'))
 app.use('/api', require('./routes/attachments'))
 
 module.exports = app

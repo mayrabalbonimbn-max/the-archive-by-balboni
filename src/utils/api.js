@@ -91,6 +91,11 @@ export const api = {
   upload: (path, form) => apiFetch(path, { method: 'POST', body: form }),
 }
 
+// Tags
+export function getTags() { return apiFetch('/tags') }
+export function createTag(name) { return apiFetch('/tags', { method: 'POST', body: JSON.stringify({ name }) }) }
+export function setPostTags(postId, tags, names = {}) { return apiFetch(`/tags/post/${postId}`, { method: 'PUT', body: JSON.stringify({ tags, names }) }) }
+
 export async function getPushVapidKey() {
   return apiFetch('/push/vapid-public-key')
 }

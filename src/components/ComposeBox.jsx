@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import MarkdownRenderer from './MarkdownRenderer'
+import TagInput from './TagInput'
+import LinkPreviewCard, { useLinkPreview, extractFirstUrl } from './LinkPreviewCard'
+import { getTags } from '../utils/api'
 import Editor from 'react-simple-code-editor'
 import { CODE_LANGUAGES, highlightCode } from '../utils/codeHighlight'
 import { useCollections } from '../hooks/useCollections'
@@ -72,9 +75,18 @@ export default function ComposeBox({ profile, onPost, onClose }) {
   const [fileError, setFileError] = useState('')
   const [posting, setPosting] = useState(false)
   const [mdPreview, setMdPreview] = useState(false)
+  const [tags, setTags] = useState([])
+  const [tagSuggestions, setTagSuggestions] = useState([])
   const fileInputRef = useRef(null)
   const titleRef = useRef(null)
   const attachmentsRef = useRef([])
+
+  useEffect(() => {
+    getTags().then(list => setTagSuggestions(list)).catch(() => {})
+  }, [])
+
+  const detectedUrl = extractFirstUrl(body)
+  const { preview: linkPreview } = useLinkPreview(!isFile && detectedUrl ? detectedUrl : null)
 
   const isFile = ['photo', 'pdf', 'markdown', 'code'].includes(entryType)
   const isArticle = entryType === 'article'
@@ -136,6 +148,8 @@ export default function ComposeBox({ profile, onPost, onClose }) {
         collectionId: collectionId || undefined,
         attachments,
         codeBlock: isCode && code.trim() ? { language: codeLanguage, code } : null,
+        tags,
+        linkPreview: linkPreview || undefined,
       })
       onClose?.()
     } catch (err) {
@@ -360,8 +374,23 @@ export default function ComposeBox({ profile, onPost, onClose }) {
           )}
         </div>
 
+        {/* Link preview */}
+        {!isFile && linkPreview && (
+          <div style={{ padding: '0 20px 8px' }}>
+            <LinkPreviewCard preview={linkPreview} />
+          </div>
+        )}
+
         {/* Meta block */}
         <div style={{ borderTop: '1px solid var(--line)', padding: '16px 20px 32px' }}>
+          {/* Tags */}
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '0.12em', color: 'var(--ink-3)', marginBottom: 11 }}>
+            TAGS
+          </div>
+          <div style={{ marginBottom: 22 }}>
+            <TagInput value={tags} onChange={setTags} suggestions={tagSuggestions} />
+          </div>
+
           {collections.length > 0 && (
             <>
               <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '0.12em', color: 'var(--ink-3)', marginBottom: 11 }}>

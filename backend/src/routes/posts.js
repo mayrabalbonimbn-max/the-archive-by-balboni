@@ -30,6 +30,8 @@ function toPost(row) {
     articleTitle: row.article_title || null,
     collectionId: row.collection_id || null,
     attachments: row.attachments || [],
+    tags: row.tags || [],
+    linkPreview: row.link_preview || null,
     codeBlock: row.code_language ? { language: row.code_language, code: row.code_content || '' } : null,
     liked: viewerReactions.includes('heart') || row.liked,
     likeCount: Number(reactionCounts.heart ?? row.like_count ?? 0),
@@ -38,6 +40,7 @@ function toPost(row) {
     viewerReactions,
     commentCount: Number(row.comment_count || 0),
     pinned: row.pinned,
+    pinOrder: row.pin_order || 0,
     createdAt: row.created_at,
     author: row.author_id ? {
       id: row.author_id,
@@ -67,6 +70,11 @@ async function notifyPostOwner(post, actorId, type, message) {
   }).catch(() => {})
 }
 
+const tagsSubquerySql = `
+  (SELECT COALESCE(jsonb_agg(t.slug ORDER BY t.slug), '[]'::jsonb)
+   FROM post_tags pt JOIN tags t ON t.id = pt.tag_id
+   WHERE pt.post_id = p.id) AS tags`
+
 const attachmentJsonSql = `
   COALESCE(jsonb_agg(jsonb_build_object(
     'id', a.id, 'postId', a.post_id, 'originalName', a.original_name, 'title', a.title, 'description', a.description,
@@ -83,25 +91,40 @@ router.get('/', async (req, res) => {
     const { q } = req.query
     let query, params
 
+    const { tag, type } = req.query
+    const conditions = ['p.profile_id = $1']
+    params = [req.user.profileId]
+
     if (q && q.trim()) {
-      query = `SELECT p.*, ${reactionCountsSql('p')}, ${viewerReactionsSql('p', '$1')}, ${commentCountSql('p')},
-                ${attachmentJsonSql}
-               FROM posts p
-               LEFT JOIN post_attachments a ON a.post_id = p.id AND a.profile_id = p.profile_id AND ${attachmentVisibleSql('a', 'p')}
-               WHERE p.profile_id = $1 AND p.content ILIKE $2
-               GROUP BY p.id
-               ORDER BY p.pinned DESC, p.created_at DESC`
-      params = [req.user.profileId, `%${q.trim()}%`]
-    } else {
-      query = `SELECT p.*, ${reactionCountsSql('p')}, ${viewerReactionsSql('p', '$1')}, ${commentCountSql('p')},
-                ${attachmentJsonSql}
-               FROM posts p
-               LEFT JOIN post_attachments a ON a.post_id = p.id AND a.profile_id = p.profile_id AND ${attachmentVisibleSql('a', 'p')}
-               WHERE p.profile_id = $1
-               GROUP BY p.id
-               ORDER BY p.pinned DESC, p.created_at DESC`
-      params = [req.user.profileId]
+      params.push(`%${q.trim()}%`)
+      conditions.push(`(p.content ILIKE $${params.length} OR p.article_title ILIKE $${params.length})`)
     }
+    if (tag) {
+      params.push(tag.replace(/^#/, ''))
+      conditions.push(`EXISTS (SELECT 1 FROM post_tags pt JOIN tags t ON t.id = pt.tag_id WHERE pt.post_id = p.id AND t.slug = $${params.length} AND t.profile_id = p.profile_id)`)
+    }
+    if (type && type !== 'all') {
+      if (type === 'article') {
+        conditions.push('p.is_article = true')
+      } else if (type === 'code') {
+        conditions.push('p.code_language IS NOT NULL')
+      } else if (type === 'diary') {
+        conditions.push('p.is_diary = true')
+      } else if (type === 'media') {
+        conditions.push(`EXISTS (SELECT 1 FROM post_attachments a2 WHERE a2.post_id = p.id AND a2.file_type = 'image')`)
+      } else {
+        params.push(type)
+        conditions.push(`p.type = $${params.length}`)
+      }
+    }
+
+    query = `SELECT p.*, ${reactionCountsSql('p')}, ${viewerReactionsSql('p', '$1')}, ${commentCountSql('p')},
+              ${attachmentJsonSql}, ${tagsSubquerySql}
+             FROM posts p
+             LEFT JOIN post_attachments a ON a.post_id = p.id AND a.profile_id = p.profile_id AND ${attachmentVisibleSql('a', 'p')}
+             WHERE ${conditions.join(' AND ')}
+             GROUP BY p.id
+             ORDER BY p.pinned DESC, p.pin_order ASC, p.created_at DESC`
 
     const result = await pool.query(query, params)
     res.json(result.rows.map(toPost))
@@ -199,7 +222,9 @@ router.get('/:id', async (req, res) => {
       `SELECT p.*,
         owner.id AS author_id, owner.name AS author_name, owner.handle AS author_handle, owner.avatar AS author_avatar,
         ${reactionCountsSql('p')}, ${viewerReactionsSql('p', '$2')}, ${commentCountSql('p')},
-        ${attachmentJsonSql}
+        ${attachmentJsonSql},
+        (SELECT COALESCE(jsonb_agg(t.slug ORDER BY t.slug), '[]'::jsonb)
+         FROM post_tags pt JOIN tags t ON t.id = pt.tag_id WHERE pt.post_id = p.id) AS tags
        FROM posts p
        JOIN profiles owner ON owner.id = p.profile_id
        LEFT JOIN post_attachments a ON a.post_id = p.id AND a.profile_id = p.profile_id AND ${attachmentVisibleSql('a', 'p').replaceAll('$1', '$2')}
@@ -217,8 +242,9 @@ router.get('/:id', async (req, res) => {
 
 // POST /api/posts
 router.post('/', async (req, res) => {
+  const client = await pool.connect()
   try {
-    const { content, type, isDiary, isPrivate, visibility, hasAttachments, codeBlock, isArticle, articleTitle, collectionId } = req.body
+    const { content, type, isDiary, isPrivate, visibility, hasAttachments, codeBlock, isArticle, articleTitle, collectionId, tags, linkPreview } = req.body
 
     const cleanContent = (content || '').trim()
     const cleanCode = typeof codeBlock?.code === 'string' ? codeBlock.code.trimEnd() : ''
@@ -227,47 +253,73 @@ router.post('/', async (req, res) => {
     const cleanVisibility = normalizeVisibility(visibility, isPrivate === true ? 'private' : 'private')
 
     if (!cleanContent && !cleanCode && hasAttachments !== true) {
+      client.release()
       return res.status(400).json({ error: 'Post deve ter texto, código ou anexo.' })
     }
     if (cleanCode && !CODE_LANGUAGES.has(codeLanguage)) {
+      client.release()
       return res.status(400).json({ error: 'Linguagem de código inválida.' })
     }
     if (cleanCode.length > MAX_CODE_LENGTH) {
+      client.release()
       return res.status(400).json({ error: 'Código deve ter no máximo 50 mil caracteres.' })
     }
 
-    // Validate collectionId belongs to this profile
+    // Validate linkPreview structure
+    let cleanLinkPreview = null
+    if (linkPreview && typeof linkPreview === 'object' && typeof linkPreview.url === 'string') {
+      cleanLinkPreview = {
+        url: linkPreview.url.slice(0, 500),
+        title: linkPreview.title?.slice(0, 200) || null,
+        description: linkPreview.description?.slice(0, 400) || null,
+        image: typeof linkPreview.image === 'string' && linkPreview.image.startsWith('http') ? linkPreview.image.slice(0, 500) : null,
+        siteName: linkPreview.siteName?.slice(0, 100) || null,
+        domain: linkPreview.domain?.slice(0, 100) || null,
+      }
+    }
+
+    await client.query('BEGIN')
+
+    // Validate collectionId
     let validCollectionId = null
     if (collectionId) {
-      const col = await pool.query(
-        'SELECT id FROM collections WHERE id = $1 AND profile_id = $2',
-        [collectionId, req.user.profileId]
-      )
+      const col = await client.query('SELECT id FROM collections WHERE id = $1 AND profile_id = $2', [collectionId, req.user.profileId])
       if (col.rows.length > 0) validCollectionId = collectionId
     }
 
-    const result = await pool.query(
-      `INSERT INTO posts (profile_id, content, type, is_diary, is_private, visibility, code_language, code_content, is_article, article_title, collection_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    const result = await client.query(
+      `INSERT INTO posts (profile_id, content, type, is_diary, is_private, visibility, code_language, code_content, is_article, article_title, collection_id, link_preview)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING *`,
       [
-        req.user.profileId,
-        cleanContent,
-        type || 'pensamento',
-        isDiary === true,
-        cleanVisibility === 'private',
-        cleanVisibility,
-        cleanCode ? codeLanguage : null,
-        cleanCode || null,
-        isArticle === true,
-        cleanTitle || null,
-        validCollectionId,
+        req.user.profileId, cleanContent, type || 'pensamento', isDiary === true,
+        cleanVisibility === 'private', cleanVisibility,
+        cleanCode ? codeLanguage : null, cleanCode || null,
+        isArticle === true, cleanTitle || null, validCollectionId,
+        cleanLinkPreview ? JSON.stringify(cleanLinkPreview) : null,
       ]
     )
-    res.status(201).json(toPost(result.rows[0]))
+    const postId = result.rows[0].id
+
+    // Apply tags
+    const tagSlugs = Array.isArray(tags) ? tags.map(s => s.replace(/^#/, '').toLowerCase().trim()).filter(Boolean).slice(0, 10) : []
+    for (const slug of tagSlugs) {
+      const tag = await client.query(
+        `INSERT INTO tags (profile_id, name, slug) VALUES ($1, $2, $3)
+         ON CONFLICT (profile_id, slug) DO UPDATE SET name = EXCLUDED.name RETURNING id`,
+        [req.user.profileId, slug, slug]
+      )
+      await client.query('INSERT INTO post_tags (post_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [postId, tag.rows[0].id])
+    }
+
+    await client.query('COMMIT')
+    res.status(201).json({ ...toPost(result.rows[0]), tags: tagSlugs })
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {})
     console.error('POST /posts error:', err)
     res.status(500).json({ error: 'Erro interno do servidor.' })
+  } finally {
+    client.release()
   }
 })
 
@@ -372,21 +424,49 @@ router.patch('/:id', async (req, res) => {
         [newLiked, Math.max(0, newCount), id]
       )
     } else if (action === 'pin') {
+      const MAX_PINS = 5
       const newPinned = !post.pinned
-      // If pinning, unpin all others first
+
       if (newPinned) {
-        await pool.query(
-          'UPDATE posts SET pinned = false WHERE profile_id = $1 AND id != $2',
-          [req.user.profileId, id]
+        const pinCount = await pool.query('SELECT COUNT(*)::int AS cnt FROM posts WHERE profile_id = $1 AND pinned = true AND id != $2', [req.user.profileId, id])
+        if (pinCount.rows[0].cnt >= MAX_PINS) {
+          return res.status(400).json({ error: `Máximo de ${MAX_PINS} entradas fixadas.` })
+        }
+        const maxOrder = await pool.query('SELECT COALESCE(MAX(pin_order), 0) AS mo FROM posts WHERE profile_id = $1 AND pinned = true', [req.user.profileId])
+        result = await pool.query(
+          'UPDATE posts SET pinned = true, pin_order = $1, updated_at = now() WHERE id = $2 RETURNING *',
+          [maxOrder.rows[0].mo + 1, id]
+        )
+      } else {
+        result = await pool.query(
+          'UPDATE posts SET pinned = false, pin_order = 0, updated_at = now() WHERE id = $1 RETURNING *',
+          [id]
         )
       }
-      result = await pool.query(
-        `UPDATE posts SET pinned = $1, updated_at = now()
-         WHERE id = $2 RETURNING *`,
-        [newPinned, id]
-      )
+    } else if (action === 'set-tags') {
+      const tagSlugs = Array.isArray(req.body.tags) ? req.body.tags.map(s => String(s).replace(/^#/, '').toLowerCase().trim()).filter(Boolean).slice(0, 10) : []
+      const client2 = await pool.connect()
+      try {
+        await client2.query('BEGIN')
+        await client2.query('DELETE FROM post_tags WHERE post_id = $1', [id])
+        for (const slug of tagSlugs) {
+          const tag = await client2.query(
+            `INSERT INTO tags (profile_id, name, slug) VALUES ($1, $2, $3)
+             ON CONFLICT (profile_id, slug) DO UPDATE SET name = EXCLUDED.name RETURNING id`,
+            [req.user.profileId, slug, slug]
+          )
+          await client2.query('INSERT INTO post_tags (post_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [id, tag.rows[0].id])
+        }
+        await client2.query('COMMIT')
+        return res.json({ id, tags: tagSlugs })
+      } catch (e) {
+        await client2.query('ROLLBACK').catch(() => {})
+        throw e
+      } finally {
+        client2.release()
+      }
     } else {
-      return res.status(400).json({ error: 'Ação inválida. Use: like, save, pin.' })
+      return res.status(400).json({ error: 'Ação inválida.' })
     }
 
     res.json(toPost(result.rows[0]))

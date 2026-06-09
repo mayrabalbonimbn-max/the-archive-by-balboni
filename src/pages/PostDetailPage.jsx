@@ -5,6 +5,7 @@ import { formatFullDate, TYPE_CONFIG } from '../utils/helpers'
 import PostAttachments from '../components/PostAttachments'
 import CodeBlock from '../components/CodeBlock'
 import MarkdownRenderer from '../components/MarkdownRenderer'
+import LinkPreviewCard from '../components/LinkPreviewCard'
 
 function BackIcon() {
   return (
@@ -111,8 +112,24 @@ export default function PostDetailPage({ profile, onLike, onSave, onDelete }) {
         </div>
 
         {post.content && (
-          <div className="mb-6">
+          <div className="mb-4">
             <MarkdownRenderer content={post.content} />
+          </div>
+        )}
+
+        {post.linkPreview && (
+          <div className="mb-6">
+            <LinkPreviewCard preview={post.linkPreview} />
+          </div>
+        )}
+
+        {post.tags?.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-6">
+            {post.tags.map(tag => (
+              <a key={tag} href={`/tags/${tag}`} className="text-[12px] font-mono text-brand-rose/70 hover:text-brand-rose border border-brand-rose/20 rounded-md px-2 py-0.5 hover:bg-brand-rose/5 transition-colors">
+                #{tag}
+              </a>
+            ))}
           </div>
         )}
 

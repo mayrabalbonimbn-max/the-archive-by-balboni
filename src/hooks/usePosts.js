@@ -16,8 +16,8 @@ export function usePosts() {
   }, [fetchPosts])
 
   const addPost = useCallback(async (draft) => {
-    const { attachments = [], ...postDraft } = draft
-    const post = await api.post('/posts', { ...postDraft, hasAttachments: attachments.length > 0 })
+    const { attachments = [], tags = [], ...postDraft } = draft
+    const post = await api.post('/posts', { ...postDraft, tags, hasAttachments: attachments.length > 0 })
     try {
       if (attachments.length > 0) {
         const form = new FormData()

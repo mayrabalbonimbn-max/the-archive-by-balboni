@@ -210,3 +210,32 @@ ALTER TABLE post_attachments ADD COLUMN IF NOT EXISTS thumbnail_path TEXT;
 ALTER TABLE post_attachments ADD COLUMN IF NOT EXISTS optimized_path TEXT;
 ALTER TABLE post_attachments ADD COLUMN IF NOT EXISTS optimized_mime TEXT;
 ALTER TABLE post_attachments ADD COLUMN IF NOT EXISTS exif_data JSONB;
+
+-- Archive Organization: tags
+CREATE TABLE IF NOT EXISTS tags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  profile_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  name VARCHAR(50) NOT NULL,
+  slug VARCHAR(50) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  CONSTRAINT tags_profile_slug_unique UNIQUE (profile_id, slug)
+);
+CREATE TABLE IF NOT EXISTS post_tags (
+  post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+  PRIMARY KEY (post_id, tag_id)
+);
+CREATE INDEX IF NOT EXISTS idx_tags_profile ON tags(profile_id);
+CREATE INDEX IF NOT EXISTS idx_post_tags_post ON post_tags(post_id);
+CREATE INDEX IF NOT EXISTS idx_post_tags_tag ON post_tags(tag_id);
+
+-- Pin order (up to 5 pinned posts)
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS pin_order INTEGER DEFAULT 0;
+
+-- Rich link preview cache
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS link_preview JSONB;
+
+-- Performance indexes
+CREATE INDEX IF NOT EXISTS idx_posts_pinned ON posts(profile_id, pinned, pin_order) WHERE pinned = true;
+CREATE INDEX IF NOT EXISTS idx_posts_type ON posts(profile_id, type);
+CREATE INDEX IF NOT EXISTS idx_posts_is_article ON posts(profile_id, is_article) WHERE is_article = true;
