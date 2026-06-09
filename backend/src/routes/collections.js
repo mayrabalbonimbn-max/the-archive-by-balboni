@@ -89,6 +89,50 @@ router.patch('/:id', async (req, res) => {
   }
 })
 
+// GET /api/collections/:id/posts
+router.get('/:id/posts', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT p.*,
+         (SELECT COALESCE(jsonb_agg(jsonb_build_object(
+           'id', a.id, 'postId', a.post_id, 'originalName', a.original_name,
+           'title', a.title, 'mimeType', a.mime_type, 'size', a.size,
+           'fileType', a.file_type, 'visibility', a.visibility, 'createdAt', a.created_at
+         ) ORDER BY a.created_at, a.id) FILTER (WHERE a.id IS NOT NULL), '[]'::jsonb)
+          FROM post_attachments a WHERE a.post_id = p.id AND a.profile_id = p.profile_id) AS attachments
+       FROM posts p
+       JOIN collections c ON c.id = $2 AND c.profile_id = $1
+       WHERE p.collection_id = $2 AND p.profile_id = $1
+       ORDER BY p.created_at DESC`,
+      [req.user.profileId, req.params.id]
+    )
+    res.json(result.rows.map(row => ({
+      id: row.id,
+      profileId: row.profile_id,
+      content: row.content,
+      type: row.type,
+      isDiary: row.is_diary,
+      isPrivate: row.is_private,
+      visibility: row.visibility,
+      isArticle: row.is_article || false,
+      articleTitle: row.article_title || null,
+      collectionId: row.collection_id || null,
+      codeBlock: row.code_language ? { language: row.code_language, code: row.code_content || '' } : null,
+      attachments: row.attachments || [],
+      liked: false,
+      likeCount: 0,
+      saved: false,
+      commentCount: 0,
+      pinned: row.pinned,
+      createdAt: row.created_at,
+      author: null,
+    })))
+  } catch (err) {
+    console.error('GET /collections/:id/posts error:', err)
+    res.status(500).json({ error: 'Erro interno do servidor.' })
+  }
+})
+
 // DELETE /api/collections/:id
 router.delete('/:id', async (req, res) => {
   try {

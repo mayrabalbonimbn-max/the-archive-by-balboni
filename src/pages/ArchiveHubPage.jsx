@@ -390,18 +390,138 @@ function CalendarSection() {
 }
 
 // ── Collections ───────────────────────────────────────────────────────────────
+function NewCollectionModal({ onClose, onCreate, existingNames }) {
+  const [name, setName] = useState('')
+  const [emoji, setEmoji] = useState('📁')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const EMOJIS = ['📁', '📷', '📔', '💡', '🎨', '📚', '🌱', '🔬', '✍️', '🎵', '🐍', '🎓', '🏃', '⚡']
+  const COLORS = ['#E86CB4', '#7AA2F7', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316']
+  const [color, setColor] = useState(COLORS[0])
+
+  async function submit() {
+    const trimmed = name.trim()
+    if (!trimmed) return setError('Nome obrigatório.')
+    if (existingNames.includes(trimmed.toLowerCase())) return setError('Essa coleção já existe.')
+    setSaving(true)
+    try {
+      await onCreate({ name: trimmed, emoji, color })
+      onClose()
+    } catch (err) {
+      setError(err.message)
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', background: 'rgba(0,0,0,0.7)' }}
+      onClick={onClose}
+    >
+      <div
+        style={{ width: '100%', maxWidth: 540, background: 'var(--surface-2)', borderRadius: '20px 20px 0 0', padding: '24px 20px 40px', border: '1px solid var(--line)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <h2 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 20, color: 'var(--ink)', fontWeight: 400 }}>Nova coleção</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 18, color: 'var(--ink-3)', lineHeight: 1 }}>×</button>
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.1em', color: 'var(--ink-3)', marginBottom: 8 }}>EMOJI</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {EMOJIS.map(e => (
+              <button key={e} onClick={() => setEmoji(e)} style={{ width: 36, height: 36, borderRadius: 9, border: `1.5px solid ${emoji === e ? 'var(--accent)' : 'var(--line)'}`, background: emoji === e ? 'rgba(232,108,180,0.1)' : 'transparent', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {e}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.1em', color: 'var(--ink-3)', marginBottom: 8 }}>COR</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {COLORS.map(c => (
+              <button key={c} onClick={() => setColor(c)} style={{ width: 26, height: 26, borderRadius: '50%', background: c, border: `2.5px solid ${color === c ? '#fff' : 'transparent'}`, cursor: 'pointer', outline: color === c ? `2px solid ${c}` : 'none', outlineOffset: 2 }} />
+            ))}
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.1em', color: 'var(--ink-3)', marginBottom: 8 }}>NOME</div>
+          <input
+            autoFocus
+            value={name}
+            onChange={e => { setName(e.target.value); setError('') }}
+            onKeyDown={e => e.key === 'Enter' && submit()}
+            placeholder="ex: Leituras de inverno"
+            maxLength={100}
+            style={{ width: '100%', background: 'var(--surface-3)', border: `1px solid ${error ? '#f7768e' : 'var(--line)'}`, borderRadius: 10, padding: '11px 14px', fontFamily: 'var(--sans)', fontSize: 15, color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
+          />
+          {error && <p style={{ margin: '6px 0 0', fontFamily: 'var(--mono)', fontSize: 11, color: '#f7768e' }}>{error}</p>}
+        </div>
+
+        <button
+          onClick={submit}
+          disabled={saving || !name.trim()}
+          style={{ width: '100%', padding: 13, borderRadius: 12, border: 'none', background: color, fontFamily: 'var(--sans)', fontSize: 15, fontWeight: 600, color: '#fff', cursor: saving || !name.trim() ? 'default' : 'pointer', opacity: saving || !name.trim() ? 0.5 : 1 }}
+        >
+          {saving ? 'Criando…' : 'Criar coleção'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function CollectionsSection() {
   const navigate = useNavigate()
-  const { collections, loading } = useCollections()
+  const { collections, loading, createCollection } = useCollections()
+  const [showModal, setShowModal] = useState(false)
 
   if (loading) return <Spinner />
 
+  const existingNames = collections.map(c => c.name.toLowerCase())
+
   return (
     <div style={{ padding: '18px 16px 0' }}>
+      {/* Header row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, padding: '0 4px' }}>
+        <div>
+          <div style={{ fontFamily: 'var(--serif)', fontSize: 20, color: 'var(--ink)', letterSpacing: '-0.01em' }}>Coleções</div>
+          <div style={{ fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink-3)', marginTop: 3 }}>
+            Entradas reunidas por tema, mesmo que não sejam um projeto.
+          </div>
+        </div>
+        <button
+          onClick={() => setShowModal(true)}
+          style={{
+            flexShrink: 0, padding: '8px 15px', borderRadius: 10,
+            background: 'var(--accent)', border: 'none',
+            fontFamily: 'var(--sans)', fontSize: 13, fontWeight: 600,
+            color: '#fff', cursor: 'pointer',
+          }}
+        >
+          + Nova
+        </button>
+      </div>
+
       {collections.length === 0 ? (
-        <p style={{ padding: '32px 4px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-3)' }}>
-          Ainda não há coleções.
-        </p>
+        <div style={{ padding: '40px 4px', textAlign: 'center' }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>📁</div>
+          <p style={{ margin: '0 0 8px', fontFamily: 'var(--serif)', fontSize: 17, color: 'var(--ink)', fontWeight: 400 }}>
+            Nenhuma coleção ainda.
+          </p>
+          <p style={{ margin: '0 0 20px', fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.6, maxWidth: 280, marginInline: 'auto' }}>
+            Coleções são curadorias manuais — um lugar para juntar entradas que pertencem ao mesmo tema, mesmo que não sejam um projeto.
+          </p>
+          <button
+            onClick={() => setShowModal(true)}
+            style={{ padding: '10px 22px', borderRadius: 12, background: 'var(--accent)', border: 'none', fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 600, color: '#fff', cursor: 'pointer' }}
+          >
+            Criar primeira coleção
+          </button>
+        </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {collections.map(c => {
@@ -417,29 +537,46 @@ function CollectionsSection() {
                 }}
               >
                 <div style={{
-                  height: 88,
-                  background: `linear-gradient(150deg, ${tone}55, #0c0c0e)`,
-                  position: 'relative', display: 'flex', alignItems: 'flex-end', padding: 11,
+                  height: 80,
+                  background: `linear-gradient(150deg, ${tone}50, #0c0c0e)`,
+                  display: 'flex', alignItems: 'flex-end', padding: '0 11px 10px',
                 }}>
-                  {c.pinned && (
-                    <div style={{ position: 'absolute', top: 10, right: 10, color: 'var(--accent)' }}>
-                      <Icon name="pin" size={15} />
-                    </div>
-                  )}
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 22 }}>{c.emoji}</span>
+                  <span style={{ fontSize: 22 }}>{c.emoji}</span>
                 </div>
-                <div style={{ padding: '11px 12px 14px' }}>
-                  <div style={{ fontFamily: 'var(--serif)', fontSize: 16.5, color: 'var(--ink)', letterSpacing: '-0.01em' }}>
+                <div style={{ padding: '10px 12px 13px' }}>
+                  <div style={{ fontFamily: 'var(--serif)', fontSize: 15.5, color: 'var(--ink)', letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {c.name}
                   </div>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--ink-3)', marginTop: 8 }}>
-                    {c.postCount ?? 0} entradas
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--ink-3)', marginTop: 6 }}>
+                    {c.postCount ?? 0} {(c.postCount ?? 0) === 1 ? 'entrada' : 'entradas'}
                   </div>
                 </div>
               </div>
             )
           })}
+          {/* Add button card */}
+          <div
+            onClick={() => setShowModal(true)}
+            style={{
+              cursor: 'pointer', borderRadius: 16, overflow: 'hidden',
+              border: '1px dashed var(--line-strong)',
+              background: 'transparent',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              minHeight: 120, gap: 6,
+            }}
+          >
+            <span style={{ fontSize: 22, opacity: 0.3 }}>+</span>
+            <span style={{ fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--ink-3)' }}>Nova coleção</span>
+          </div>
         </div>
+      )}
+
+      {showModal && (
+        <NewCollectionModal
+          onClose={() => setShowModal(false)}
+          onCreate={createCollection}
+          existingNames={existingNames}
+        />
       )}
     </div>
   )
