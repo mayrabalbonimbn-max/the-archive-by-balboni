@@ -197,6 +197,35 @@ router.get('/following', async (req, res) => {
   }
 })
 
+// GET /api/posts/guide — public posts by @thearchive system profile
+router.get('/guide', async (req, res) => {
+  try {
+    const { rows: [sys] } = await pool.query(
+      'SELECT id FROM profiles WHERE handle = $1 AND is_system = true',
+      ['thearchive']
+    )
+    if (!sys) return res.json([])
+
+    const result = await pool.query(
+      `SELECT p.*,
+         owner.id AS author_id, owner.name AS author_name, owner.handle AS author_handle, owner.avatar AS author_avatar,
+         ${reactionCountsSql('p')}, ${viewerReactionsSql('p', '$2')}, ${commentCountSql('p')},
+         ${attachmentJsonSql}
+        FROM posts p
+        JOIN profiles owner ON owner.id = p.profile_id
+        LEFT JOIN post_attachments a ON a.post_id = p.id AND a.profile_id = p.profile_id AND ${attachmentVisibleSql('a', 'p')}
+        WHERE p.profile_id = $1 AND p.visibility = 'public'
+        GROUP BY p.id, owner.id
+        ORDER BY p.created_at ASC`,
+      [sys.id, req.user.profileId]
+    )
+    res.json(result.rows.map(toPost))
+  } catch (err) {
+    console.error('GET /posts/guide error:', err)
+    res.status(500).json({ error: 'Erro interno do servidor.' })
+  }
+})
+
 // GET /api/posts/explore
 router.get('/explore', async (req, res) => {
   try {

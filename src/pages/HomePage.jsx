@@ -155,6 +155,59 @@ function MemoryStrip({ memories, onSeeAll }) {
   )
 }
 
+// ── GuideSection ─────────────────────────────────────────────────────────────
+function GuideSection({ posts }) {
+  const navigate = useNavigate()
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('archive-guide-collapsed') === '1' } catch { return false }
+  })
+
+  if (!posts.length) return null
+
+  function toggle() {
+    const next = !collapsed
+    setCollapsed(next)
+    try { localStorage.setItem('archive-guide-collapsed', next ? '1' : '0') } catch {}
+  }
+
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)' }} />
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '0.12em', color: 'var(--ink-3)', textTransform: 'uppercase' }}>
+            Guia do Archive
+          </span>
+        </div>
+        <button
+          onClick={toggle}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)', padding: 0 }}
+        >
+          {collapsed ? 'Mostrar' : 'Ocultar'}
+        </button>
+      </div>
+
+      {!collapsed && (
+        <div style={{ borderTop: '1px solid var(--line)' }}>
+          {posts.slice(0, 4).map(p => (
+            <EntryCard key={p.id} post={p} showAuthor />
+          ))}
+          {posts.length > 4 && (
+            <div style={{ padding: '14px 20px', textAlign: 'center' }}>
+              <button
+                onClick={() => navigate('/explore')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--accent)', letterSpacing: '0.08em' }}
+              >
+                Ver todos os guias →
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── NotifBell ─────────────────────────────────────────────────────────────────
 function NotifBell({ hasUnread, onClick }) {
   return (
@@ -185,9 +238,11 @@ export default function HomePage({ posts, profile, searchQuery, onPost, onLike, 
   const [circlePosts, setCirclePosts] = useState([])
   const [circleLoading, setCircleLoading] = useState(true)
   const [memories, setMemories] = useState([])
+  const [guidePosts, setGuidePosts] = useState([])
 
   useEffect(() => {
     api.get('/archive/memories').then(d => setMemories(d.slice(0, 4))).catch(() => {})
+    api.get('/posts/guide').then(d => setGuidePosts(d)).catch(() => {})
     api.get('/posts/following')
       .then(d => setCirclePosts(d.slice(0, 6)))
       .catch(() => {})
@@ -239,6 +294,9 @@ export default function HomePage({ posts, profile, searchQuery, onPost, onLike, 
 
       {/* Memory strip */}
       <MemoryStrip memories={memories} />
+
+      {/* Guide section */}
+      <GuideSection posts={guidePosts} />
 
       {/* Circle feed */}
       <SectionLabel>Do seu círculo hoje</SectionLabel>

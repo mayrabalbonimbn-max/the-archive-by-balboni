@@ -16,9 +16,12 @@ if (process.env.JWT_SECRET.length < 32) {
   process.exit(1)
 }
 
+const seedTheArchive = require('./seeds/thearchive')
+
 pool.initialize()
   .then(() => pool.migrateLegacyImages())
   .then(() => pool.migrateLegacyProfileImages())
+  .then(() => seedTheArchive(pool))
   .then(() => {
     console.log('✓ PostgreSQL connected')
     app.listen(PORT, () => console.log(`✓ API running on port ${PORT}`))

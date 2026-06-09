@@ -81,10 +81,44 @@ function PublicArchiveCard({ user, idx }) {
   )
 }
 
+// ── GuideCard — compact card for guide posts in Explore ──────────────────────
+function GuideCard({ post }) {
+  const navigate = useNavigate()
+  const firstLine = post.content?.split('\n')[0] || ''
+  const body = post.content?.split('\n').slice(2).join(' ').trim().slice(0, 100) || ''
+
+  return (
+    <button
+      onClick={() => navigate(`/posts/${post.id}`)}
+      style={{
+        flexShrink: 0, width: 220, cursor: 'pointer', textAlign: 'left',
+        background: 'rgba(255,255,255,0.025)', borderRadius: 14,
+        border: '1px solid var(--line)', padding: '14px 15px',
+        display: 'flex', flexDirection: 'column', gap: 6,
+      }}
+    >
+      <div style={{ fontFamily: 'var(--serif)', fontSize: 15, lineHeight: 1.3, color: 'var(--ink)', fontStyle: 'italic' }}>
+        {firstLine}
+      </div>
+      {body && (
+        <div style={{ fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink-3)', lineHeight: 1.5 }}>
+          {body}…
+        </div>
+      )}
+      <div style={{ marginTop: 4, fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', letterSpacing: '0.06em' }}>
+        @thearchive
+      </div>
+    </button>
+  )
+}
+
 // ── DefaultState ──────────────────────────────────────────────────────────────
-function DefaultState({ suggested }) {
+function DefaultState({ suggested, guidePosts }) {
   const navigate = useNavigate()
   const [activeTheme, setActiveTheme] = useState(0)
+
+  // Exclude @thearchive from people/archives sections
+  const realSuggested = suggested.filter(u => u.handle !== 'thearchive')
 
   return (
     <>
@@ -95,12 +129,24 @@ function DefaultState({ suggested }) {
         ))}
       </div>
 
+      {/* Guide posts from @thearchive */}
+      {guidePosts.length > 0 && (
+        <div style={{ marginBottom: 8 }}>
+          <SectionLabel>Do próprio Archive</SectionLabel>
+          <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '10px 20px 22px', scrollbarWidth: 'none' }}>
+            {guidePosts.slice(0, 8).map(p => (
+              <GuideCard key={p.id} post={p} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Public archives */}
-      {suggested.length > 0 && (
+      {realSuggested.length > 0 && (
         <>
           <SectionLabel>Arquivos públicos, abertos recentemente</SectionLabel>
           <div style={{ display: 'flex', gap: 14, overflowX: 'auto', padding: '12px 20px 26px', scrollbarWidth: 'none' }}>
-            {suggested.slice(0, 5).map((u, i) => (
+            {realSuggested.slice(0, 5).map((u, i) => (
               <PublicArchiveCard key={u.id} user={u} idx={i} />
             ))}
           </div>
@@ -112,10 +158,10 @@ function DefaultState({ suggested }) {
         Pessoas guardando coisas como você
       </SectionLabel>
       <div style={{ borderTop: '1px solid var(--line)' }}>
-        {suggested.slice(0, 4).map(u => (
+        {realSuggested.slice(0, 4).map(u => (
           <PersonRow key={u.id} person={u} />
         ))}
-        {suggested.length === 0 && (
+        {realSuggested.length === 0 && (
           <p style={{ padding: '24px 20px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-3)' }}>
             Ninguém sugerido ainda.
           </p>
@@ -174,13 +220,14 @@ export default function ExplorePage() {
   const [results, setResults] = useState(null)
   const [loading, setLoading] = useState(false)
   const [suggested, setSuggested] = useState([])
+  const [guidePosts, setGuidePosts] = useState([])
   const inputRef = useRef(null)
   const debounceRef = useRef(null)
 
-  // Load suggested people for default state
+  // Load suggested people and guide posts for default state
   useEffect(() => {
+    api.get('/posts/guide').then(setGuidePosts).catch(() => {})
     api.get('/users/suggested').then(setSuggested).catch(() => {
-      // Fallback: load all users and filter non-following
       api.get('/search?q=').then(d => setSuggested(d?.users ?? [])).catch(() => {})
     })
   }, [])
@@ -221,7 +268,7 @@ export default function ExplorePage() {
 
       {searching
         ? <SearchResults q={q.trim()} results={results} loading={loading} />
-        : <DefaultState suggested={suggested} />
+        : <DefaultState suggested={suggested} guidePosts={guidePosts} />
       }
     </div>
   )
