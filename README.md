@@ -25,7 +25,7 @@ Com o tempo, todos esses registros formam uma narrativa — gerada automaticamen
 | PWA | vite-plugin-pwa |
 | Backend | Express + PostgreSQL |
 | Gerenciador de processos | PM2 (`mayra-social-api`) |
-| Servidor | VPS — `root@187.77.44.178` |
+| Servidor | VPS Linux + Nginx + PM2 |
 
 ---
 
@@ -166,18 +166,7 @@ Copie `.env.example` para `.env` e preencha a URL do banco e o JWT secret.
 
 ## Deploy
 
-```bash
-# Local: build e push
-npm run build
-git push origin main
-
-# VPS (automatizado via git pull)
-ssh root@187.77.44.178
-cd /var/www/mayra-social
-git pull origin main
-npm run build
-pm2 restart all
-```
+Build local e push para o repositório. O servidor puxa a atualização, faz o build e reinicia o processo via PM2.
 
 ---
 
