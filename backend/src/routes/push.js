@@ -1,6 +1,7 @@
 const express = require('express')
 const pool = require('../db')
 const requireAuth = require('../middleware/auth')
+const { sendPushToUser } = require('../utils/push')
 
 const router = express.Router()
 router.use(requireAuth)
@@ -46,6 +47,21 @@ router.delete('/subscribe', async (req, res) => {
   } catch (err) {
     console.error('push unsubscribe error:', err)
     res.status(500).json({ error: 'Erro ao remover subscription.' })
+  }
+})
+
+router.post('/test', async (req, res) => {
+  try {
+    await sendPushToUser(req.user.profileId, {
+      title: 'The Archive',
+      body: 'Notificações push estão funcionando! ✓',
+      url: '/notifications',
+      tag: 'push-test',
+    })
+    res.json({ ok: true })
+  } catch (err) {
+    console.error('push test error:', err)
+    res.status(500).json({ error: err.message })
   }
 })
 

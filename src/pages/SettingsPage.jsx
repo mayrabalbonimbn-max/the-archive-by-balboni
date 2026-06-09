@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { exportPostsAsMarkdown } from '../utils/storage'
-import { api, getPushVapidKey, subscribePush, unsubscribePush } from '../utils/api'
+import { api, getPushVapidKey, subscribePush, unsubscribePush, sendTestPush } from '../utils/api'
 import AppBar from '../components/ui/AppBar'
 import Avatar from '../components/ui/Avatar'
 import Icon from '../components/ui/Icon'
@@ -404,9 +404,26 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
             </div>
           )}
           {pushSubscribed ? (
-            <OutlineBtn onClick={handleDisablePush} disabled={pushLoading}>
-              {pushLoading ? 'Aguarde…' : 'Desativar notificações push'}
-            </OutlineBtn>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <AccentBtn onClick={async () => {
+                setPushLoading(true)
+                setPushMsg('')
+                try {
+                  await sendTestPush()
+                  setPushMsg('Notificação de teste enviada! Verifique seu dispositivo.')
+                } catch (err) {
+                  setPushMsg(err.message || 'Erro ao enviar notificação de teste.')
+                } finally {
+                  setPushLoading(false)
+                  setTimeout(() => setPushMsg(''), 5000)
+                }
+              }} disabled={pushLoading}>
+                {pushLoading ? 'Enviando…' : 'Enviar notificação de teste'}
+              </AccentBtn>
+              <OutlineBtn onClick={handleDisablePush} disabled={pushLoading}>
+                Desativar
+              </OutlineBtn>
+            </div>
           ) : (
             <AccentBtn onClick={handleEnablePush} disabled={pushLoading || pushPermission === 'denied' || !('PushManager' in window)}>
               {pushLoading ? 'Ativando…' : 'Ativar notificações push'}

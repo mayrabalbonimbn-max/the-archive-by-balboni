@@ -107,3 +107,7 @@ export async function subscribePush(subscription) {
 export async function unsubscribePush(endpoint) {
   return apiFetch('/push/subscribe', { method: 'DELETE', body: JSON.stringify({ endpoint }) })
 }
+
+export async function sendTestPush() {
+  return apiFetch('/push/test', { method: 'POST' })
+}
