@@ -91,7 +91,7 @@ router.get('/username/:username', async (req, res) => {
         (SELECT COUNT(*)::int FROM follows fl WHERE fl.follower_id = p.id) AS following_count,
         (SELECT COUNT(*)::int FROM friendships f WHERE f.status = 'accepted' AND (f.requester_id = p.id OR f.receiver_id = p.id)) AS friend_count
        FROM profiles p
-       WHERE LOWER(p.handle) = $2`,
+       WHERE LOWER(TRIM(LEADING '@' FROM p.handle)) = $2`,
       [req.user.profileId, handle]
     )
     if (result.rowCount === 0) return res.status(404).json({ error: 'Perfil não encontrado.' })

@@ -195,15 +195,15 @@ async function seedTheArchive(pool) {
         `INSERT INTO profiles (name, handle, bio, is_system, onboarding_completed, password_hash)
          VALUES ($1, $2, $3, true, true, $4)
          RETURNING id`,
-        ['The Archive', 'thearchive', 'Guia silencioso do Archive.', hash]
+        ['The Archive', '@thearchive', 'Guia silencioso do Archive.', hash]
       )
       profileId = created.id
       console.log('✓ @thearchive profile created')
     }
 
-    // Always sync password_hash + is_system (idempotent)
+    // Always sync handle format, password_hash and is_system (idempotent)
     await pool.query(
-      'UPDATE profiles SET is_system = true, password_hash = $2 WHERE id = $1',
+      "UPDATE profiles SET is_system = true, password_hash = $2, handle = '@thearchive' WHERE id = $1",
       [profileId, hash]
     )
 
