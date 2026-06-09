@@ -114,7 +114,7 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
   const [passwordStatus, setPasswordStatus] = useState(null)
   const [passwordLoading, setPasswordLoading] = useState(false)
 
-  const [pushPermission, setPushPermission] = useState(Notification?.permission || 'default')
+  const [pushPermission, setPushPermission] = useState(window.Notification?.permission || 'default')
   const [pushSubscribed, setPushSubscribed] = useState(false)
   const [pushLoading, setPushLoading] = useState(false)
   const [pushMsg, setPushMsg] = useState('')
@@ -122,7 +122,7 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
 
   useEffect(() => {
     const swOk = 'serviceWorker' in navigator
-    const permOk = Notification?.permission === 'granted'
+    const permOk = window.Notification?.permission === 'granted'
     if (!swOk || !('PushManager' in window)) {
       setPushDiag({ swOk: false, permOk, subOk: false })
       return
@@ -139,13 +139,13 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
   }, [])
 
   async function handleEnablePush() {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !window.Notification) {
       return setPushMsg('Seu navegador não suporta push notifications.')
     }
     setPushLoading(true)
     setPushMsg('')
     try {
-      const perm = await Notification.requestPermission()
+      const perm = await window.Notification.requestPermission()
       setPushPermission(perm)
       if (perm !== 'granted') {
         return setPushMsg('Permissão negada. Habilite notificações nas configurações do navegador.')
