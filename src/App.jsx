@@ -31,6 +31,13 @@ import ProjectDetailPage from './pages/ProjectDetailPage'
 import ProjectsPage from './pages/ProjectsPage'
 import LifeMapPage from './pages/LifeMapPage'
 import OnboardingTour from './components/OnboardingTour'
+import GraphPage from './pages/GraphPage'
+import DashboardPage from './pages/DashboardPage'
+import YearReviewPage from './pages/YearReviewPage'
+import KnowledgePage from './pages/KnowledgePage'
+import GrowthPage from './pages/GrowthPage'
+import AchievementsPage from './pages/AchievementsPage'
+import StoryPage from './pages/StoryPage'
 import { usePosts } from './hooks/usePosts'
 import { useProfile } from './hooks/useProfile'
 import { useSession } from './hooks/useSession'
@@ -97,6 +104,13 @@ function AuthenticatedApp({ onLogout }) {
         <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/projects/:slug" element={<ProjectDetailPage />} />
         <Route path="/life-map" element={<LifeMapPage />} />
+        <Route path="/graph" element={<GraphPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/year-review/:year" element={<YearReviewPage />} />
+        <Route path="/knowledge" element={<KnowledgePage />} />
+        <Route path="/growth" element={<GrowthPage />} />
+        <Route path="/achievements" element={<AchievementsPage />} />
+        <Route path="/story" element={<StoryPage />} />
       </Routes>
     </Layout>
     </>

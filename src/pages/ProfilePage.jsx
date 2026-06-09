@@ -51,7 +51,7 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
   const streak = useStreak()
   const [projects, setProjects] = useState([])
   const [showNewProject, setShowNewProject] = useState(false)
-  const [newProject, setNewProject] = useState({ emoji: '🌱', title: '', description: '', status: 'ativo' })
+  const [newProject, setNewProject] = useState({ emoji: '🌱', title: '', description: '', status: 'ativo', githubUrl: '', websiteUrl: '', tags: '', startedAt: '', completedAt: '' })
   const [creating, setCreating] = useState(false)
 
   useEffect(() => {
@@ -357,17 +357,82 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
               onChange={e => setNewProject(p => ({ ...p, description: e.target.value }))}
               placeholder="Descrição breve (opcional)"
               rows={2}
-              style={{ width: '100%', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 8, padding: '10px 12px', fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink)', resize: 'none', boxSizing: 'border-box', marginBottom: 16 }}
+              style={{ width: '100%', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 8, padding: '10px 12px', fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink)', resize: 'none', boxSizing: 'border-box', marginBottom: 12 }}
             />
+            {/* Status */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Status</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {['ideia','construindo','ativo','pausado','concluído'].map(s => (
+                  <button key={s} onClick={() => setNewProject(p => ({ ...p, status: s }))} style={{
+                    padding: '4px 12px', borderRadius: 20, border: `1px solid ${newProject.status === s ? 'var(--accent)' : 'var(--line)'}`,
+                    background: newProject.status === s ? 'rgba(232,108,180,0.12)' : 'transparent',
+                    color: newProject.status === s ? 'var(--accent)' : 'var(--ink-3)',
+                    fontFamily: 'var(--mono)', fontSize: 11, cursor: 'pointer',
+                  }}>{s}</button>
+                ))}
+              </div>
+            </div>
+            {/* GitHub + Website */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+              <input
+                value={newProject.githubUrl}
+                onChange={e => setNewProject(p => ({ ...p, githubUrl: e.target.value }))}
+                placeholder="GitHub URL"
+                style={{ background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 8, padding: '9px 10px', fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink)' }}
+              />
+              <input
+                value={newProject.websiteUrl}
+                onChange={e => setNewProject(p => ({ ...p, websiteUrl: e.target.value }))}
+                placeholder="Website URL"
+                style={{ background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 8, padding: '9px 10px', fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink)' }}
+              />
+            </div>
+            {/* Tags */}
+            <input
+              value={newProject.tags}
+              onChange={e => setNewProject(p => ({ ...p, tags: e.target.value }))}
+              placeholder="Tags: fotografia, ios, swift"
+              style={{ width: '100%', boxSizing: 'border-box', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 8, padding: '9px 10px', fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink)', marginBottom: 12 }}
+            />
+            {/* Start date */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+              <div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Início</div>
+                <input
+                  type="date"
+                  value={newProject.startedAt}
+                  onChange={e => setNewProject(p => ({ ...p, startedAt: e.target.value }))}
+                  style={{ width: '100%', boxSizing: 'border-box', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 8, padding: '8px 10px', fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink)' }}
+                />
+              </div>
+              <div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Conclusão</div>
+                <input
+                  type="date"
+                  value={newProject.completedAt}
+                  onChange={e => setNewProject(p => ({ ...p, completedAt: e.target.value }))}
+                  style={{ width: '100%', boxSizing: 'border-box', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 8, padding: '8px 10px', fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink)' }}
+                />
+              </div>
+            </div>
             <button
               onClick={async () => {
                 if (!newProject.title.trim()) return
                 setCreating(true)
                 try {
-                  const proj = await api.post('/projects', newProject)
+                  const payload = {
+                    ...newProject,
+                    tags: newProject.tags ? newProject.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+                    startedAt: newProject.startedAt || undefined,
+                    completedAt: newProject.completedAt || undefined,
+                    githubUrl: newProject.githubUrl || undefined,
+                    websiteUrl: newProject.websiteUrl || undefined,
+                  }
+                  const proj = await api.post('/projects', payload)
                   setProjects(prev => [proj, ...prev])
                   setShowNewProject(false)
-                  setNewProject({ emoji: '🌱', title: '', description: '', status: 'ativo' })
+                  setNewProject({ emoji: '🌱', title: '', description: '', status: 'ativo', githubUrl: '', websiteUrl: '', tags: '', startedAt: '', completedAt: '' })
                 } catch {}
                 setCreating(false)
               }}

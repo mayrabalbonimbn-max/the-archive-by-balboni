@@ -433,4 +433,253 @@ router.get('/backlinks/:title', async (req, res) => {
   }
 })
 
+// GET /archive/graph
+router.get('/graph', async (req, res) => {
+  try {
+    const pid = req.user.profileId
+    const postsRes = await pool.query(
+      `SELECT id, type, is_article, code_language, content, created_at, project_id, collection_id, article_title
+       FROM posts WHERE profile_id=$1 ORDER BY created_at DESC LIMIT 150`,
+      [pid]
+    )
+    const projectsRes = await pool.query(
+      `SELECT id, title, emoji, status FROM projects WHERE profile_id=$1`,
+      [pid]
+    )
+    const collectionsRes = await pool.query(
+      `SELECT id, name, emoji FROM collections WHERE profile_id=$1`,
+      [pid]
+    )
+
+    const nodes = []
+    const links = []
+    const tagSet = new Map()
+
+    for (const row of postsRes.rows) {
+      const group = row.is_article ? 'article' : row.code_language ? 'code' : 'post'
+      nodes.push({
+        id: row.id,
+        type: row.is_article ? 'article' : 'post',
+        label: (row.article_title || (row.content || '').slice(0, 50)).trim(),
+        group,
+        createdAt: row.created_at,
+      })
+      if (row.project_id) links.push({ source: row.id, target: row.project_id, kind: 'project' })
+      if (row.collection_id) links.push({ source: row.id, target: row.collection_id, kind: 'collection' })
+
+      const tagMatches = (row.content || '').match(/#[\p{L}\p{N}_-]+/gu) || []
+      for (const tag of tagMatches) {
+        const name = tag.slice(1)
+        if (!tagSet.has(name)) tagSet.set(name, 0)
+        tagSet.set(name, tagSet.get(name) + 1)
+        links.push({ source: row.id, target: 'tag:' + name, kind: 'tag' })
+      }
+    }
+
+    for (const row of projectsRes.rows) {
+      nodes.push({ id: row.id, type: 'project', label: (row.emoji || '') + ' ' + row.title, group: 'project', createdAt: null })
+    }
+    for (const row of collectionsRes.rows) {
+      nodes.push({ id: row.id, type: 'collection', label: (row.emoji || '') + ' ' + row.name, group: 'collection', createdAt: null })
+    }
+
+    const topTags = [...tagSet.entries()].sort((a, b) => b[1] - a[1]).slice(0, 40)
+    for (const [name] of topTags) {
+      nodes.push({ id: 'tag:' + name, type: 'tag', label: '#' + name, group: 'tag', createdAt: null })
+    }
+
+    res.json({ nodes, links })
+  } catch (err) {
+    console.error('GET /archive/graph error:', err)
+    res.status(500).json({ error: 'Erro interno.' })
+  }
+})
+
+// GET /archive/dashboard
+router.get('/dashboard', async (req, res) => {
+  try {
+    const pid = req.user.profileId
+    const [last30, last12, summaryRes, photosRes, projectsRes, capsulesRes] = await Promise.all([
+      pool.query(
+        `SELECT created_at::date AS day, COUNT(*)::int AS count FROM posts WHERE profile_id=$1 AND created_at >= now()-'30 days'::interval GROUP BY day ORDER BY day`,
+        [pid]
+      ),
+      pool.query(
+        `SELECT date_trunc('month', created_at) AS month, COUNT(*)::int AS count FROM posts WHERE profile_id=$1 AND created_at >= now()-'12 months'::interval GROUP BY month ORDER BY month`,
+        [pid]
+      ),
+      pool.query(
+        `SELECT COUNT(*)::int AS total_posts, COUNT(*) FILTER (WHERE is_article)::int AS total_articles, COUNT(*) FILTER (WHERE code_language IS NOT NULL)::int AS total_codes, MIN(created_at) AS first_post FROM posts WHERE profile_id=$1`,
+        [pid]
+      ),
+      pool.query(`SELECT COUNT(*)::int AS total_photos FROM post_attachments WHERE profile_id=$1 AND file_type='image'`, [pid]),
+      pool.query(`SELECT COUNT(*)::int AS active_projects FROM projects WHERE profile_id=$1 AND status IN ('ativo','construindo')`, [pid]),
+      pool.query(`SELECT COUNT(*)::int AS capsules_waiting FROM posts WHERE profile_id=$1 AND is_time_capsule=true AND unlock_at > now()`, [pid]),
+    ])
+    const s = summaryRes.rows[0]
+    res.json({
+      last30: last30.rows,
+      last12: last12.rows,
+      summary: {
+        totalPosts: s.total_posts,
+        totalArticles: s.total_articles,
+        totalCodes: s.total_codes,
+        totalPhotos: photosRes.rows[0].total_photos,
+        activeProjects: projectsRes.rows[0].active_projects,
+        capsulesWaiting: capsulesRes.rows[0].capsules_waiting,
+        firstPost: s.first_post,
+      },
+    })
+  } catch (err) {
+    console.error('GET /archive/dashboard error:', err)
+    res.status(500).json({ error: 'Erro interno.' })
+  }
+})
+
+// GET /archive/year-review/:year
+router.get('/year-review/:year', async (req, res) => {
+  try {
+    const pid = req.user.profileId
+    const year = parseInt(req.params.year, 10)
+    const [statsRes, bestMonthRes, projCreatedRes, projCompletedRes, firstPostRes, topProjectsRes, reflectionsRes, photosRes] = await Promise.all([
+      pool.query(
+        `SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE is_article)::int AS articles, COUNT(*) FILTER (WHERE code_language IS NOT NULL)::int AS codes, COUNT(DISTINCT created_at::date)::int AS active_days FROM posts WHERE profile_id=$1 AND EXTRACT(YEAR FROM created_at)=$2`,
+        [pid, year]
+      ),
+      pool.query(
+        `SELECT EXTRACT(MONTH FROM created_at)::int AS month, COUNT(*)::int AS count FROM posts WHERE profile_id=$1 AND EXTRACT(YEAR FROM created_at)=$2 GROUP BY month ORDER BY count DESC LIMIT 1`,
+        [pid, year]
+      ),
+      pool.query(`SELECT COUNT(*)::int AS created FROM projects WHERE profile_id=$1 AND EXTRACT(YEAR FROM created_at)=$2`, [pid, year]),
+      pool.query(`SELECT COUNT(*)::int AS completed FROM projects WHERE profile_id=$1 AND EXTRACT(YEAR FROM completed_at)=$2`, [pid, year]),
+      pool.query(
+        `SELECT content, article_title, created_at FROM posts WHERE profile_id=$1 AND EXTRACT(YEAR FROM created_at)=$2 ORDER BY created_at ASC LIMIT 1`,
+        [pid, year]
+      ),
+      pool.query(
+        `SELECT pr.title, pr.emoji, COUNT(*)::int AS post_count FROM posts p JOIN projects pr ON pr.id = p.project_id WHERE p.profile_id=$1 AND EXTRACT(YEAR FROM p.created_at)=$2 GROUP BY pr.id, pr.title, pr.emoji ORDER BY post_count DESC LIMIT 3`,
+        [pid, year]
+      ),
+      pool.query(
+        `SELECT COUNT(*)::int AS reflections FROM posts WHERE profile_id=$1 AND parent_memory_post_id IS NOT NULL AND EXTRACT(YEAR FROM created_at)=$2`,
+        [pid, year]
+      ),
+      pool.query(
+        `SELECT COUNT(*)::int AS photos FROM post_attachments WHERE profile_id=$1 AND file_type='image' AND EXTRACT(YEAR FROM created_at)=$2`,
+        [pid, year]
+      ),
+    ])
+    const s = statsRes.rows[0]
+    const bm = bestMonthRes.rows[0] || null
+    const fp = firstPostRes.rows[0] || null
+    res.json({
+      year,
+      stats: {
+        total: s.total,
+        articles: s.articles,
+        codes: s.codes,
+        activeDays: s.active_days,
+        reflections: reflectionsRes.rows[0].reflections,
+        photos: photosRes.rows[0].photos,
+      },
+      bestMonth: bm ? { month: bm.month, count: bm.count } : null,
+      projects: { created: projCreatedRes.rows[0].created, completed: projCompletedRes.rows[0].completed },
+      topProjects: topProjectsRes.rows.map(r => ({ title: r.title, emoji: r.emoji, postCount: r.post_count })),
+      firstPost: fp ? { content: fp.content, articleTitle: fp.article_title, createdAt: fp.created_at } : null,
+    })
+  } catch (err) {
+    console.error('GET /archive/year-review error:', err)
+    res.status(500).json({ error: 'Erro interno.' })
+  }
+})
+
+// GET /archive/growth
+router.get('/growth', async (req, res) => {
+  try {
+    const pid = req.user.profileId
+    const [firstPost, firstPhoto, firstArticle, firstProject, firstCapsule, firstReflection, profileRes] = await Promise.all([
+      pool.query(`SELECT id, content, article_title, created_at FROM posts WHERE profile_id=$1 ORDER BY created_at ASC LIMIT 1`, [pid]),
+      pool.query(`SELECT a.id, a.original_name, a.created_at FROM post_attachments a WHERE a.profile_id=$1 AND a.file_type='image' ORDER BY a.created_at ASC LIMIT 1`, [pid]),
+      pool.query(`SELECT id, article_title, created_at FROM posts WHERE profile_id=$1 AND is_article=true ORDER BY created_at ASC LIMIT 1`, [pid]),
+      pool.query(`SELECT id, title, emoji, created_at FROM projects WHERE profile_id=$1 ORDER BY created_at ASC LIMIT 1`, [pid]),
+      pool.query(`SELECT id, content, created_at FROM posts WHERE profile_id=$1 AND is_time_capsule=true ORDER BY created_at ASC LIMIT 1`, [pid]),
+      pool.query(`SELECT id, content, created_at FROM posts WHERE profile_id=$1 AND parent_memory_post_id IS NOT NULL ORDER BY created_at ASC LIMIT 1`, [pid]),
+      pool.query(`SELECT created_at FROM profiles WHERE id=$1`, [pid]),
+    ])
+    const milestones = []
+    const add = (type, label, row, description) => {
+      if (row) milestones.push({ type, label, date: row.created_at, description })
+    }
+    add('first_post', 'Primeiro registro', firstPost.rows[0], firstPost.rows[0]?.content?.slice(0, 80))
+    add('first_photo', 'Primeira foto', firstPhoto.rows[0], firstPhoto.rows[0]?.original_name)
+    add('first_article', 'Primeiro ensaio', firstArticle.rows[0], firstArticle.rows[0]?.article_title)
+    add('first_project', 'Primeiro projeto', firstProject.rows[0], firstProject.rows[0]?.title)
+    add('first_capsule', 'Primeira cápsula do tempo', firstCapsule.rows[0], firstCapsule.rows[0]?.content?.slice(0, 80))
+    add('first_reflection', 'Primeira reflexão', firstReflection.rows[0], firstReflection.rows[0]?.content?.slice(0, 80))
+    milestones.sort((a, b) => new Date(a.date) - new Date(b.date))
+    res.json({ accountCreatedAt: profileRes.rows[0]?.created_at || null, milestones })
+  } catch (err) {
+    console.error('GET /archive/growth error:', err)
+    res.status(500).json({ error: 'Erro interno.' })
+  }
+})
+
+// GET /archive/achievements
+router.get('/achievements', async (req, res) => {
+  try {
+    const pid = req.user.profileId
+    const [countsRes, photosRes, projectsRes, daysRes] = await Promise.all([
+      pool.query(
+        `SELECT COUNT(*)::int AS posts, COUNT(*) FILTER (WHERE is_article)::int AS articles, COUNT(*) FILTER (WHERE code_language IS NOT NULL)::int AS codes, COUNT(*) FILTER (WHERE parent_memory_post_id IS NOT NULL)::int AS reflections, COUNT(*) FILTER (WHERE is_time_capsule)::int AS capsules FROM posts WHERE profile_id=$1`,
+        [pid]
+      ),
+      pool.query(`SELECT COUNT(*)::int AS photos FROM post_attachments WHERE profile_id=$1 AND file_type='image'`, [pid]),
+      pool.query(`SELECT COUNT(*)::int AS projects FROM projects WHERE profile_id=$1`, [pid]),
+      pool.query(`SELECT DISTINCT created_at::date AS day FROM posts WHERE profile_id=$1 ORDER BY day`, [pid]),
+    ])
+    const c = countsRes.rows[0]
+    const posts = c.posts, articles = c.articles, codes = c.codes, reflections = c.reflections, capsules = c.capsules
+    const photos = photosRes.rows[0].photos
+    const projects = projectsRes.rows[0].projects
+
+    // compute best streak
+    const days = daysRes.rows.map(r => r.day instanceof Date ? r.day : new Date(r.day))
+    let bestStreak = 0, cur = 0
+    for (let i = 0; i < days.length; i++) {
+      if (i === 0) { cur = 1; continue }
+      const diff = (days[i] - days[i-1]) / 86400000
+      if (diff === 1) { cur++; if (cur > bestStreak) bestStreak = cur }
+      else { if (cur > bestStreak) bestStreak = cur; cur = 1 }
+    }
+    if (cur > bestStreak) bestStreak = cur
+    const activeDays = days.length
+
+    const all = [
+      { id: 'first_post', emoji: '🌱', title: 'Primeiro registro', desc: 'Criou seu primeiro post', earned: posts >= 1 },
+      { id: 'posts_10', emoji: '📖', title: '10 registros', desc: '', earned: posts >= 10 },
+      { id: 'posts_50', emoji: '📚', title: '50 registros', desc: '', earned: posts >= 50 },
+      { id: 'posts_100', emoji: '🏛️', title: '100 registros', desc: '', earned: posts >= 100 },
+      { id: 'first_article', emoji: '✍️', title: 'Primeiro ensaio', desc: '', earned: articles >= 1 },
+      { id: 'first_code', emoji: '💻', title: 'Primeiro código', desc: '', earned: codes >= 1 },
+      { id: 'first_photo', emoji: '📷', title: 'Primeira foto', desc: '', earned: photos >= 1 },
+      { id: 'photos_50', emoji: '🎞️', title: '50 fotos', desc: '', earned: photos >= 50 },
+      { id: 'first_project', emoji: '🌱', title: 'Primeiro projeto', desc: '', earned: projects >= 1 },
+      { id: 'projects_5', emoji: '🏗️', title: '5 projetos', desc: '', earned: projects >= 5 },
+      { id: 'first_capsule', emoji: '📦', title: 'Primeira cápsula', desc: '', earned: capsules >= 1 },
+      { id: 'first_reflection', emoji: '🧠', title: 'Primeira reflexão', desc: '', earned: reflections >= 1 },
+      { id: 'streak_7', emoji: '🔥', title: '7 dias seguidos', desc: '', earned: bestStreak >= 7 },
+      { id: 'streak_30', emoji: '🔥', title: '30 dias seguidos', desc: '', earned: bestStreak >= 30 },
+      { id: 'streak_100', emoji: '🔥', title: '100 dias seguidos', desc: '', earned: bestStreak >= 100 },
+      { id: 'active_30', emoji: '📅', title: '30 dias ativos', desc: '', earned: activeDays >= 30 },
+      { id: 'active_100', emoji: '🗓️', title: '100 dias ativos', desc: '', earned: activeDays >= 100 },
+    ]
+    const earned = all.filter(a => a.earned)
+    const unearned = all.filter(a => !a.earned)
+    res.json({ achievements: [...earned, ...unearned], earnedCount: earned.length, totalCount: all.length })
+  } catch (err) {
+    console.error('GET /archive/achievements error:', err)
+    res.status(500).json({ error: 'Erro interno.' })
+  }
+})
+
 module.exports = router
