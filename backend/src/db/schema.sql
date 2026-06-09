@@ -345,3 +345,14 @@ CREATE INDEX IF NOT EXISTS idx_project_learnings_project ON project_learnings(pr
 
 -- Post categoria (semantic nature of the content)
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS categoria VARCHAR(40) DEFAULT NULL;
+
+-- GIN indexes for full-text search (Portuguese)
+CREATE INDEX IF NOT EXISTS idx_posts_fts ON posts USING GIN (
+  to_tsvector('portuguese', coalesce(article_title,'') || ' ' || coalesce(content,''))
+);
+CREATE INDEX IF NOT EXISTS idx_attachments_fts ON post_attachments USING GIN (
+  to_tsvector('portuguese', coalesce(title,'') || ' ' || coalesce(original_name,'') || ' ' || coalesce(description,''))
+);
+CREATE INDEX IF NOT EXISTS idx_collections_fts ON collections USING GIN (
+  to_tsvector('portuguese', name)
+);

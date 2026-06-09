@@ -312,39 +312,79 @@ router.get('/search', async (req, res) => {
   try {
     const q = (req.query.q || '').trim()
     if (q.length < 2) return res.json({ posts: [], files: [], collections: [], users: [], tags: [], backlinks: [] })
-    const like = `%${q}%`
+
+    // Build a safe tsquery — websearch_to_tsquery never throws on bad input
     const [posts, files, collections, users] = await Promise.all([
       pool.query(
-        `SELECT p.*, c.name AS collection_name
-         FROM posts p LEFT JOIN collections c ON c.id = p.collection_id
-         WHERE p.profile_id = $1 AND (p.content ILIKE $2 OR p.article_title ILIKE $2 OR p.code_content ILIKE $2)
-         ORDER BY p.created_at DESC LIMIT 12`,
-        [req.user.profileId, like]
+        `SELECT p.*, c.name AS collection_name,
+            ts_rank(
+              to_tsvector('portuguese', coalesce(p.article_title,'') || ' ' || coalesce(p.content,'')),
+              websearch_to_tsquery('portuguese', $2)
+            ) AS rank,
+            ts_headline(
+              'portuguese',
+              coalesce(p.content, p.article_title, ''),
+              websearch_to_tsquery('portuguese', $2),
+              'StartSel=<<<, StopSel=>>>, MaxWords=25, MinWords=10, MaxFragments=1, FragmentDelimiter= … '
+            ) AS excerpt
+         FROM posts p
+         LEFT JOIN collections c ON c.id = p.collection_id
+         WHERE p.profile_id = $1
+           AND to_tsvector('portuguese', coalesce(p.article_title,'') || ' ' || coalesce(p.content,''))
+               @@ websearch_to_tsquery('portuguese', $2)
+         ORDER BY rank DESC, p.created_at DESC LIMIT 12`,
+        [req.user.profileId, q]
       ),
       pool.query(
-        `SELECT a.*, p.content AS post_content, p.article_title
-         FROM post_attachments a JOIN posts p ON p.id = a.post_id
-         WHERE a.profile_id = $1 AND (a.original_name ILIKE $2 OR a.title ILIKE $2 OR a.description ILIKE $2)
-         ORDER BY a.created_at DESC LIMIT 12`,
-        [req.user.profileId, like]
+        `SELECT a.*, p.content AS post_content, p.article_title,
+            ts_rank(
+              to_tsvector('portuguese', coalesce(a.title,'') || ' ' || coalesce(a.original_name,'') || ' ' || coalesce(a.description,'')),
+              websearch_to_tsquery('portuguese', $2)
+            ) AS rank
+         FROM post_attachments a
+         JOIN posts p ON p.id = a.post_id
+         WHERE a.profile_id = $1
+           AND to_tsvector('portuguese', coalesce(a.title,'') || ' ' || coalesce(a.original_name,'') || ' ' || coalesce(a.description,''))
+               @@ websearch_to_tsquery('portuguese', $2)
+         ORDER BY rank DESC, a.created_at DESC LIMIT 8`,
+        [req.user.profileId, q]
       ),
-      pool.query('SELECT * FROM collections WHERE profile_id = $1 AND name ILIKE $2 ORDER BY created_at DESC LIMIT 8', [req.user.profileId, like]),
-      pool.query('SELECT id, name, handle, avatar FROM profiles WHERE id != $1 AND (name ILIKE $2 OR handle ILIKE $2) ORDER BY name LIMIT 8', [req.user.profileId, like]),
+      pool.query(
+        `SELECT *,
+            ts_rank(to_tsvector('portuguese', name), websearch_to_tsquery('portuguese', $2)) AS rank
+         FROM collections
+         WHERE profile_id = $1
+           AND to_tsvector('portuguese', name) @@ websearch_to_tsquery('portuguese', $2)
+         ORDER BY rank DESC LIMIT 6`,
+        [req.user.profileId, q]
+      ),
+      pool.query(
+        `SELECT id, name, handle, avatar FROM profiles
+         WHERE id != $1 AND (name ILIKE $2 OR handle ILIKE $2)
+         ORDER BY name LIMIT 6`,
+        [req.user.profileId, `%${q}%`]
+      ),
     ])
-    const tagRows = await pool.query('SELECT id, content, code_content, created_at FROM posts WHERE profile_id = $1 ORDER BY created_at DESC LIMIT 500', [req.user.profileId])
+
+    const tagRows = await pool.query(
+      'SELECT id, content, code_content, created_at FROM posts WHERE profile_id = $1 ORDER BY created_at DESC LIMIT 500',
+      [req.user.profileId]
+    )
+    const qLower = q.replace(/^#/, '').toLowerCase()
     const tags = []
     const backlinks = []
     tagRows.rows.forEach(row => {
       extractTags(`${row.content || ''} ${row.code_content || ''}`).forEach(tag => {
-        if (tag.includes(q.replace(/^#/, '').toLowerCase())) tags.push({ tag, postId: row.id, createdAt: row.created_at })
+        if (tag.includes(qLower)) tags.push({ tag, postId: row.id, createdAt: row.created_at })
       })
       extractLinks(row.content || '').forEach(link => {
         if (link.toLowerCase().includes(q.toLowerCase())) backlinks.push({ title: link, postId: row.id, createdAt: row.created_at })
       })
     })
+
     res.json({
-      posts: posts.rows.map(postJson),
-      files: files.rows.map(fileJson),
+      posts: posts.rows.map(row => ({ ...postJson(row), excerpt: row.excerpt || null, rank: row.rank })),
+      files: files.rows.map(row => ({ ...fileJson(row), rank: row.rank })),
       collections: collections.rows,
       users: users.rows,
       tags: tags.slice(0, 12),
