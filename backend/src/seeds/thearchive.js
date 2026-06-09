@@ -185,11 +185,12 @@ async function seedTheArchive(pool) {
       ['thearchive']
     )
 
+    const hash = await bcrypt.hash('thearchive123', 12)
+
     let profileId
     if (existing) {
       profileId = existing.id
     } else {
-      const hash = await bcrypt.hash('thearchive123', 12)
       const { rows: [created] } = await pool.query(
         `INSERT INTO profiles (name, handle, bio, is_system, onboarding_completed, password_hash)
          VALUES ($1, $2, $3, true, true, $4)
@@ -200,10 +201,10 @@ async function seedTheArchive(pool) {
       console.log('✓ @thearchive profile created')
     }
 
-    // Ensure is_system is set (idempotent)
+    // Always sync password_hash + is_system (idempotent)
     await pool.query(
-      'UPDATE profiles SET is_system = true WHERE id = $1',
-      [profileId]
+      'UPDATE profiles SET is_system = true, password_hash = $2 WHERE id = $1',
+      [profileId, hash]
     )
 
     // Create posts that don't exist yet — keyed by first 60 chars of content
