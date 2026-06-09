@@ -18,6 +18,7 @@ function toUser(row) {
     bio: row.bio || '',
     hasAvatar: Boolean(row.avatar) && isStoredFile(row.avatar),
     isFollowing: row.is_following === true,
+    verified: row.is_system || false,
   }
 }
 
@@ -47,7 +48,7 @@ router.get('/', async (req, res) => {
   try {
     const [usersResult, postsResult] = await Promise.all([
       pool.query(
-        `SELECT p.id, p.name, p.handle, p.avatar, p.bio,
+        `SELECT p.id, p.name, p.handle, p.avatar, p.bio, p.is_system,
            EXISTS (
              SELECT 1 FROM follows fl
              WHERE fl.follower_id = $1 AND fl.following_id = p.id

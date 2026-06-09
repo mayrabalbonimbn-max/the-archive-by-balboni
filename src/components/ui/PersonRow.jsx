@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Avatar from './Avatar'
+import VerifiedBadge from './VerifiedBadge'
 import { api } from '../../utils/api'
 import { profileUrl } from '../../utils/helpers'
 
@@ -34,8 +35,9 @@ export default function PersonRow({ person, hairline = true, storyProfiles }) {
       <Avatar name={person.name} src={person.avatar} profileId={person.id} size={44} story={storyProfiles?.has(person.id)} />
 
       <div style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ fontFamily: 'var(--serif)', fontSize: 16.5, color: 'var(--ink)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <span style={{ fontFamily: 'var(--serif)', fontSize: 16.5, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {person.name}
+          {person.verified && <VerifiedBadge size={15} />}
         </span>
         <div style={{ fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink-3)', marginTop: 1 }}>
           {person.handle}

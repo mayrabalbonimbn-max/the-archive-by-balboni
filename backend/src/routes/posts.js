@@ -53,6 +53,7 @@ function toPost(row) {
       name: row.author_name,
       handle: row.author_handle,
       avatar: row.author_avatar,
+      verified: row.author_is_system || false,
     } : null,
   }
 }
@@ -145,7 +146,7 @@ router.get('/friends', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT p.*,
-        owner.id AS author_id, owner.name AS author_name, owner.handle AS author_handle, owner.avatar AS author_avatar,
+        owner.id AS author_id, owner.name AS author_name, owner.handle AS author_handle, owner.avatar AS author_avatar, owner.is_system AS author_is_system,
         ${reactionCountsSql('p')}, ${viewerReactionsSql('p', '$1')},
         ${attachmentJsonSql}
        FROM posts p
@@ -177,7 +178,7 @@ router.get('/following', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT p.*,
-        owner.id AS author_id, owner.name AS author_name, owner.handle AS author_handle, owner.avatar AS author_avatar,
+        owner.id AS author_id, owner.name AS author_name, owner.handle AS author_handle, owner.avatar AS author_avatar, owner.is_system AS author_is_system,
         ${reactionCountsSql('p')}, ${viewerReactionsSql('p', '$1')}, ${commentCountSql('p')},
         ${attachmentJsonSql}
        FROM posts p
@@ -208,7 +209,7 @@ router.get('/guide', async (req, res) => {
 
     const result = await pool.query(
       `SELECT p.*,
-         owner.id AS author_id, owner.name AS author_name, owner.handle AS author_handle, owner.avatar AS author_avatar,
+         owner.id AS author_id, owner.name AS author_name, owner.handle AS author_handle, owner.avatar AS author_avatar, owner.is_system AS author_is_system,
          ${reactionCountsSql('p')}, ${viewerReactionsSql('p', '$2')}, ${commentCountSql('p')},
          ${attachmentJsonSql}
         FROM posts p
@@ -231,7 +232,7 @@ router.get('/explore', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT p.*,
-        owner.id AS author_id, owner.name AS author_name, owner.handle AS author_handle, owner.avatar AS author_avatar,
+        owner.id AS author_id, owner.name AS author_name, owner.handle AS author_handle, owner.avatar AS author_avatar, owner.is_system AS author_is_system,
         ${reactionCountsSql('p')}, ${viewerReactionsSql('p', '$1')}, ${commentCountSql('p')},
         ${attachmentJsonSql}
        FROM posts p
@@ -255,7 +256,7 @@ router.get('/:id', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT p.*,
-        owner.id AS author_id, owner.name AS author_name, owner.handle AS author_handle, owner.avatar AS author_avatar,
+        owner.id AS author_id, owner.name AS author_name, owner.handle AS author_handle, owner.avatar AS author_avatar, owner.is_system AS author_is_system,
         ${reactionCountsSql('p')}, ${viewerReactionsSql('p', '$2')}, ${commentCountSql('p')},
         ${attachmentJsonSql},
         (SELECT COALESCE(jsonb_agg(t.slug ORDER BY t.slug), '[]'::jsonb)

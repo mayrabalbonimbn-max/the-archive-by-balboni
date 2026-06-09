@@ -69,6 +69,7 @@ function toProfile(row) {
     followingCount: Number(row.following_count || 0),
     onboardingCompleted: Boolean(row.onboarding_completed),
     createdAt: row.created_at,
+    verified: row.is_system || false,
   }
 }
 

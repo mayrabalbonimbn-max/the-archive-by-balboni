@@ -7,6 +7,7 @@ import Icon from '../components/ui/Icon'
 import Avatar from '../components/ui/Avatar'
 import SectionLabel from '../components/ui/SectionLabel'
 import EntryCard from '../components/ui/EntryCard'
+import VerifiedBadge from '../components/ui/VerifiedBadge'
 
 function Stat({ n, label, onClick }) {
   return (
@@ -154,8 +155,9 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
       {/* Identity */}
       <div style={{ padding: '20px 20px 0' }}>
         <Avatar name={profile.name} src={profile.avatar} size={76} ring={!storyProfiles.has(profile.id)} story={storyProfiles.has(profile.id)} />
-        <h1 style={{ margin: '16px 0 3px', fontFamily: 'var(--serif)', fontSize: 28, color: 'var(--ink)', fontWeight: 400, letterSpacing: '-0.01em' }}>
+        <h1 style={{ margin: '16px 0 3px', fontFamily: 'var(--serif)', fontSize: 28, color: 'var(--ink)', fontWeight: 400, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 8 }}>
           {profile.name}
+          {profile.verified && <VerifiedBadge size={22} />}
         </h1>
         <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--accent)' }}>{profile.handle}</div>
         {profile.title && (

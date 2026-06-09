@@ -8,6 +8,7 @@ import PhotoTile from '../components/ui/PhotoTile'
 import Avatar from '../components/ui/Avatar'
 import PersonRow from '../components/ui/PersonRow'
 import EntryCard from '../components/ui/EntryCard'
+import VerifiedBadge from '../components/ui/VerifiedBadge'
 import { api } from '../utils/api'
 import { profileUrl } from '../utils/helpers'
 
@@ -108,9 +109,10 @@ function GuideCard({ post }) {
       )}
       <button
         onClick={e => { e.stopPropagation(); navigate(profileUrl('@thearchive')) }}
-        style={{ marginTop: 4, fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', letterSpacing: '0.06em', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+        style={{ marginTop: 4, fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', letterSpacing: '0.06em', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 4 }}
       >
         @thearchive
+        <VerifiedBadge size={11} />
       </button>
     </div>
   )

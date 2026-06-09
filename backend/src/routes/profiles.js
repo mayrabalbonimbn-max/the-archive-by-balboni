@@ -38,6 +38,7 @@ function toPublicProfile(row) {
     friendCount: Number(row.friend_count || 0),
     isFollowing: row.is_following === true,
     isFriend: row.is_friend === true,
+    verified: row.is_system || false,
   }
 }
 
@@ -70,6 +71,7 @@ function toPost(row) {
       name: row.author_name,
       handle: row.author_handle,
       avatar: row.author_avatar,
+      verified: row.author_is_system || false,
     },
   }
 }
@@ -131,7 +133,7 @@ router.get('/:id/posts', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT p.*,
-        owner.id AS author_id, owner.name AS author_name, owner.handle AS author_handle, owner.avatar AS author_avatar,
+        owner.id AS author_id, owner.name AS author_name, owner.handle AS author_handle, owner.avatar AS author_avatar, owner.is_system AS author_is_system,
         ${reactionCountsSql('p')}, ${viewerReactionsSql('p', '$1')},
         (SELECT COUNT(*)::int FROM comments c WHERE c.post_id = p.id) AS comment_count,
         ${attachmentJsonSql}

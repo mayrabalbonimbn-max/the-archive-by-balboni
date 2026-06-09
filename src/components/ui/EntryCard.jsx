@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Avatar from './Avatar'
 import TypeTag from './TypeTag'
 import ReactionRow from './ReactionRow'
+import VerifiedBadge from './VerifiedBadge'
 import { useAttachmentUrl } from '../../hooks/useAttachmentUrl'
 import { api, attachmentBlob } from '../../utils/api'
 import CommentsBox from '../CommentsBox'
@@ -116,7 +117,10 @@ export default function EntryCard({ post, showAuthor = true, onLike, onSave, onD
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flex: 1, flexWrap: 'wrap' }}>
           {showAuthor && authorName && (
-            <button onClick={goToProfile} style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink)', fontWeight: 500, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>{authorName}</button>
+            <button onClick={goToProfile} style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink)', fontWeight: 500, background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              {authorName}
+              {author?.verified && <VerifiedBadge size={13} />}
+            </button>
           )}
           <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)', letterSpacing: '0.02em' }}>
             {fmtDate(post.createdAt)}

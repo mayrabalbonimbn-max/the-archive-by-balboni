@@ -7,6 +7,7 @@ import CodeBlock from '../components/CodeBlock'
 import MarkdownRenderer from '../components/MarkdownRenderer'
 import LinkPreviewCard, { useLinkPreview, extractFirstUrl } from '../components/LinkPreviewCard'
 import Avatar from '../components/ui/Avatar'
+import VerifiedBadge from '../components/ui/VerifiedBadge'
 import CommentsBox from '../components/CommentsBox'
 import { publicProfileMediaBlob } from '../utils/api'
 
@@ -204,7 +205,10 @@ export default function PostDetailPage({ profile, onLike, onSave, onDelete }) {
         >
           <Avatar name={displayProfile?.name} src={avatarSrc} size={40} />
           <div>
-            <p className="font-semibold text-dark-text text-sm">{displayProfile?.name}</p>
+            <p className="font-semibold text-dark-text text-sm" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              {displayProfile?.name}
+              {post.author?.verified && <VerifiedBadge size={13} />}
+            </p>
             <p className="text-dark-muted text-xs">{displayProfile?.handle}</p>
           </div>
         </div>
