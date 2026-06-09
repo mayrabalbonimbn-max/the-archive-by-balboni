@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppBar from '../components/ui/AppBar'
 import Icon from '../components/ui/Icon'
-import Chip from '../components/ui/Chip'
 import SectionLabel from '../components/ui/SectionLabel'
 import PhotoTile from '../components/ui/PhotoTile'
 import Avatar from '../components/ui/Avatar'
@@ -12,8 +11,16 @@ import VerifiedBadge from '../components/ui/VerifiedBadge'
 import { api } from '../utils/api'
 import { profileUrl } from '../utils/helpers'
 
-const THEMES = [
-  'Fotografia', 'Ensaios', 'Notas de campo', 'Código', 'Leitura', 'Memória', 'Arquitetura',
+// ── Static feature cards for "Comece por aqui" ───────────────────────────────
+const FEATURES = [
+  { emoji: '✍️', label: 'Escrever uma nota',   action: 'compose' },
+  { emoji: '⌛', label: 'Cápsulas',             path: '/capsules' },
+  { emoji: '🔗', label: 'Graph',               path: '/graph' },
+  { emoji: '📁', label: 'Coleções',            path: '/archive?s=collections' },
+  { emoji: '💭', label: 'Memórias',            path: '/archive?s=memories' },
+  { emoji: '📸', label: 'Fotos',               path: '/photos' },
+  { emoji: '📖', label: 'Stories',             path: '/archive?s=stories' },
+  { emoji: '🗂️', label: 'Seu Arquivo',         path: '/archive' },
 ]
 
 // Tones for public archive cards — deterministic by index
@@ -21,6 +28,7 @@ const CARD_TONES = [
   ['#3a3f3c', '#191c1a'],
   ['#26303a', '#11171d'],
   ['#2d2533', '#161118'],
+  ['#33302a', '#191611'],
 ]
 
 // ── SearchField ───────────────────────────────────────────────────────────────
@@ -33,10 +41,7 @@ function SearchField({ value, onChange, inputRef }) {
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder="Arquivos, entradas, pessoas…"
-        style={{
-          flex: 1, background: 'none', border: 'none', outline: 'none',
-          color: 'var(--ink)', fontFamily: 'var(--sans)', fontSize: 14.5,
-        }}
+        style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: 'var(--ink)', fontFamily: 'var(--sans)', fontSize: 14.5 }}
       />
       {value && (
         <button
@@ -45,6 +50,137 @@ function SearchField({ value, onChange, inputRef }) {
         >
           <Icon name="close" size={16} />
         </button>
+      )}
+    </div>
+  )
+}
+
+// ── "Comece por aqui" — always rendered, no API dependency ───────────────────
+function StartHereSection() {
+  const navigate = useNavigate()
+
+  function handleFeature(f) {
+    if (f.action === 'compose') {
+      window.dispatchEvent(new CustomEvent('open-compose'))
+    } else {
+      navigate(f.path)
+    }
+  }
+
+  return (
+    <div style={{ marginBottom: 4 }}>
+      <SectionLabel>Comece por aqui</SectionLabel>
+      <div style={{ display: 'flex', gap: 9, overflowX: 'auto', padding: '10px 20px 22px', scrollbarWidth: 'none' }}>
+        {FEATURES.map(f => (
+          <button
+            key={f.label}
+            onClick={() => handleFeature(f)}
+            style={{
+              flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+              gap: 10, padding: '13px 14px',
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid var(--line)',
+              borderRadius: 14, cursor: 'pointer', minWidth: 120,
+              textAlign: 'left',
+            }}
+          >
+            <span style={{ fontSize: 22, lineHeight: 1 }}>{f.emoji}</span>
+            <span style={{ fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink-2)', lineHeight: 1.3 }}>
+              {f.label}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── GuideCard — card for @thearchive posts ───────────────────────────────────
+function GuideCard({ post }) {
+  const navigate = useNavigate()
+  const lines = post.content?.split('\n') ?? []
+  const title = lines[0] || ''
+  const body = lines.slice(2).join(' ').trim().slice(0, 90) || ''
+
+  return (
+    <div
+      onClick={() => navigate(`/posts/${post.id}`)}
+      style={{
+        flexShrink: 0, width: 210, cursor: 'pointer', textAlign: 'left',
+        background: 'rgba(255,255,255,0.025)', borderRadius: 14,
+        border: '1px solid var(--line)', padding: '14px 15px',
+        display: 'flex', flexDirection: 'column', gap: 7,
+      }}
+    >
+      <div style={{ fontFamily: 'var(--serif)', fontSize: 14.5, lineHeight: 1.35, color: 'var(--ink)', fontStyle: 'italic', flex: 1 }}>
+        {title}
+      </div>
+      {body && (
+        <div style={{ fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--ink-3)', lineHeight: 1.5 }}>
+          {body}…
+        </div>
+      )}
+      <button
+        onClick={e => { e.stopPropagation(); navigate(profileUrl('@thearchive')) }}
+        style={{ marginTop: 2, fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', letterSpacing: '0.06em', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 4 }}
+      >
+        @thearchive
+        <VerifiedBadge size={11} />
+      </button>
+    </div>
+  )
+}
+
+// ── Archive posts section — with fallback ─────────────────────────────────────
+function ArchivePostsSection({ guidePosts, loading }) {
+  const navigate = useNavigate()
+
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <SectionLabel
+        action="Ver perfil"
+        onAction={() => navigate(profileUrl('@thearchive'))}
+      >
+        Do Archive
+      </SectionLabel>
+
+      {loading ? (
+        <div style={{ padding: '16px 20px' }}>
+          <div style={{ display: 'flex', gap: 10 }}>
+            {[1, 2, 3].map(i => (
+              <div key={i} style={{ flexShrink: 0, width: 210, height: 100, borderRadius: 14, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--line)' }} />
+            ))}
+          </div>
+        </div>
+      ) : guidePosts.length > 0 ? (
+        <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '10px 20px 24px', scrollbarWidth: 'none' }}>
+          {guidePosts.map(p => <GuideCard key={p.id} post={p} />)}
+        </div>
+      ) : (
+        // Fallback: @thearchive profile card
+        <div style={{ margin: '8px 20px 24px', padding: '16px', borderRadius: 14, border: '1px solid var(--line)', background: 'rgba(255,255,255,0.02)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(232,108,180,0.15)', border: '1px solid rgba(232,108,180,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
+              🗄️
+            </div>
+            <div>
+              <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 5 }}>
+                The Archive
+                <VerifiedBadge size={12} />
+              </div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)' }}>@thearchive</div>
+            </div>
+          </div>
+          <p style={{ margin: '0 0 12px', fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.55 }}>
+            Guias, dicas e formas de usar o Archive — publicado pela própria plataforma.
+          </p>
+          <button
+            onClick={() => navigate(profileUrl('@thearchive'))}
+            style={{ padding: '8px 16px', borderRadius: 9, background: 'rgba(232,108,180,0.12)', border: '1px solid rgba(232,108,180,0.25)', fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--accent)', cursor: 'pointer' }}
+          >
+            Ver perfil →
+          </button>
+        </div>
       )}
     </div>
   )
@@ -59,120 +195,104 @@ function PublicArchiveCard({ user, idx }) {
   return (
     <div
       onClick={() => navigate(profileUrl(user.handle, user.id))}
-      style={{ flexShrink: 0, width: 256, cursor: 'pointer' }}
+      style={{ flexShrink: 0, width: 248, cursor: 'pointer' }}
     >
-      <PhotoTile tone1={tone1} tone2={tone2} radius={16} style={{ height: 150 }}>
+      <PhotoTile tone1={tone1} tone2={tone2} radius={16} style={{ height: 144 }}>
         <div style={{
-          position: 'absolute', inset: 0, padding: 15,
+          position: 'absolute', inset: 0, padding: 14,
           display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-          background: 'linear-gradient(transparent 30%, rgba(0,0,0,0.7))',
+          background: 'linear-gradient(transparent 30%, rgba(0,0,0,0.72))',
         }}>
-          <div style={{ fontFamily: 'var(--serif)', fontSize: 18, lineHeight: 1.2, color: '#fff' }}>
+          <div style={{ fontFamily: 'var(--serif)', fontSize: 17, lineHeight: 1.25, color: '#fff', fontStyle: 'italic' }}>
             {headline}
           </div>
         </div>
       </PhotoTile>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 11 }}>
-        <Avatar name={user.name} src={user.avatar} profileId={user.id} size={28} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 10 }}>
+        <Avatar name={user.name} src={user.avatar} profileId={user.id} size={27} />
         <div style={{ minWidth: 0 }}>
           <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink)', fontWeight: 500 }}>{user.name}</div>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)' }}>{user.handle}</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)' }}>
+            {user.postCount} {user.postCount === 1 ? 'entrada' : 'entradas'}
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
-// ── GuideCard — compact card for guide posts in Explore ──────────────────────
-function GuideCard({ post }) {
-  const navigate = useNavigate()
-  const firstLine = post.content?.split('\n')[0] || ''
-  const body = post.content?.split('\n').slice(2).join(' ').trim().slice(0, 100) || ''
+// ── People section — with smart empty state ───────────────────────────────────
+function PeopleSection({ people, navigate }) {
+  if (people.length === 0) {
+    return (
+      <div>
+        <SectionLabel>Pessoas no Archive</SectionLabel>
+        <div style={{
+          margin: '4px 20px 32px',
+          padding: '24px 20px',
+          borderRadius: 16,
+          border: '1px solid var(--line)',
+          background: 'rgba(255,255,255,0.015)',
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 28, marginBottom: 12 }}>🌱</div>
+          <p style={{ margin: '0 0 6px', fontFamily: 'var(--serif)', fontSize: 16, color: 'var(--ink)', fontWeight: 400, fontStyle: 'italic' }}>
+            A comunidade ainda está crescendo.
+          </p>
+          <p style={{ margin: '0 0 16px', fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.6, maxWidth: 280, marginInline: 'auto' }}>
+            Enquanto isso, explore os guias do Archive e descubra novas formas de registrar a sua trajetória.
+          </p>
+          <button
+            onClick={() => navigate(profileUrl('@thearchive'))}
+            style={{ padding: '9px 18px', borderRadius: 10, background: 'rgba(232,108,180,0.1)', border: '1px solid rgba(232,108,180,0.25)', fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--accent)', cursor: 'pointer' }}
+          >
+            Ver @thearchive →
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div
-      onClick={() => navigate(`/posts/${post.id}`)}
-      style={{
-        flexShrink: 0, width: 220, cursor: 'pointer', textAlign: 'left',
-        background: 'rgba(255,255,255,0.025)', borderRadius: 14,
-        border: '1px solid var(--line)', padding: '14px 15px',
-        display: 'flex', flexDirection: 'column', gap: 6,
-      }}
-    >
-      <div style={{ fontFamily: 'var(--serif)', fontSize: 15, lineHeight: 1.3, color: 'var(--ink)', fontStyle: 'italic' }}>
-        {firstLine}
+    <div>
+      <SectionLabel action="Ver tudo" onAction={() => navigate('/friends')}>
+        Pessoas guardando coisas como você
+      </SectionLabel>
+      <div style={{ borderTop: '1px solid var(--line)' }}>
+        {people.slice(0, 5).map(u => <PersonRow key={u.id} person={u} />)}
       </div>
-      {body && (
-        <div style={{ fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink-3)', lineHeight: 1.5 }}>
-          {body}…
-        </div>
-      )}
-      <button
-        onClick={e => { e.stopPropagation(); navigate(profileUrl('@thearchive')) }}
-        style={{ marginTop: 4, fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', letterSpacing: '0.06em', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 4 }}
-      >
-        @thearchive
-        <VerifiedBadge size={11} />
-      </button>
     </div>
   )
 }
 
 // ── DefaultState ──────────────────────────────────────────────────────────────
-function DefaultState({ suggested, guidePosts }) {
+function DefaultState({ suggested, guidePosts, guideLoading }) {
   const navigate = useNavigate()
-  const [activeTheme, setActiveTheme] = useState(0)
 
-  // Exclude @thearchive from people/archives sections
-  const realSuggested = suggested.filter(u => u.handle !== 'thearchive')
+  const realPeople = suggested.filter(u => !u.verified)
 
   return (
     <>
-      {/* Theme chips */}
-      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '14px 20px 20px', scrollbarWidth: 'none' }}>
-        {THEMES.map((t, i) => (
-          <Chip key={t} active={activeTheme === i} onClick={() => setActiveTheme(i)}>{t}</Chip>
-        ))}
-      </div>
+      {/* 1. Comece por aqui — always */}
+      <StartHereSection />
 
-      {/* Guide posts from @thearchive */}
-      {guidePosts.length > 0 && (
+      {/* 2. Do Archive — guide posts */}
+      <ArchivePostsSection guidePosts={guidePosts} loading={guideLoading} />
+
+      {/* 3. Public archives — only if people exist */}
+      {realPeople.length > 0 && (
         <div style={{ marginBottom: 8 }}>
-          <SectionLabel>Do próprio Archive</SectionLabel>
-          <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '10px 20px 22px', scrollbarWidth: 'none' }}>
-            {guidePosts.slice(0, 8).map(p => (
-              <GuideCard key={p.id} post={p} />
+          <SectionLabel>Arquivos públicos</SectionLabel>
+          <div style={{ display: 'flex', gap: 14, overflowX: 'auto', padding: '10px 20px 26px', scrollbarWidth: 'none' }}>
+            {realPeople.slice(0, 6).map((u, i) => (
+              <PublicArchiveCard key={u.id} user={u} idx={i} />
             ))}
           </div>
         </div>
       )}
 
-      {/* Public archives */}
-      {realSuggested.length > 0 && (
-        <>
-          <SectionLabel>Arquivos públicos, abertos recentemente</SectionLabel>
-          <div style={{ display: 'flex', gap: 14, overflowX: 'auto', padding: '12px 20px 26px', scrollbarWidth: 'none' }}>
-            {realSuggested.slice(0, 5).map((u, i) => (
-              <PublicArchiveCard key={u.id} user={u} idx={i} />
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* People */}
-      <SectionLabel action="Ver tudo" onAction={() => navigate('/friends')}>
-        Pessoas guardando coisas como você
-      </SectionLabel>
-      <div style={{ borderTop: '1px solid var(--line)' }}>
-        {realSuggested.slice(0, 4).map(u => (
-          <PersonRow key={u.id} person={u} />
-        ))}
-        {realSuggested.length === 0 && (
-          <p style={{ padding: '24px 20px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-3)' }}>
-            Ninguém sugerido ainda.
-          </p>
-        )}
-      </div>
+      {/* 4. People */}
+      <PeopleSection people={realPeople} navigate={navigate} />
     </>
   )
 }
@@ -185,7 +305,8 @@ function SearchResults({ q, results, loading }) {
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
-        <div className="w-5 h-5 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+        <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid var(--accent)', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
       </div>
     )
   }
@@ -224,25 +345,29 @@ function SearchResults({ q, results, loading }) {
 export default function ExplorePage() {
   const [q, setQ] = useState('')
   const [results, setResults] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [searchLoading, setSearchLoading] = useState(false)
   const [suggested, setSuggested] = useState([])
   const [guidePosts, setGuidePosts] = useState([])
+  const [guideLoading, setGuideLoading] = useState(true)
   const inputRef = useRef(null)
   const debounceRef = useRef(null)
 
-  // Load suggested people and guide posts for default state
   useEffect(() => {
-    api.get('/posts/guide').then(setGuidePosts).catch(() => {})
-    api.get('/users/suggested').then(setSuggested).catch(() => {
-      api.get('/search?q=').then(d => setSuggested(d?.users ?? [])).catch(() => {})
-    })
+    setGuideLoading(true)
+    api.get('/posts/guide')
+      .then(setGuidePosts)
+      .catch(() => setGuidePosts([]))
+      .finally(() => setGuideLoading(false))
+
+    api.get('/users/suggested')
+      .then(setSuggested)
+      .catch(() => setSuggested([]))
   }, [])
 
-  // Live search
   useEffect(() => {
     clearTimeout(debounceRef.current)
     if (q.trim().length < 2) { setResults(null); return }
-    setLoading(true)
+    setSearchLoading(true)
     debounceRef.current = setTimeout(async () => {
       try {
         const data = await api.get(`/search?q=${encodeURIComponent(q.trim())}`)
@@ -250,7 +375,7 @@ export default function ExplorePage() {
       } catch {
         setResults({ users: [], posts: [], articles: [] })
       } finally {
-        setLoading(false)
+        setSearchLoading(false)
       }
     }, 280)
     return () => clearTimeout(debounceRef.current)
@@ -273,8 +398,8 @@ export default function ExplorePage() {
       </div>
 
       {searching
-        ? <SearchResults q={q.trim()} results={results} loading={loading} />
-        : <DefaultState suggested={suggested} guidePosts={guidePosts} />
+        ? <SearchResults q={q.trim()} results={results} loading={searchLoading} />
+        : <DefaultState suggested={suggested} guidePosts={guidePosts} guideLoading={guideLoading} />
       }
     </div>
   )

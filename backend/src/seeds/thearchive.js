@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs')
 
 // Slug is the deduplication key — never change a slug once in production.
 const OFFICIAL_POSTS = [
+  // ── Editorial / philosophy ────────────────────────────────────────────────
   {
     slug: 'bem-vinda-ao-archive',
     content: `O Archive é um lugar para guardar o que importa sem transformar tudo em performance.\n\nNotas, fotos, projetos, arquivos, código e memórias podem viver no mesmo espaço — com calma.`,
@@ -62,6 +63,56 @@ const OFFICIAL_POSTS = [
     type: 'pensamento',
     categoria: 'reflexão',
   },
+
+  // ── How-to / feature tips ─────────────────────────────────────────────────
+  {
+    slug: 'como-criar-uma-capsula',
+    content: `Como criar uma cápsula do tempo\n\nAo criar uma entrada, ative a opção Cápsula e escolha uma data de abertura.\n\nA entrada fica bloqueada até lá. Você pode criar cápsulas para daqui a uma semana, um ano ou uma década.`,
+    type: 'pensamento',
+    categoria: 'aprendizado',
+  },
+  {
+    slug: 'como-o-graph-funciona',
+    content: `Como o Graph funciona\n\nO Graph mapeia conexões entre suas entradas a partir das tags que você usa.\n\nQuanto mais você escreve, mais o mapa cresce. É possível identificar padrões e temas recorrentes que talvez você não perceba no dia a dia.`,
+    type: 'pensamento',
+    categoria: 'aprendizado',
+  },
+  {
+    slug: 'como-usar-colecoes',
+    content: `Como usar coleções\n\nColeções são grupos manuais de entradas que pertencem ao mesmo tema — mesmo que não sejam um projeto formal.\n\nCrie uma coleção pelo Archive (aba Coleções) e associe entradas a ela no momento de escrever.`,
+    type: 'pensamento',
+    categoria: 'aprendizado',
+  },
+  {
+    slug: 'como-usar-stories',
+    content: `Como usar Stories\n\nStories são registros rápidos, visuais e efêmeros — diferentes das entradas do arquivo.\n\nUse para capturar um momento, uma foto ou uma ideia que não precisa durar para sempre, mas merece existir agora.`,
+    type: 'pensamento',
+    categoria: 'aprendizado',
+  },
+  {
+    slug: 'tipos-de-entrada',
+    content: `Tipos de entrada no Archive\n\nNota — um pensamento, observação ou fragmento.\nEnsaio — texto longo, estruturado, com título.\nFoto — imagem com contexto.\nCódigo — trecho com syntax highlighting.\nCápsula — entrada com data de abertura futura.\n\nCada tipo tem seu ritmo. Use o que fizer sentido para o momento.`,
+    type: 'pensamento',
+    categoria: 'aprendizado',
+  },
+  {
+    slug: 'como-funciona-privacidade',
+    content: `Visibilidade de cada entrada\n\nPrivada — só você vê.\nAmigos — visível para quem você aceitou como amigo.\nSeguidores — visível para quem te segue.\nPública — qualquer pessoa autenticada pode ver.\n\nO padrão é privado. Você decide o que abre e para quem.`,
+    type: 'pensamento',
+    categoria: 'aprendizado',
+  },
+  {
+    slug: 'como-usar-memorias',
+    content: `Como funciona a seção Memórias\n\nA seção Memórias no seu Arquivo mostra entradas que você criou neste mesmo dia em anos anteriores.\n\nÉ uma forma de o Archive trazer de volta o que você guardou — sem que você precise procurar.`,
+    type: 'pensamento',
+    categoria: 'aprendizado',
+  },
+  {
+    slug: 'como-criar-projeto',
+    content: `Como criar um projeto\n\nProjetos organizam entradas em torno de um objetivo com início e fim.\n\nCrie um projeto, associe entradas a ele enquanto trabalha, e o Archive mantém o histórico de tudo que aconteceu dentro daquele contexto.`,
+    type: 'pensamento',
+    categoria: 'aprendizado',
+  },
 ]
 
 async function seedTheArchive(pool) {
@@ -91,11 +142,6 @@ async function seedTheArchive(pool) {
       [profileId, hash]
     )
 
-    // Idempotent: keyed by slug stored in first 60 chars of content via a dedicated lookup
-    // We use a separate check column approach: store slug as the first 60 chars won't work
-    // for variable content, so we check by exact slug prefix pattern instead.
-    // Slugs are embedded as the first word of content won't collide — use content hash.
-    // Simpler: check existing posts by exact content match (trimmed).
     const { rows: existingPosts } = await pool.query(
       'SELECT TRIM(content) AS content FROM posts WHERE profile_id = $1',
       [profileId]
