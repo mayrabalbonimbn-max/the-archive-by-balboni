@@ -240,6 +240,33 @@ CREATE INDEX IF NOT EXISTS idx_posts_pinned ON posts(profile_id, pinned, pin_ord
 CREATE INDEX IF NOT EXISTS idx_posts_type ON posts(profile_id, type);
 CREATE INDEX IF NOT EXISTS idx_posts_is_article ON posts(profile_id, is_article) WHERE is_article = true;
 
+-- Stories
+CREATE TABLE IF NOT EXISTS stories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  profile_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  type VARCHAR(20) NOT NULL DEFAULT 'text',
+  content TEXT,
+  media_path TEXT,
+  bg_color VARCHAR(30) DEFAULT '#0a0a0a',
+  font_style VARCHAR(20) DEFAULT 'serif',
+  visibility VARCHAR(20) NOT NULL DEFAULT 'friends',
+  expires_at TIMESTAMPTZ NOT NULL DEFAULT (now() + INTERVAL '24 hours'),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  CONSTRAINT stories_type_check CHECK (type IN ('text', 'photo')),
+  CONSTRAINT stories_visibility_check CHECK (visibility IN ('public', 'friends', 'private'))
+);
+
+CREATE TABLE IF NOT EXISTS story_views (
+  story_id UUID NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+  viewer_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  viewed_at TIMESTAMPTZ DEFAULT now(),
+  PRIMARY KEY (story_id, viewer_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_stories_profile ON stories(profile_id);
+CREATE INDEX IF NOT EXISTS idx_stories_expires ON stories(expires_at);
+CREATE INDEX IF NOT EXISTS idx_story_views_story ON story_views(story_id);
+
 -- Time capsules
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_time_capsule BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS unlock_at TIMESTAMPTZ;
