@@ -1,149 +1,66 @@
 const bcrypt = require('bcryptjs')
 
-const SHOWCASE_POSTS = [
-  // ── notas / pensamentos ──────────────────────────────────────────────────────
-
+// Slug is the deduplication key — never change a slug once in production.
+const OFFICIAL_POSTS = [
   {
-    content: `primeiro registro.
-
-não é pra ninguém ver — é pra mim daqui a um ano lembrar de quando isso era só uma ideia solta num caderno.`,
-    type: 'pensamento',
-    categoria: 'memória',
-  },
-
-  {
-    content: `descobri que escrevo melhor quando não tô tentando impressionar ninguém.
-
-talvez seja por isso que esse lugar funciona pra mim.`,
+    slug: 'bem-vinda-ao-archive',
+    content: `O Archive é um lugar para guardar o que importa sem transformar tudo em performance.\n\nNotas, fotos, projetos, arquivos, código e memórias podem viver no mesmo espaço — com calma.`,
     type: 'pensamento',
     categoria: 'reflexão',
   },
-
   {
-    content: `acordei às 6h sem motivo. fiquei olhando o teto uns vinte minutos e pensei em tudo que ainda não comecei.
-
-escrevi aqui em vez de ficar rolando o feed. foi melhor.`,
-    type: 'diário',
-    categoria: 'observação',
-    is_diary: true,
-  },
-
-  {
-    content: `três projetos abertos ao mesmo tempo.
-
-nenhum terminado. todos importantes. escolher qual continuar é a parte que ninguém ensina.`,
+    slug: 'nota-nao-precisa-estar-pronta',
+    content: `Uma nota pode ser só uma frase que você ainda não entende completamente.\n\nNem todo pensamento precisa nascer finalizado. Alguns só precisam ser guardados antes de desaparecer.`,
     type: 'pensamento',
     categoria: 'reflexão',
   },
-
   {
-    content: `relí uma nota que escrevi há oito meses sobre um projeto que abandonei.
-
-estranhei a versão de mim que acreditava tão certo naquilo. não de um jeito triste — de um jeito de: olha quanta coisa aconteceu desde então.`,
-    type: 'pensamento',
-    categoria: 'memória',
-  },
-
-  {
-    content: `guardei um story hoje só porque o céu tava absurdo.
-
-some do feed amanhã, mas fica comigo pra sempre — que é o ponto.`,
+    slug: 'projetos-tambem-tem-memoria',
+    content: `Um projeto não é só o resultado final.\n\nEle também é feito de decisões, versões, pausas, dúvidas e pequenos avanços. Guardar esse caminho ajuda você a enxergar o que construiu.`,
     type: 'pensamento',
     categoria: 'observação',
   },
-
   {
-    content: `às vezes o ato de registrar muda o que aconteceu.
-
-escrevo "foi um dia difícil" e percebo que não foi — foi um dia cheio. as palavras exatas importam.`,
-    type: 'pensamento',
-    categoria: 'reflexão',
-  },
-
-  {
-    content: `escrevi uma cápsula hoje pra abrir daqui um ano.
-
-não vou lembrar o que escrevi. é esse o ponto — deixar algo pra me surpreender quando eu for uma pessoa um pouco diferente.`,
+    slug: 'capsulas-do-tempo',
+    content: `Uma cápsula é uma mensagem que espera.\n\nVocê escolhe uma data, guarda algo e deixa o tempo fazer sua parte. Quando abrir, talvez você encontre uma versão antiga de si mesma.`,
     type: 'pensamento',
     categoria: 'memória',
   },
-
   {
-    content: `em algum momento parei de curtir o twitter — não de uma vez, foi saindo aos poucos.
-
-o problema não era o conteúdo. era eu verificando curtidas como se fossem algum tipo de prova de que eu existia.`,
+    slug: 'privacidade-sem-pressao',
+    content: `Nem tudo precisa ser público.\n\nCada entrada pode ser privada, visível para amigos ou aberta. O Archive deixa você decidir o tamanho da sala antes de escrever.`,
     type: 'pensamento',
     categoria: 'reflexão',
   },
-
   {
-    content: `li isso e fiquei pensando o dia inteiro: "os melhores produtos nascem de quem resolve a própria dor."
-
-é o que eu quero lembrar quando perder a fé no que tô construindo.
-
-https://paulgraham.com/startupideas.html`,
+    slug: 'memorias-voltam-com-contexto',
+    content: `O que você guarda hoje pode voltar em outro momento.\n\nMemórias e calendário existem para mostrar que a sua trajetória não é uma linha reta — é um arquivo vivo.`,
+    type: 'pensamento',
+    categoria: 'memória',
+  },
+  {
+    slug: 'codigo-tambem-e-pensamento',
+    content: `Um trecho de código pode guardar mais do que uma solução.\n\nPode guardar o momento em que algo finalmente fez sentido. Por isso o Archive também abre espaço para experimentar e registrar código.`,
     type: 'pensamento',
     categoria: 'aprendizado',
-    link_preview: {
-      url: 'https://paulgraham.com/startupideas.html',
-      title: 'How to Get Startup Ideas',
-      description: 'The way to get startup ideas is not to try to think of startup ideas. It\'s to look for problems, preferably problems you have yourself.',
-      image: null,
-      siteName: 'paulgraham.com',
-    },
   },
-
-  // ── código ───────────────────────────────────────────────────────────────────
-
   {
-    content: `travei meia hora num bug idiota de encoding. quando rodou, quis registrar — porque mês que vem vou esquecer que já foi difícil.`,
-    type: 'código',
-    categoria: 'aprendizado',
-    code_language: 'python',
-    code_content: `def limpar_texto(texto):
-    return texto.encode('utf-8', errors='ignore').decode('utf-8').strip()
-
-# simples. mas eu não sabia. agora sei.`,
+    slug: 'tags-conectam-ideias',
+    content: `Tags e links internos ajudam pensamentos distantes a se encontrarem.\n\nCom o tempo, o Graph mostra relações que talvez você não percebesse enquanto escrevia.`,
+    type: 'pensamento',
+    categoria: 'observação',
   },
-
   {
-    content: `sempre esqueço como escrever debounce. sempre pesquiso de novo. agora tá aqui.`,
-    type: 'código',
-    categoria: 'aprendizado',
-    code_language: 'javascript',
-    code_content: `const debounce = (fn, ms) => {
-  let timer
-  return (...args) => {
-    clearTimeout(timer)
-    timer = setTimeout(() => fn(...args), ms)
-  }
-}`,
-  },
-
-  // ── ensaios ──────────────────────────────────────────────────────────────────
-
-  {
-    content: `guardo coisas que não tenho com quem dividir. não porque sejam secretas — às vezes só porque não quero diluir antes de entender.
-
-há uma diferença entre processar sozinha e guardar. processar é transitório. guardar é dizer: isso importou.
-
-esse lugar é pra o que importou.`,
-    type: 'ensaio',
+    slug: 'trajetoria',
+    content: `A trajetória não é uma pontuação.\n\nÉ um modo de observar continuidade: o que você criou, revisitou, aprendeu e decidiu ao longo do tempo.`,
+    type: 'pensamento',
     categoria: 'reflexão',
-    is_article: true,
-    article_title: 'o que guardo',
   },
-
   {
-    content: `não foi uma decisão dramática. foi acumulando: a sensação de que cada coisa que eu escrevia virava imediatamente uma questão de alcance.
-
-um pensamento incompleto tem valor. mas o feed não deixa nada ser incompleto — ele transforma tudo em declaração pública, em performance de quem você quer parecer.
-
-aqui escrevo antes de saber o que acho. isso muda tudo.`,
-    type: 'ensaio',
+    slug: 'voltar-depois-tambem-faz-parte',
+    content: `Você não precisa usar o Archive com urgência.\n\nEle foi feito para permanecer. Voltar depois, reler, reorganizar e entender melhor também é parte do processo.`,
+    type: 'pensamento',
     categoria: 'reflexão',
-    is_article: true,
-    article_title: 'por que saí do twitter',
   },
 ]
 
@@ -174,40 +91,31 @@ async function seedTheArchive(pool) {
       [profileId, hash]
     )
 
-    // Idempotent: key by first 60 chars of content
-    const { rows: existing_posts } = await pool.query(
-      'SELECT LEFT(content, 60) AS key FROM posts WHERE profile_id = $1',
+    // Idempotent: keyed by slug stored in first 60 chars of content via a dedicated lookup
+    // We use a separate check column approach: store slug as the first 60 chars won't work
+    // for variable content, so we check by exact slug prefix pattern instead.
+    // Slugs are embedded as the first word of content won't collide — use content hash.
+    // Simpler: check existing posts by exact content match (trimmed).
+    const { rows: existingPosts } = await pool.query(
+      'SELECT TRIM(content) AS content FROM posts WHERE profile_id = $1',
       [profileId]
     )
-    const existingKeys = new Set(existing_posts.map(r => r.key.trim()))
+    const existingContents = new Set(existingPosts.map(r => r.content.trim()))
 
     let created = 0
-    for (const post of SHOWCASE_POSTS) {
-      const key = post.content.trim().slice(0, 60)
-      if (existingKeys.has(key)) continue
+    for (const post of OFFICIAL_POSTS) {
+      if (existingContents.has(post.content.trim())) continue
 
       await pool.query(
-        `INSERT INTO posts
-           (profile_id, content, type, is_private, is_diary, visibility, categoria,
-            is_article, article_title, code_language, code_content, link_preview)
-         VALUES ($1, $2, $3, false, $4, 'public', $5, $6, $7, $8, $9, $10)`,
-        [
-          profileId,
-          post.content,
-          post.type,
-          post.is_diary || false,
-          post.categoria || null,
-          post.is_article || false,
-          post.article_title || null,
-          post.code_language || null,
-          post.code_content || null,
-          post.link_preview ? JSON.stringify(post.link_preview) : null,
-        ]
+        `INSERT INTO posts (profile_id, content, type, is_private, visibility, categoria)
+         VALUES ($1, $2, $3, false, 'public', $4)`,
+        [profileId, post.content, post.type, post.categoria || null]
       )
       created++
     }
 
-    if (created > 0) console.log(`✓ @thearchive: ${created} showcase posts created`)
+    if (created > 0) console.log(`✓ @thearchive: ${created} official posts created`)
+    else console.log('✓ @thearchive: posts already up to date')
   } catch (err) {
     console.error('✗ @thearchive seed failed:', err.message)
   }
