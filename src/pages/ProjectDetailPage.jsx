@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { api } from '../utils/api'
 import AppBar from '../components/ui/AppBar'
 import Icon from '../components/ui/Icon'
@@ -47,6 +47,7 @@ function PostItem({ post }) {
 export default function ProjectDetailPage() {
   const { slug } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const [project, setProject] = useState(null)
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -100,6 +101,14 @@ export default function ProjectDetailPage() {
     } catch {}
   }
 
+  // Prefer explicit referrer state; fall back to browser history; last resort: /profile
+  function goBack() {
+    const from = location.state?.from
+    if (from) navigate(from)
+    else if (window.history.length > 1) navigate(-1)
+    else navigate('/profile')
+  }
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}>
@@ -114,10 +123,12 @@ export default function ProjectDetailPage() {
 
   return (
     <div style={{ animation: 'fadeUp var(--dur-screen) var(--ease-out)', minHeight: '100vh' }}>
+      {/* Mobile AppBar — hidden on desktop */}
       <AppBar
         left={
-          <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink)', display: 'flex' }}>
+          <button onClick={goBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Icon name="back" size={22} />
+            <span style={{ fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink-2)' }}>Voltar</span>
           </button>
         }
         right={
@@ -129,6 +140,38 @@ export default function ProjectDetailPage() {
           </button>
         }
       />
+
+      {/* Desktop breadcrumb — hidden on mobile (AppBar handles mobile) */}
+      <div className="hidden md:flex" style={{ alignItems: 'center', gap: 8, padding: '18px 28px 0' }}>
+        <button
+          onClick={goBack}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)',
+            padding: '4px 8px 4px 4px', borderRadius: 6,
+            transition: 'color 0.15s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--ink)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'var(--ink-3)'}
+        >
+          <Icon name="back" size={15} stroke={1.8} />
+          Voltar
+        </button>
+        <span style={{ color: 'var(--line-strong)', fontSize: 12 }}>·</span>
+        <button
+          onClick={() => navigate('/profile')}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)', padding: 0, transition: 'color 0.15s' }}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--ink)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'var(--ink-3)'}
+        >
+          Perfil
+        </button>
+        <span style={{ color: 'var(--line-strong)', fontSize: 12 }}>→</span>
+        <span style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)' }}>Projetos</span>
+        <span style={{ color: 'var(--line-strong)', fontSize: 12 }}>→</span>
+        <span style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink)', fontWeight: 500 }}>{project.title}</span>
+      </div>
 
       {/* Hero */}
       <div style={{ padding: '32px 24px 24px', borderBottom: '1px solid var(--line)' }}>

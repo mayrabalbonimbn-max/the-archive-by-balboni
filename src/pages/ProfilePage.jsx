@@ -209,7 +209,7 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
                 return (
                   <div
                     key={proj.id}
-                    onClick={() => navigate(`/projects/${proj.slug}`)}
+                    onClick={() => navigate(`/projects/${proj.slug}`, { state: { from: '/profile' } })}
                     style={{
                       padding: '14px', borderRadius: 14,
                       border: '1px solid var(--line)', background: 'var(--surface-2)',
