@@ -237,7 +237,7 @@ export default function Sidebar({ profile, onLogout, onCompose }) {
           <DSidebarItem icon="calendar"    label="Calendário"  active={isArchiveSection('calendar')}    onClick={() => navigate('/archive?s=calendar')} />
           <DSidebarItem icon="collections" label="Coleções"    active={isArchiveSection('collections')} onClick={() => navigate('/archive?s=collections')} />
           <DSidebarItem icon="library"     label="Biblioteca"  active={isArchiveSection('library')}     onClick={() => navigate('/archive?s=library')} />
-          <DSidebarItem icon="photo"       label="Fotografia"  active={isArchiveSection('photos')}      onClick={() => navigate('/archive?s=photos')} />
+          <DSidebarItem icon="photo"       label="Fotografia"  active={isArchiveSection('photography')}  onClick={() => navigate('/archive?s=photography')} />
         </nav>
 
         <div style={{ flex: 1 }} />
