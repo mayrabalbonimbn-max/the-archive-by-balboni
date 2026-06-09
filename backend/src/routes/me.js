@@ -67,6 +67,7 @@ function toProfile(row) {
     friendCount: Number(row.friend_count || 0),
     followerCount: Number(row.follower_count || 0),
     followingCount: Number(row.following_count || 0),
+    onboardingCompleted: Boolean(row.onboarding_completed),
     createdAt: row.created_at,
   }
 }
@@ -96,7 +97,7 @@ router.get('/', async (req, res) => {
 // PATCH /api/me
 router.patch('/', async (req, res) => {
   try {
-    const { name, handle, bio, headerColor, interests } = req.body
+    const { name, handle, bio, headerColor, interests, onboardingCompleted } = req.body
     const fields = []
     const values = []
     let i = 1
@@ -105,6 +106,7 @@ router.patch('/', async (req, res) => {
     if (bio !== undefined)  { fields.push(`bio = $${i++}`);  values.push(bio) }
     if (headerColor !== undefined) { fields.push(`header_color = $${i++}`); values.push(headerColor) }
     if (interests !== undefined) { fields.push(`interests = $${i++}`); values.push(interests) }
+    if (onboardingCompleted !== undefined) { fields.push(`onboarding_completed = $${i++}`); values.push(Boolean(onboardingCompleted)) }
 
     if (handle !== undefined) {
       const cleanHandle = handle.startsWith('@') ? handle.trim() : '@' + handle.trim()

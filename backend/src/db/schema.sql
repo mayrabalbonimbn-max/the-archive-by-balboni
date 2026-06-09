@@ -297,3 +297,6 @@ CREATE INDEX IF NOT EXISTS idx_projects_featured ON projects(profile_id, is_feat
 
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES projects(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_posts_project_id ON posts(project_id);
+
+-- Onboarding
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN NOT NULL DEFAULT false;
