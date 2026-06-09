@@ -81,9 +81,31 @@ Copie `.env.example` para `.env` e configure `DATABASE_URL` e `JWT_SECRET`.
 
 ---
 
+## Testes
+
+Testes de integração cobrem os fluxos principais do backend: auth, posts, categorias, reações, comentários, cápsulas e projetos.
+
+```bash
+# 1. Crie um banco de teste local (uma única vez)
+createdb archive_test
+
+# 2. Configure .env.test
+cp backend/.env.test.example backend/.env.test
+# Edite backend/.env.test e ajuste DATABASE_URL e JWT_SECRET
+
+# 3. Execute
+cd backend && npm test
+```
+
+Os testes criam usuários com handle `@_test_<run_id>_*` e removem todos os dados ao final.
+Se `backend/.env.test` não existir, os testes tentam usar o banco configurado em `backend/.env`.
+Se o banco não estiver acessível, os testes são ignorados com aviso — sem falha no CI.
+
+---
+
 ## Segurança
 
-Nunca versionar: `.env`, `backend/.env`, `backend/storage/uploads/`, `dist/`, `node_modules/`.
+Nunca versionar: `.env`, `backend/.env`, `backend/.env.test`, `backend/storage/uploads/`, `dist/`, `node_modules/`.
 
 ---
 
