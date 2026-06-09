@@ -23,6 +23,12 @@ import PhotosPage from './pages/PhotosPage'
 import ArchiveListPage from './pages/ArchiveListPage'
 import ArchiveHubPage from './pages/ArchiveHubPage'
 import ExplorePage from './pages/ExplorePage'
+import MessagesPage from './pages/MessagesPage'
+import ConversationPage from './pages/ConversationPage'
+import CapsulesPage from './pages/CapsulesPage'
+import StoriesArchivePage from './pages/StoriesArchivePage'
+import ProjectDetailPage from './pages/ProjectDetailPage'
+import OnboardingTour from './components/OnboardingTour'
 import { usePosts } from './hooks/usePosts'
 import { useProfile } from './hooks/useProfile'
 import { useSession } from './hooks/useSession'
@@ -34,7 +40,7 @@ export default function App() {
 }
 
 function AuthenticatedApp({ onLogout }) {
-  const { profile, loading: profileLoading, updateProfile, uploadProfileMedia, removeProfileMedia } = useProfile()
+  const { profile, loading: profileLoading, updateProfile, uploadProfileMedia, removeProfileMedia, completeOnboarding, resetOnboarding } = useProfile()
   const { posts, loading: postsLoading, addPost, toggleLike, toggleSave, togglePin, deletePost, importPosts } = usePosts()
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -54,6 +60,8 @@ function AuthenticatedApp({ onLogout }) {
   const sharedProps = { posts, profile, onLike: toggleLike, onSave: toggleSave, onPin: togglePin, onDelete: deletePost }
 
   return (
+    <>
+    {!profile.onboardingCompleted && <OnboardingTour onComplete={completeOnboarding} />}
     <Layout profile={profile} posts={posts} searchQuery={searchQuery} onSearch={setSearchQuery} onLogout={onLogout} onPost={addPost}>
       <Routes>
         <Route path="/"        element={<HomePage {...sharedProps} searchQuery={searchQuery} onPost={addPost} />} />
@@ -73,14 +81,20 @@ function AuthenticatedApp({ onLogout }) {
         <Route path="/diary"   element={<DiaryPage {...sharedProps} searchQuery={searchQuery} />} />
         <Route path="/saved"   element={<SavedPage {...sharedProps} searchQuery={searchQuery} />} />
         <Route path="/settings" element={
-          <SettingsPage profile={profile} posts={posts} onUpdateProfile={updateProfile} onUploadProfileMedia={uploadProfileMedia} onRemoveProfileMedia={removeProfileMedia} onImportPosts={importPosts} onLogout={onLogout} />
+          <SettingsPage profile={profile} posts={posts} onUpdateProfile={updateProfile} onUploadProfileMedia={uploadProfileMedia} onRemoveProfileMedia={removeProfileMedia} onImportPosts={importPosts} onLogout={onLogout} onResetOnboarding={resetOnboarding} />
         } />
         <Route path="/collections" element={<CollectionsPage />} />
         <Route path="/collections/:id" element={<CollectionDetailPage {...sharedProps} />} />
         <Route path="/library" element={<LibraryPage />} />
         <Route path="/articles/:id" element={<ArticlePage profile={profile} onLike={toggleLike} onSave={toggleSave} onDelete={deletePost} />} />
         <Route path="/posts/:id" element={<PostDetailPage profile={profile} onLike={toggleLike} onSave={toggleSave} onDelete={deletePost} />} />
+        <Route path="/messages" element={<MessagesPage />} />
+        <Route path="/messages/:id" element={<ConversationPage profile={profile} />} />
+        <Route path="/capsules" element={<CapsulesPage />} />
+        <Route path="/archive/stories" element={<StoriesArchivePage />} />
+        <Route path="/projects/:slug" element={<ProjectDetailPage />} />
       </Routes>
     </Layout>
+    </>
   )
 }

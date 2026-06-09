@@ -1,21 +1,49 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useFriends } from '../hooks/useFriends'
 import { useFollows } from '../hooks/useFollows'
+import { api } from '../utils/api'
 import AppBar from '../components/ui/AppBar'
 import Icon from '../components/ui/Icon'
 import PersonRow from '../components/ui/PersonRow'
+import { useStoryProfiles } from '../hooks/useStories'
 
 export default function FriendsPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const viewId = searchParams.get('view')
+  const initialTab = searchParams.get('tab') ?? 'circle'
+
   const friendsApi = useFriends()
   const followsApi = useFollows()
-  const [tab, setTab] = useState('circle')
+  const storyProfiles = useStoryProfiles()
+  const [tab, setTab] = useState(initialTab)
 
-  const loading = friendsApi.loading || followsApi.loading
-  const circle = followsApi.following ?? []
-  const followers = followsApi.followers ?? []
-  const suggested = [] // placeholder — no suggested endpoint yet
+  // For viewing another user's circle
+  const [viewProfile, setViewProfile] = useState(null)
+  const [viewFollowing, setViewFollowing] = useState(null)
+  const [viewFollowers, setViewFollowers] = useState(null)
+  const [viewLoading, setViewLoading] = useState(false)
+
+  useEffect(() => {
+    if (!viewId) return
+    setViewLoading(true)
+    Promise.all([
+      api.get(`/profiles/${viewId}`),
+      api.get(`/profiles/${viewId}/following`),
+      api.get(`/profiles/${viewId}/followers`),
+    ]).then(([prof, following, followers]) => {
+      setViewProfile(prof)
+      setViewFollowing(following)
+      setViewFollowers(followers)
+    }).catch(() => {}).finally(() => setViewLoading(false))
+  }, [viewId])
+
+  const isViewing = Boolean(viewId)
+  const loading = isViewing ? viewLoading : (friendsApi.loading || followsApi.loading)
+
+  const circle = isViewing ? (viewFollowing ?? []) : (followsApi.following ?? [])
+  const followers = isViewing ? (viewFollowers ?? []) : (followsApi.followers ?? [])
 
   const tabs = [
     { id: 'circle',    label: `Círculo · ${circle.length}` },
@@ -23,6 +51,10 @@ export default function FriendsPage() {
   ]
 
   const list = tab === 'circle' ? circle : followers
+
+  const title = isViewing
+    ? (viewProfile ? `${viewProfile.name}` : 'Círculo')
+    : 'Pessoas'
 
   return (
     <div style={{ animation: 'fadeUp var(--dur-screen) var(--ease-out)' }}>
@@ -35,16 +67,22 @@ export default function FriendsPage() {
             <Icon name="back" size={22} />
           </button>
         }
-        title="Pessoas"
+        title={title}
       />
 
       {/* Header */}
       <div style={{ padding: '18px 20px 6px' }}>
         <h2 style={{ margin: '0 0 4px', fontFamily: 'var(--serif)', fontSize: 25, color: 'var(--ink)', fontWeight: 400 }}>
-          Seu <span style={{ fontStyle: 'italic' }}>círculo</span>
+          {isViewing
+            ? <>{viewProfile?.name ?? '…'} e seu <span style={{ fontStyle: 'italic' }}>círculo</span></>
+            : <>Seu <span style={{ fontStyle: 'italic' }}>círculo</span></>
+          }
         </h2>
         <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)' }}>
-          {circle.length} pessoas que você acompanha. Sem contadores, sem exibição — só companhia.
+          {isViewing
+            ? `${circle.length} pessoas que ${viewProfile?.name ?? 'este perfil'} acompanha.`
+            : `${circle.length} pessoas que você acompanha. Sem contadores, sem exibição — só companhia.`
+          }
         </div>
       </div>
 
@@ -77,20 +115,25 @@ export default function FriendsPage() {
         </div>
       ) : list.length === 0 ? (
         <p style={{ padding: '40px 20px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-3)' }}>
-          {tab === 'circle' ? 'Você ainda não acompanha ninguém.' : 'Nenhum seguidor ainda.'}
+          {tab === 'circle'
+            ? (isViewing ? 'Este perfil ainda não acompanha ninguém.' : 'Você ainda não acompanha ninguém.')
+            : (isViewing ? 'Nenhum seguidor ainda.' : 'Nenhum seguidor ainda.')
+          }
         </p>
       ) : (
         <div>
           {list.map(person => (
-            <PersonRow key={person.id} person={person} />
+            <PersonRow key={person.id} person={person} storyProfiles={storyProfiles} />
           ))}
         </div>
       )}
 
       {/* Footer */}
-      <div style={{ padding: '26px 20px', textAlign: 'center', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 14.5, color: 'var(--ink-3)' }}>
-        Encontre pessoas pelo Explorar.
-      </div>
+      {!isViewing && (
+        <div style={{ padding: '26px 20px', textAlign: 'center', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 14.5, color: 'var(--ink-3)' }}>
+          Encontre pessoas pelo Explorar.
+        </div>
+      )}
     </div>
   )
 }

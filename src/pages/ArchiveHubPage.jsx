@@ -8,7 +8,7 @@ import Chip from '../components/ui/Chip'
 import EntryCard from '../components/ui/EntryCard'
 import { useCollections } from '../hooks/useCollections'
 import { useProfile } from '../hooks/useProfile'
-import { api } from '../utils/api'
+import { api, attachmentBlob } from '../utils/api'
 import { useAttachmentUrl } from '../hooks/useAttachmentUrl'
 
 const SECTIONS = [
@@ -16,7 +16,7 @@ const SECTIONS = [
   { id: 'memories',     label: 'Memórias' },
   { id: 'calendar',     label: 'Calendário' },
   { id: 'collections',  label: 'Coleções' },
-  { id: 'library',      label: 'Biblioteca' },
+  { id: 'library',      label: 'Arquivos' },
   { id: 'photography',  label: 'Fotos' },
 ]
 
@@ -130,7 +130,7 @@ function OverviewSection({ profile }) {
             {profile?.name}
           </div>
           <div style={{ fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink-3)', marginTop: 1 }}>
-            @{profile?.handle}
+            {profile?.handle}
             {posts && <> · <span style={{ color: 'var(--ink-2)' }}>{posts.length}</span> entradas</>}
           </div>
         </div>
@@ -402,13 +402,16 @@ function CollectionsSection() {
 const KIND_ICON = { pdf: 'pdf', markdown: 'markdown', python: 'code', code: 'code', image: 'image' }
 const KIND_COLOR = { pdf: '#F7768E', markdown: '#7AA2F7', python: '#9ECE6A', code: '#E0AF68', image: '#BB9AF7' }
 
-function LibraryRow({ item }) {
+function LibraryRow({ item, onView }) {
   const tone = KIND_COLOR[item.fileType] ?? '#ABA49A'
   const iconName = KIND_ICON[item.fileType] ?? 'note'
   const title = item.title || item.originalName || item.articleTitle || 'Arquivo'
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '15px 20px', borderBottom: '1px solid var(--line)', cursor: 'pointer' }}>
+    <div
+      onClick={() => onView(item)}
+      style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '15px 20px', borderBottom: '1px solid var(--line)', cursor: 'pointer' }}
+    >
       <div style={{
         width: 38, height: 50, borderRadius: 5, flexShrink: 0,
         background: `linear-gradient(160deg, ${tone}33, #111)`,
@@ -425,49 +428,84 @@ function LibraryRow({ item }) {
           {item.fileType?.toUpperCase() ?? 'FILE'}
           {item.size ? ` · ${item.size >= 1048576 ? `${(item.size / 1048576).toFixed(1)} MB` : `${Math.ceil(item.size / 1024)} KB`}` : ''}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
-          <div style={{ flex: 1, maxWidth: 120, height: 3, borderRadius: 3, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-            <div style={{ width: '30%', height: '100%', background: 'var(--accent)' }} />
-          </div>
-        </div>
       </div>
+      <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>Abrir →</span>
     </div>
   )
 }
 
 function LibrarySection() {
   const [files, setFiles] = useState(null)
+  const [textModal, setTextModal] = useState(null)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     api.get('/library').then(d => setFiles(Array.isArray(d) ? d : d?.files ?? [])).catch(() => setFiles([]))
   }, [])
 
+  async function handleView(item) {
+    setError('')
+    const isText = ['markdown', 'python', 'code'].includes(item.fileType)
+    const windowRef = item.fileType === 'pdf' ? window.open('', '_blank') : null
+    try {
+      const blob = await attachmentBlob(item.id)
+      if (isText) {
+        setTextModal({ item, content: await blob.text() })
+        return
+      }
+      const url = URL.createObjectURL(blob)
+      if (windowRef) { windowRef.opener = null; windowRef.location = url }
+      else window.open(url, '_blank', 'noopener,noreferrer')
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } catch (err) {
+      windowRef?.close()
+      setError(err.message)
+    }
+  }
+
   return (
-    <div style={{ paddingTop: 6 }}>
-      <div style={{ padding: '16px 20px 12px', fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)' }}>
-        Livros, documentos, notas e código — tudo que é legível, num só lugar.
+    <>
+      <div style={{ paddingTop: 6 }}>
+        <div style={{ padding: '16px 20px 12px', fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)' }}>
+          Documentos, notas e código — tudo que é legível, num só lugar.
+        </div>
+        {error && <p style={{ padding: '0 20px 8px', color: '#f7768e', fontFamily: 'var(--mono)', fontSize: 12 }}>{error}</p>}
+        <div style={{ borderTop: '1px solid var(--line)' }}>
+          {!files ? <Spinner /> : files.length === 0 ? (
+            <p style={{ padding: '24px 20px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-3)' }}>
+              Nenhum arquivo ainda.
+            </p>
+          ) : (
+            files.map(f => <LibraryRow key={f.id} item={f} onView={handleView} />)
+          )}
+        </div>
       </div>
-      <div style={{ borderTop: '1px solid var(--line)' }}>
-        {!files ? <Spinner /> : files.length === 0 ? (
-          <p style={{ padding: '24px 20px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-3)' }}>
-            Nenhum arquivo na biblioteca ainda.
-          </p>
-        ) : (
-          files.map(f => <LibraryRow key={f.id} item={f} />)
-        )}
-      </div>
-    </div>
+
+      {textModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={() => setTextModal(null)}>
+          <div style={{ background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 16, width: '100%', maxWidth: 720, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: '1px solid var(--line)' }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--ink)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{textModal.item.originalName}</span>
+              <button onClick={() => navigator.clipboard.writeText(textModal.content)} style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer' }}>Copiar</button>
+              <button onClick={() => setTextModal(null)} style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)', background: 'none', border: 'none', cursor: 'pointer' }}>Fechar</button>
+            </div>
+            <pre style={{ margin: 0, padding: 16, overflow: 'auto', fontFamily: 'var(--mono)', fontSize: 13, lineHeight: 1.6, color: 'var(--ink-2)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{textModal.content}</pre>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
 // ── Photography ───────────────────────────────────────────────────────────────
-function PhotoCell({ photo }) {
-  const url = useAttachmentUrl(photo.id)
+function PhotoCell({ photo, onOpen }) {
+  const url = useAttachmentUrl(photo.id, photo.hasThumbnail ? 'thumbnail' : 'view')
   const [hover, setHover] = useState(false)
 
   return (
     <div
       style={{ aspectRatio: '1', borderRadius: 3, overflow: 'hidden', position: 'relative', cursor: 'pointer' }}
+      onClick={() => onOpen(photo)}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
@@ -489,25 +527,59 @@ function PhotoCell({ photo }) {
   )
 }
 
+function ArchiveLightbox({ photo, onClose }) {
+  const url = useAttachmentUrl(photo.id, 'view')
+  const exif = photo.exifData
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.93)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16, gap: 12 }}
+      onClick={onClose}
+    >
+      <button
+        onClick={e => { e.stopPropagation(); onClose() }}
+        style={{ position: 'absolute', top: 'max(16px, calc(env(safe-area-inset-top, 0px) + 8px))', right: 16, background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: 999, color: '#fff', padding: '8px 14px', fontSize: 13, cursor: 'pointer', touchAction: 'manipulation' }}
+      >
+        Fechar
+      </button>
+      {url
+        ? <img src={url} alt={photo.title || photo.originalName || ''} onClick={e => e.stopPropagation()} style={{ maxWidth: '100%', maxHeight: '80vh', borderRadius: 10, objectFit: 'contain' }} />
+        : <div style={{ width: 48, height: 48, borderRadius: '50%', border: '3px solid #e8697a', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+      }
+      {exif && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+          {exif.camera && <span style={{ display: 'inline-flex', gap: 4, fontSize: 11, color: '#aaa', background: '#1a1a1a', borderRadius: 4, padding: '2px 8px' }}><span style={{ color: '#555' }}>câmera</span><span>{exif.camera}</span></span>}
+          {exif.aperture && <span style={{ display: 'inline-flex', gap: 4, fontSize: 11, color: '#aaa', background: '#1a1a1a', borderRadius: 4, padding: '2px 8px' }}><span style={{ color: '#555' }}>abertura</span><span>{exif.aperture}</span></span>}
+          {exif.shutterSpeed && <span style={{ display: 'inline-flex', gap: 4, fontSize: 11, color: '#aaa', background: '#1a1a1a', borderRadius: 4, padding: '2px 8px' }}><span style={{ color: '#555' }}>velocidade</span><span>{exif.shutterSpeed}</span></span>}
+          {exif.iso && <span style={{ display: 'inline-flex', gap: 4, fontSize: 11, color: '#aaa', background: '#1a1a1a', borderRadius: 4, padding: '2px 8px' }}><span style={{ color: '#555' }}>ISO</span><span>{exif.iso}</span></span>}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function PhotographySection() {
   const [photos, setPhotos] = useState(null)
+  const [open, setOpen] = useState(null)
 
   useEffect(() => {
     api.get('/archive/photos').then(setPhotos).catch(() => setPhotos([]))
   }, [])
 
   return (
-    <div style={{ padding: '16px 3px 0' }}>
-      {!photos ? <Spinner /> : photos.length === 0 ? (
-        <p style={{ padding: '32px 20px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-3)' }}>
-          Nenhuma fotografia ainda.
-        </p>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 3 }}>
-          {photos.map(p => <PhotoCell key={p.id} photo={p} />)}
-        </div>
-      )}
-    </div>
+    <>
+      <div style={{ padding: '16px 3px 0' }}>
+        {!photos ? <Spinner /> : photos.length === 0 ? (
+          <p style={{ padding: '32px 20px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-3)' }}>
+            Nenhuma fotografia ainda.
+          </p>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 3 }}>
+            {photos.map(p => <PhotoCell key={p.id} photo={p} onOpen={setOpen} />)}
+          </div>
+        )}
+      </div>
+      {open && <ArchiveLightbox photo={open} onClose={() => setOpen(null)} />}
+    </>
   )
 }
 

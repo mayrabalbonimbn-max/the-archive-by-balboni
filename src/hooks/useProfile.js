@@ -60,5 +60,15 @@ export function useProfile() {
     return hydrateMedia(updated)
   }, [hydrateMedia])
 
-  return { profile, loading, updateProfile, uploadProfileMedia, removeProfileMedia }
+  const completeOnboarding = useCallback(async () => {
+    setProfile(prev => prev ? { ...prev, onboardingCompleted: true } : prev)
+    await api.patch('/me', { onboardingCompleted: true }).catch(() => {})
+  }, [])
+
+  const resetOnboarding = useCallback(async () => {
+    await api.patch('/me', { onboardingCompleted: false }).catch(() => {})
+    setProfile(prev => prev ? { ...prev, onboardingCompleted: false } : prev)
+  }, [])
+
+  return { profile, loading, updateProfile, uploadProfileMedia, removeProfileMedia, completeOnboarding, resetOnboarding }
 }

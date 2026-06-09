@@ -71,7 +71,7 @@ function PublicArchiveCard({ user, idx }) {
         </div>
       </PhotoTile>
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 11 }}>
-        <Avatar name={user.name} src={user.avatar} size={28} />
+        <Avatar name={user.name} src={user.avatar} profileId={user.id} size={28} />
         <div style={{ minWidth: 0 }}>
           <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink)', fontWeight: 500 }}>{user.name}</div>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)' }}>{user.handle}</div>

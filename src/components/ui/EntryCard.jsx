@@ -1,10 +1,12 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Avatar from './Avatar'
 import TypeTag from './TypeTag'
 import ReactionRow from './ReactionRow'
 import { useAttachmentUrl } from '../../hooks/useAttachmentUrl'
 import { attachmentBlob } from '../../utils/api'
+import CommentsBox from '../CommentsBox'
+import EditPostModal from '../EditPostModal'
 
 function fmtDate(iso) {
   if (!iso) return ''
@@ -55,26 +57,41 @@ async function openPdf(attachment) {
   } catch { win?.close() }
 }
 
-export default function EntryCard({ post, showAuthor = true, onLike, onSave, hairline = true }) {
+export default function EntryCard({ post, showAuthor = true, onLike, onSave, onDelete, onEdit, hairline = true }) {
   const navigate = useNavigate()
   const [lightboxId, setLightboxId] = useState(null)
   const lightboxOpenedAt = useRef(0)
+  const [localPost, setLocalPost] = useState(post)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const menuRef = useRef(null)
 
-  const isArticle = post.isArticle || post.type === 'article'
+  useEffect(() => { setLocalPost(post) }, [post])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [menuOpen])
+
+  const canEdit = Boolean(onEdit || onDelete)
+
+  const isArticle = localPost.isArticle || localPost.type === 'article'
 
   // Use correct API field names (fileType, originalName — NOT kind/filename)
-  const images = post.attachments?.filter(a => a.fileType === 'image') ?? []
-  const pdfs   = post.attachments?.filter(a => a.fileType === 'pdf') ?? []
-  const texts  = post.attachments?.filter(a => a.fileType === 'markdown' || a.fileType === 'python' || a.fileType === 'code') ?? []
-  const hasCode = !!post.codeBlock?.code
+  const images = localPost.attachments?.filter(a => a.fileType === 'image') ?? []
+  const pdfs   = localPost.attachments?.filter(a => a.fileType === 'pdf') ?? []
+  const texts  = localPost.attachments?.filter(a => a.fileType === 'markdown' || a.fileType === 'python' || a.fileType === 'code') ?? []
+  const hasCode = !!localPost.codeBlock?.code
 
   function openDetail(e) {
     if (lightboxId) return
-    if (isArticle) navigate(`/articles/${post.id}`)
-    else navigate(`/posts/${post.id}`)
+    if (isArticle) navigate(`/articles/${localPost.id}`)
+    else navigate(`/posts/${localPost.id}`)
   }
 
-  const author = typeof post.author === 'object' ? post.author : null
+  const author = typeof localPost.author === 'object' ? localPost.author : null
   const authorName = author?.name || null
 
   return (
@@ -89,7 +106,7 @@ export default function EntryCard({ post, showAuthor = true, onLike, onSave, hai
       {/* Meta row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
         {showAuthor && authorName && (
-          <Avatar name={authorName} src={author?.avatar} size={26} />
+          <Avatar name={authorName} src={author?.avatar} profileId={author?.id} size={26} />
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flex: 1, flexWrap: 'wrap' }}>
           {showAuthor && authorName && (
@@ -99,25 +116,65 @@ export default function EntryCard({ post, showAuthor = true, onLike, onSave, hai
             {fmtDate(post.createdAt)}
           </span>
         </div>
-        <TypeTag type={post.type ?? (isArticle ? 'article' : 'note')} />
+        <TypeTag type={localPost.type ?? (isArticle ? 'article' : 'note')} />
+
+        {/* ⋯ menu */}
+        {canEdit && (
+          <div ref={menuRef} style={{ position: 'relative', marginLeft: 'auto' }}>
+            <button
+              onClick={e => { e.stopPropagation(); setMenuOpen(v => !v) }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-3)', padding: '2px 6px', fontSize: 18, lineHeight: 1, borderRadius: 6 }}
+            >
+              ···
+            </button>
+            {menuOpen && (
+              <div
+                onClick={e => e.stopPropagation()}
+                style={{
+                  position: 'absolute', right: 0, top: '100%', zIndex: 200,
+                  background: 'var(--surface-1)', border: '1px solid var(--line)',
+                  borderRadius: 12, overflow: 'hidden', minWidth: 130,
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                }}
+              >
+                {onEdit && (
+                  <button
+                    onClick={() => { setMenuOpen(false); setEditOpen(true) }}
+                    style={{ display: 'block', width: '100%', padding: '11px 16px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink)', textAlign: 'left' }}
+                  >
+                    Editar
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    onClick={() => { setMenuOpen(false); onDelete(localPost.id) }}
+                    style={{ display: 'block', width: '100%', padding: '11px 16px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: 13.5, color: '#f7768e', textAlign: 'left' }}
+                  >
+                    Apagar
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Article title */}
-      {isArticle && post.articleTitle && (
+      {isArticle && localPost.articleTitle && (
         <h3 style={{ margin: '0 0 7px', fontFamily: 'var(--serif)', fontSize: 20, lineHeight: 1.2, color: 'var(--ink)', fontWeight: 500, letterSpacing: '-0.01em' }}>
-          {post.articleTitle}
+          {localPost.articleTitle}
         </h3>
       )}
 
       {/* Content */}
-      {post.content && (
+      {localPost.content && (
         <p style={{
           margin: 0, fontFamily: isArticle ? 'var(--serif)' : 'var(--sans)',
           fontSize: isArticle ? 15.5 : 14.5, lineHeight: 1.6, color: 'var(--ink-2)',
           display: '-webkit-box', WebkitLineClamp: images.length > 0 ? 2 : 3,
           WebkitBoxOrient: 'vertical', overflow: 'hidden',
         }}>
-          {post.content}
+          {localPost.content}
         </p>
       )}
 
@@ -139,10 +196,10 @@ export default function EntryCard({ post, showAuthor = true, onLike, onSave, hai
           border: '1px solid var(--line-strong)', background: 'rgba(255,255,255,0.02)',
         }}>
           <div style={{ padding: '8px 13px', borderBottom: '1px solid var(--line)', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)', letterSpacing: '0.06em' }}>
-            {post.codeBlock.language?.toUpperCase() || 'CÓDIGO'}
+            {localPost.codeBlock.language?.toUpperCase() || 'CÓDIGO'}
           </div>
           <pre style={{ margin: 0, padding: '12px 14px', overflow: 'hidden', fontFamily: 'var(--mono)', fontSize: 12, lineHeight: 1.6, color: 'var(--ink-2)', maxHeight: 100 }}>
-            {post.codeBlock.code.slice(0, 300)}
+            {localPost.codeBlock.code.slice(0, 300)}
           </pre>
         </div>
       )}
@@ -187,7 +244,16 @@ export default function EntryCard({ post, showAuthor = true, onLike, onSave, hai
         </div>
       ))}
 
-      <ReactionRow post={post} onLike={onLike} onSave={onSave} onOpen={openDetail} />
+      <ReactionRow post={localPost} onLike={onLike} onSave={onSave} onOpen={openDetail} />
+      <CommentsBox postId={localPost.id} initialCount={localPost.commentCount} />
+
+      {editOpen && (
+        <EditPostModal
+          post={localPost}
+          onClose={() => setEditOpen(false)}
+          onSaved={updated => { setLocalPost(p => ({ ...p, ...updated })); onEdit?.(updated) }}
+        />
+      )}
 
       {/* Lightbox */}
       {lightboxId && (
@@ -197,7 +263,7 @@ export default function EntryCard({ post, showAuthor = true, onLike, onSave, hai
         >
           <button
             onClick={e => { e.stopPropagation(); setLightboxId(null) }}
-            style={{ position: 'absolute', top: 16, right: 16, color: 'white', background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}
+            style={{ position: 'absolute', top: 'max(16px, calc(env(safe-area-inset-top, 0px) + 8px))', right: 16, color: 'white', background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}
           >×</button>
           <LightboxImage id={lightboxId} alt="Imagem" />
         </div>

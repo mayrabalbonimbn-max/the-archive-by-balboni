@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import MarkdownRenderer from './MarkdownRenderer'
 import TagInput from './TagInput'
 import LinkPreviewCard, { useLinkPreview, extractFirstUrl } from './LinkPreviewCard'
-import { getTags } from '../utils/api'
+import { getTags, api } from '../utils/api'
 import Editor from 'react-simple-code-editor'
 import { CODE_LANGUAGES, highlightCode } from '../utils/codeHighlight'
 import { useCollections } from '../hooks/useCollections'
@@ -81,14 +81,23 @@ export default function ComposeBox({ profile, onPost, onClose }) {
   const [fileError, setFileError] = useState('')
   const [posting, setPosting] = useState(false)
   const [mdPreview, setMdPreview] = useState(false)
+  const [capsuleOption, setCapsuleOption] = useState('now') // 'now' | '1m' | '6m' | '1y' | 'custom'
+  const [capsuleCustomDate, setCapsuleCustomDate] = useState('')
+  const [projectId, setProjectId] = useState('')
+  const [projects, setProjects] = useState([])
   const [tags, setTags] = useState([])
   const [tagSuggestions, setTagSuggestions] = useState([])
+  const [mentionUsers, setMentionUsers] = useState([])
+  const [mentionQuery, setMentionQuery] = useState(null)
   const fileInputRef = useRef(null)
   const titleRef = useRef(null)
+  const bodyRef = useRef(null)
   const attachmentsRef = useRef([])
+  const mentionTimerRef = useRef(null)
 
   useEffect(() => {
     getTags().then(list => setTagSuggestions(list)).catch(() => {})
+    api.get('/projects').then(setProjects).catch(() => {})
   }, [])
 
   const isFile = ['photo', 'pdf', 'markdown', 'arquivo', 'code'].includes(entryType)
@@ -96,6 +105,42 @@ export default function ComposeBox({ profile, onPost, onClose }) {
   const isCode = entryType === 'code'
   const isArquivo = entryType === 'arquivo'
   const active = CREATE_TYPES.find(t => t.id === entryType)
+
+  function handleBodyChange(e) {
+    const val = e.target.value
+    setBody(val)
+    const pos = e.target.selectionStart
+    const before = val.slice(0, pos)
+    const match = before.match(/@([\w-]*)$/)
+    if (match) {
+      const q = match[1]
+      setMentionQuery(match[0])
+      clearTimeout(mentionTimerRef.current)
+      if (q.length >= 1) {
+        mentionTimerRef.current = setTimeout(() => {
+          import('../utils/api').then(({ api }) =>
+            api.get(`/search?q=${encodeURIComponent(q)}`).then(data => setMentionUsers(data.users ?? [])).catch(() => {})
+          )
+        }, 200)
+      } else {
+        setMentionUsers([])
+      }
+    } else {
+      setMentionQuery(null)
+      setMentionUsers([])
+    }
+  }
+
+  function applyMention(user) {
+    const pos = bodyRef.current?.selectionStart ?? body.length
+    const before = body.slice(0, pos)
+    const after = body.slice(pos)
+    const replaced = before.replace(/@[\w-]*$/, `@${user.handle} `)
+    setBody(replaced + after)
+    setMentionQuery(null)
+    setMentionUsers([])
+    setTimeout(() => bodyRef.current?.focus(), 0)
+  }
 
   const detectedUrl = extractFirstUrl(body)
   const { preview: linkPreview } = useLinkPreview(!isFile && detectedUrl ? detectedUrl : null)
@@ -141,22 +186,37 @@ export default function ComposeBox({ profile, onPost, onClose }) {
     })
   }
 
+  function capsuleUnlockDate() {
+    if (capsuleOption === 'now') return null
+    if (capsuleOption === 'custom') return capsuleCustomDate ? new Date(capsuleCustomDate).toISOString() : null
+    const d = new Date()
+    if (capsuleOption === '1m') d.setMonth(d.getMonth() + 1)
+    else if (capsuleOption === '6m') d.setMonth(d.getMonth() + 6)
+    else if (capsuleOption === '1y') d.setFullYear(d.getFullYear() + 1)
+    return d.toISOString()
+  }
+
   async function handleSave() {
     if (!canPost) return
     setPosting(true)
+    const unlockAt = capsuleUnlockDate()
+    const isCapsule = capsuleOption !== 'now' && Boolean(unlockAt)
     try {
       await onPost({
         content: body.trim(),
         type: isArticle ? 'article' : 'pensamento',
         isArticle,
         articleTitle: isArticle ? title.trim() : undefined,
-        visibility: privacy,
-        isPrivate: privacy === 'private',
+        visibility: isCapsule ? 'private' : privacy,
+        isPrivate: isCapsule ? true : privacy === 'private',
         collectionId: collectionId || undefined,
         attachments,
         codeBlock: isCode && code.trim() ? { language: codeLanguage, code } : null,
         tags,
         linkPreview: linkPreview || undefined,
+        isTimeCapsule: isCapsule,
+        unlockAt: isCapsule ? unlockAt : undefined,
+        projectId: projectId || undefined,
       })
       onClose?.()
     } catch (err) {
@@ -368,22 +428,49 @@ export default function ComposeBox({ profile, onPost, onClose }) {
                   <MarkdownRenderer content={body} />
                 </div>
               ) : (
-                <textarea
-                  value={body}
-                  onChange={e => setBody(e.target.value)}
-                  placeholder={
-                    isArticle ? 'Comece a escrever… (suporta Markdown)'
-                    : isCode ? '# cole ou descreva seu código…'
-                    : 'Escreva o que quer lembrar…'
-                  }
-                  rows={isFile ? 3 : 9}
-                  style={{
-                    width: '100%', background: 'none', border: 'none', outline: 'none',
-                    resize: 'none', color: 'var(--ink-2)',
-                    fontFamily: isArticle ? 'var(--serif)' : 'var(--sans)',
-                    fontSize: 15, lineHeight: 1.65,
-                  }}
-                />
+                <div style={{ position: 'relative' }}>
+                  <textarea
+                    ref={bodyRef}
+                    value={body}
+                    onChange={handleBodyChange}
+                    placeholder={
+                      isArticle ? 'Comece a escrever… (suporta Markdown)'
+                      : isCode ? '# cole ou descreva seu código…'
+                      : 'Escreva o que quer lembrar… use @handle para marcar alguém'
+                    }
+                    rows={isFile ? 3 : 9}
+                    style={{
+                      width: '100%', background: 'none', border: 'none', outline: 'none',
+                      resize: 'none', color: 'var(--ink-2)',
+                      fontFamily: isArticle ? 'var(--serif)' : 'var(--sans)',
+                      fontSize: 15, lineHeight: 1.65,
+                    }}
+                  />
+                  {mentionQuery !== null && mentionUsers.length > 0 && (
+                    <div style={{
+                      position: 'absolute', top: '100%', left: 0, zIndex: 50,
+                      background: 'var(--surface-2)', border: '1px solid var(--line)',
+                      borderRadius: 10, overflow: 'hidden', minWidth: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                    }}>
+                      {mentionUsers.slice(0, 5).map(u => (
+                        <button
+                          key={u.id}
+                          onMouseDown={e => { e.preventDefault(); applyMention(u) }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            width: '100%', padding: '10px 14px', background: 'none', border: 'none',
+                            cursor: 'pointer', textAlign: 'left',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-3)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                        >
+                          <span style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink)', fontWeight: 500 }}>{u.name}</span>
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>@{u.handle}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
             </>
           )}
@@ -422,25 +509,103 @@ export default function ComposeBox({ profile, onPost, onClose }) {
             </>
           )}
 
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '0.12em', color: 'var(--ink-3)', marginBottom: 11 }}>
-            QUEM PODE VER
-          </div>
-          <div style={{ display: 'flex', borderRadius: 12, border: '1px solid var(--line-strong)', overflow: 'hidden', maxWidth: 280 }}>
-            {PRIVACY.map(([id, label]) => (
-              <button
-                key={id}
-                onClick={() => setPrivacy(id)}
+          {projects.length > 0 && (
+            <>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '0.12em', color: 'var(--ink-3)', marginBottom: 11 }}>
+                PROJETO
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 22 }}>
+                <Chip active={!projectId} onClick={() => setProjectId('')}>Nenhum</Chip>
+                {projects.map(p => (
+                  <Chip key={p.id} active={projectId === p.id} onClick={() => setProjectId(p.id)}>
+                    {p.emoji} {p.title}
+                  </Chip>
+                ))}
+              </div>
+            </>
+          )}
+
+          {capsuleOption === 'now' && (
+            <>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '0.12em', color: 'var(--ink-3)', marginBottom: 11 }}>
+                QUEM PODE VER
+              </div>
+              <div style={{ display: 'flex', borderRadius: 12, border: '1px solid var(--line-strong)', overflow: 'hidden', maxWidth: 280 }}>
+                {PRIVACY.map(([id, label]) => (
+                  <button
+                    key={id}
+                    onClick={() => setPrivacy(id)}
+                    style={{
+                      flex: 1, padding: '10px 0', cursor: 'pointer', border: 'none',
+                      background: privacy === id ? 'var(--accent)' : 'transparent',
+                      color: privacy === id ? '#fff' : 'var(--ink-2)',
+                      fontFamily: 'var(--sans)', fontSize: 13, fontWeight: 500,
+                      transition: 'all .15s',
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Cápsula do Tempo */}
+          <div style={{ marginTop: 22 }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '0.12em', color: 'var(--ink-3)', marginBottom: 12 }}>
+              CÁPSULA DO TEMPO
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[
+                { id: 'now',    label: 'Publicar agora' },
+                { id: '1m',     label: 'Abrir em 1 mês' },
+                { id: '6m',     label: 'Abrir em 6 meses' },
+                { id: '1y',     label: 'Abrir em 1 ano' },
+                { id: 'custom', label: 'Escolher data' },
+              ].map(opt => (
+                <label key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="capsule"
+                    value={opt.id}
+                    checked={capsuleOption === opt.id}
+                    onChange={() => setCapsuleOption(opt.id)}
+                    style={{ accentColor: 'var(--accent)', width: 16, height: 16, cursor: 'pointer' }}
+                  />
+                  <span style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-2)' }}>{opt.label}</span>
+                </label>
+              ))}
+            </div>
+
+            {capsuleOption === 'custom' && (
+              <input
+                type="date"
+                value={capsuleCustomDate}
+                min={new Date(Date.now() + 86400000).toISOString().slice(0, 10)}
+                onChange={e => setCapsuleCustomDate(e.target.value)}
                 style={{
-                  flex: 1, padding: '10px 0', cursor: 'pointer', border: 'none',
-                  background: privacy === id ? 'var(--accent)' : 'transparent',
-                  color: privacy === id ? '#fff' : 'var(--ink-2)',
-                  fontFamily: 'var(--sans)', fontSize: 13, fontWeight: 500,
-                  transition: 'all .15s',
+                  marginTop: 10, padding: '9px 12px', borderRadius: 10,
+                  border: '1px solid var(--line-strong)', background: 'var(--surface-2)',
+                  fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--ink)',
+                  colorScheme: 'dark', outline: 'none',
                 }}
-              >
-                {label}
-              </button>
-            ))}
+              />
+            )}
+
+            {capsuleOption !== 'now' && (() => {
+              const d = capsuleUnlockDate()
+              if (!d) return null
+              return (
+                <div style={{
+                  marginTop: 12, padding: '10px 14px', borderRadius: 10,
+                  background: 'rgba(232,108,180,0.06)', border: '1px solid rgba(232,108,180,0.2)',
+                }}>
+                  <span style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 13.5, color: 'var(--accent)' }}>
+                    Esta entrada será guardada até {new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}.
+                  </span>
+                </div>
+              )
+            })()}
           </div>
         </div>
       </div>

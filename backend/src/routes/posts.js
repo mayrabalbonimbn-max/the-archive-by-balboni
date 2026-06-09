@@ -29,6 +29,9 @@ function toPost(row) {
     isArticle: row.is_article || false,
     articleTitle: row.article_title || null,
     collectionId: row.collection_id || null,
+    isTimeCapsule: row.is_time_capsule || false,
+    unlockAt: row.unlock_at || null,
+    projectId: row.project_id || null,
     attachments: row.attachments || [],
     tags: row.tags || [],
     linkPreview: row.link_preview || null,
@@ -92,7 +95,7 @@ router.get('/', async (req, res) => {
     let query, params
 
     const { tag, type } = req.query
-    const conditions = ['p.profile_id = $1']
+    const conditions = ['p.profile_id = $1', '(p.is_time_capsule = false OR p.is_time_capsule IS NULL)']
     params = [req.user.profileId]
 
     if (q && q.trim()) {
@@ -244,7 +247,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   const client = await pool.connect()
   try {
-    const { content, type, isDiary, isPrivate, visibility, hasAttachments, codeBlock, isArticle, articleTitle, collectionId, tags, linkPreview } = req.body
+    const { content, type, isDiary, isPrivate, visibility, hasAttachments, codeBlock, isArticle, articleTitle, collectionId, tags, linkPreview, isTimeCapsule, unlockAt, projectId } = req.body
 
     const cleanContent = (content || '').trim()
     const cleanCode = typeof codeBlock?.code === 'string' ? codeBlock.code.trimEnd() : ''
@@ -287,9 +290,24 @@ router.post('/', async (req, res) => {
       if (col.rows.length > 0) validCollectionId = collectionId
     }
 
+    // Validate projectId
+    let validProjectId = null
+    if (projectId) {
+      const proj = await client.query('SELECT id FROM projects WHERE id = $1 AND profile_id = $2', [projectId, req.user.profileId])
+      if (proj.rows.length > 0) validProjectId = projectId
+    }
+
+    // Validate unlockAt for time capsules
+    const isCapsule = isTimeCapsule === true && unlockAt
+    let cleanUnlockAt = null
+    if (isCapsule) {
+      const d = new Date(unlockAt)
+      if (!isNaN(d.getTime()) && d > new Date()) cleanUnlockAt = d.toISOString()
+    }
+
     const result = await client.query(
-      `INSERT INTO posts (profile_id, content, type, is_diary, is_private, visibility, code_language, code_content, is_article, article_title, collection_id, link_preview)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      `INSERT INTO posts (profile_id, content, type, is_diary, is_private, visibility, code_language, code_content, is_article, article_title, collection_id, link_preview, is_time_capsule, unlock_at, project_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING *`,
       [
         req.user.profileId, cleanContent, type || 'pensamento', isDiary === true,
@@ -297,6 +315,7 @@ router.post('/', async (req, res) => {
         cleanCode ? codeLanguage : null, cleanCode || null,
         isArticle === true, cleanTitle || null, validCollectionId,
         cleanLinkPreview ? JSON.stringify(cleanLinkPreview) : null,
+        isCapsule ? true : false, cleanUnlockAt, validProjectId,
       ]
     )
     const postId = result.rows[0].id

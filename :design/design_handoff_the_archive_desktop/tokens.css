@@ -1,0 +1,106 @@
+/* ============================================================
+   The Archive by Balboni — Design Tokens
+   Dark editorial · pure flat black · warm ink · rose accent
+   Single source of truth for the prototype's visual language.
+   ============================================================ */
+
+:root {
+  /* ---- Brand --------------------------------------------- */
+  --accent:            #E86CB4;   /* rose — headers, CTAs, active states */
+  --accent-press:      #d4549f;   /* pressed/hover rose */
+  --accent-soft:       color-mix(in srgb, var(--accent) 12%, transparent);
+  --accent-faint:      color-mix(in srgb, var(--accent) 6%,  transparent);
+
+  /* ---- Surfaces ------------------------------------------ */
+  --bg:                #000000;   /* canvas — pure flat black */
+  --surface-1:         rgba(255,255,255,0.015); /* barely-there fill */
+  --surface-2:         rgba(255,255,255,0.03);  /* inputs, raised rows */
+  --surface-3:         rgba(255,255,255,0.05);  /* round buttons */
+
+  /* ---- Ink (warm off-whites) ----------------------------- */
+  --ink:               #F2EDE6;   /* primary text */
+  --ink-2:             #ABA49A;   /* secondary / body */
+  --ink-3:             #6C665E;   /* tertiary / meta, captions */
+
+  /* ---- Hairlines ----------------------------------------- */
+  --line:              rgba(255,255,255,0.08);  /* separators */
+  --line-strong:       rgba(255,255,255,0.15);  /* borders, chips */
+
+  /* ---- Typography ---------------------------------------- */
+  --serif:  'Newsreader', Georgia, 'Times New Roman', serif;     /* headlines, editorial */
+  --sans:   'Hanken Grotesk', system-ui, sans-serif;             /* UI, body */
+  --mono:   'JetBrains Mono', ui-monospace, 'SF Mono', monospace;/* dates, files, labels */
+
+  /* type scale (px) */
+  --t-display:   33;   /* masthead greeting */
+  --t-title:     28;   /* profile / page titles */
+  --t-h2:        25;   /* section headlines */
+  --t-entry:     21;   /* entry card title */
+  --t-body:      15;   /* reading body */
+  --t-ui:        14;   /* controls, list text */
+  --t-meta:      12.5; /* secondary meta */
+  --t-mono:      11;   /* eyebrow / mono labels */
+
+  /* line-heights */
+  --lh-tight:    1.12;
+  --lh-snug:     1.2;
+  --lh-body:     1.6;
+  --lh-read:     1.72;
+
+  /* tracking */
+  --track-tight: -0.02em;  /* display serif */
+  --track-eyebrow: 0.14em; /* mono uppercase eyebrows */
+
+  /* ---- Spacing scale (px) -------------------------------- */
+  --s-1: 4;
+  --s-2: 8;
+  --s-3: 12;
+  --s-4: 16;
+  --s-5: 20;   /* default screen gutter */
+  --s-6: 26;
+  --s-7: 32;
+  --gutter: 20px;
+
+  /* ---- Radii --------------------------------------------- */
+  --r-sm:  9px;    /* file badges */
+  --r-md:  13px;   /* inputs, buttons */
+  --r-lg:  16px;   /* cards, prompts */
+  --r-xl:  26px;   /* sheets */
+  --r-pill: 999px; /* chips, avatars */
+
+  /* ---- Motion -------------------------------------------- */
+  --ease-out:    cubic-bezier(.22, 1, .36, 1);
+  --dur-fast:    .18s;
+  --dur-screen:  .34s;
+
+  /* ---- Layout -------------------------------------------- */
+  --safe-top:     58px;  /* clears status bar / dynamic island */
+  --safe-bottom:  26px;  /* clears home indicator */
+  --device-w:     402px;
+  --device-h:     874px;
+}
+
+/* ============================================================
+   Base reset & page
+   ============================================================ */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; }
+body {
+  background: radial-gradient(120% 80% at 50% 0%, #18181c 0%, #101012 45%, #0a0a0b 100%);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+#root { width: 100%; height: 100%; }
+button { font-family: var(--sans); -webkit-tap-highlight-color: transparent; }
+input::placeholder, textarea::placeholder { color: var(--ink-3); opacity: 1; }
+::-webkit-scrollbar { width: 0; height: 0; }
+
+/* ============================================================
+   Motion keyframes
+   ============================================================ */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes pushIn { from { opacity: .4; transform: translateX(26px); } to { opacity: 1; transform: none; } }
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; } }

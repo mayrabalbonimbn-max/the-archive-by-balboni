@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Avatar from './Avatar'
 import { api } from '../../utils/api'
 
-export default function PersonRow({ person, hairline = true }) {
+export default function PersonRow({ person, hairline = true, storyProfiles }) {
   const navigate = useNavigate()
   const [following, setFollowing] = useState(person.isFollowing ?? person.following ?? false)
   const [busy, setBusy] = useState(false)
@@ -30,7 +30,7 @@ export default function PersonRow({ person, hairline = true }) {
         cursor: 'pointer',
       }}
     >
-      <Avatar name={person.name} src={person.avatar} size={44} />
+      <Avatar name={person.name} src={person.avatar} profileId={person.id} size={44} story={storyProfiles?.has(person.id)} />
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <span style={{ fontFamily: 'var(--serif)', fontSize: 16.5, color: 'var(--ink)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

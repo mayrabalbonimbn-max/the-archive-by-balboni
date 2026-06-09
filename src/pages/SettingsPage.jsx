@@ -85,7 +85,7 @@ function AccentBtn({ onClick, children, disabled = false, type = 'button' }) {
   )
 }
 
-export default function SettingsPage({ profile, posts, onUpdateProfile, onUploadProfileMedia, onRemoveProfileMedia, onImportPosts, onLogout }) {
+export default function SettingsPage({ profile, posts, onUpdateProfile, onUploadProfileMedia, onRemoveProfileMedia, onImportPosts, onLogout, onResetOnboarding }) {
   const navigate = useNavigate()
   const [name, setName] = useState(profile.name)
   const [handle, setHandle] = useState(profile.handle)
@@ -437,7 +437,12 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
           <div style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', marginBottom: 16 }}>
             Logado como <span style={{ color: 'var(--ink)' }}>{profile.handle}</span>
           </div>
-          <OutlineBtn onClick={onLogout}>Sair do perfil</OutlineBtn>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
+            {onResetOnboarding && (
+              <OutlineBtn onClick={onResetOnboarding}>Refazer Tour</OutlineBtn>
+            )}
+            <OutlineBtn onClick={onLogout}>Sair do perfil</OutlineBtn>
+          </div>
         </div>
 
         {/* ── Perigo ── */}

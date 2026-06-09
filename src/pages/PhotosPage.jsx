@@ -36,7 +36,7 @@ function Lightbox({ photo, onClose }) {
       <button
         onClick={e => { e.stopPropagation(); onClose() }}
         style={{
-          position: 'absolute', top: 16, right: 16,
+          position: 'absolute', top: 'max(16px, calc(env(safe-area-inset-top, 0px) + 8px))', right: 16,
           background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: 999,
           color: '#fff', padding: '8px 14px', fontSize: 13, cursor: 'pointer',
           touchAction: 'manipulation',

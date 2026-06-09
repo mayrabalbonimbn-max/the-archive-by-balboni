@@ -151,7 +151,7 @@ export default function PostAttachments({ attachments = [] }) {
 
       {openImage && (
         <div className="fixed inset-0 bg-black/92 backdrop-blur-sm flex flex-col items-center justify-center gap-3 p-4" style={{ zIndex: 9999 }} onClick={() => setOpenImage(null)}>
-          <button className="absolute top-4 right-4 text-white bg-black/70 rounded-full px-3 py-2 text-sm" style={{ touchAction: 'manipulation' }} onClick={e => { e.stopPropagation(); setOpenImage(null) }}>Fechar</button>
+          <button className="absolute right-4 text-white bg-black/70 rounded-full px-3 py-2 text-sm" style={{ top: 'max(16px, calc(env(safe-area-inset-top, 0px) + 8px))', touchAction: 'manipulation' }} onClick={e => { e.stopPropagation(); setOpenImage(null) }}>Fechar</button>
           <LightboxImage attachment={openImage} />
           {exif && (
             <div className="flex flex-wrap gap-2 justify-center max-w-lg" onClick={e => e.stopPropagation()}>

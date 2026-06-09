@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, publicProfileMediaBlob } from '../utils/api'
+import { useStoryProfiles } from '../hooks/useStories'
 import AppBar from '../components/ui/AppBar'
 import Icon from '../components/ui/Icon'
 import Avatar from '../components/ui/Avatar'
 import SectionLabel from '../components/ui/SectionLabel'
 import EntryCard from '../components/ui/EntryCard'
 
-function Stat({ n, label }) {
+function Stat({ n, label, onClick }) {
   return (
-    <div style={{ textAlign: 'center' }}>
+    <div onClick={onClick} style={{ textAlign: 'center', cursor: onClick ? 'pointer' : 'default' }}>
       <div style={{ fontFamily: 'var(--serif)', fontSize: 21, color: 'var(--ink)', letterSpacing: '-0.01em' }}>{n}</div>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.1em', color: 'var(--ink-3)', textTransform: 'uppercase', marginTop: 2 }}>{label}</div>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.1em', color: onClick ? 'var(--accent)' : 'var(--ink-3)', textTransform: 'uppercase', marginTop: 2 }}>{label}</div>
     </div>
   )
 }
@@ -19,6 +20,7 @@ function Stat({ n, label }) {
 export default function PublicProfilePage({ profile: viewerProfile }) {
   const { id } = useParams()
   const navigate = useNavigate()
+  const storyProfiles = useStoryProfiles()
   const [profile, setProfile] = useState(null)
   const [posts, setPosts] = useState([])
   const [summary, setSummary] = useState(null)
@@ -69,6 +71,13 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
     }
   }
 
+  async function startConversation() {
+    try {
+      const conv = await api.post('/conversations', { recipientId: profile.id })
+      navigate(`/messages/${conv.id}`)
+    } catch {}
+  }
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', padding: '64px 0' }}>
@@ -114,11 +123,11 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
 
       {/* Identity */}
       <div style={{ padding: '20px 20px 0' }}>
-        <Avatar name={profile.name} src={profile.avatar} size={76} ring />
+        <Avatar name={profile.name} src={profile.avatar} size={76} ring={!storyProfiles.has(profile.id)} story={storyProfiles.has(profile.id)} />
         <h1 style={{ margin: '16px 0 3px', fontFamily: 'var(--serif)', fontSize: 28, color: 'var(--ink)', fontWeight: 400, letterSpacing: '-0.01em' }}>
           {profile.name}
         </h1>
-        <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--accent)' }}>@{profile.handle}</div>
+        <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--accent)' }}>{profile.handle}</div>
         {profile.title && (
           <div style={{ fontFamily: 'var(--serif)', fontSize: 15.5, fontStyle: 'italic', color: 'var(--ink-2)', marginTop: 3 }}>
             {profile.title}
@@ -156,7 +165,7 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
           >
             {profile.isFollowing ? 'Seguindo' : 'Seguir'}
           </button>
-          <button style={{ width: 48, borderRadius: 13, cursor: 'pointer', border: '1px solid var(--line-strong)', background: 'transparent', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button onClick={startConversation} style={{ width: 48, borderRadius: 13, cursor: 'pointer', border: '1px solid var(--line-strong)', background: 'transparent', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="comment" size={18} />
           </button>
         </div>
@@ -170,7 +179,7 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
       }}>
         <Stat n={posts.length.toLocaleString('pt-BR')} label="Entradas" />
         <Stat n={collections.length || profile.collectionsCount || 0} label="Coleções" />
-        <Stat n={profile.followerCount ?? 0} label="Círculo" />
+        <Stat n={profile.followerCount ?? 0} label="Círculo" onClick={() => navigate(`/friends?view=${profile.id}`)} />
         <Stat n={daysKept.toLocaleString('pt-BR')} label="Dias" />
       </div>
 

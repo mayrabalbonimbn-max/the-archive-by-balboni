@@ -28,5 +28,8 @@ app.use('/api/search', require('./routes/search'))
 app.use('/api/tags', require('./routes/tags'))
 app.use('/api/link-preview', require('./routes/link-preview'))
 app.use('/api', require('./routes/attachments'))
+app.use('/api/stories', require('./routes/stories'))
+app.use('/api/capsules', require('./routes/capsules'))
+app.use('/api/projects', require('./routes/projects'))
 
 module.exports = app

@@ -19,7 +19,7 @@ export default function TodayPage() {
 
   return (
     <div>
-      <div className="sticky top-0 z-10 bg-black/85 backdrop-blur-md border-b border-dark-border px-4 py-4">
+      <div className="sticky z-10 bg-black/85 backdrop-blur-md border-b border-dark-border px-4 py-4" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
         <p className="text-[11px] uppercase tracking-[0.18em] text-dark-muted font-bold">Painel pessoal</p>
         <h1 className="font-bold text-2xl text-dark-text mt-1">Hoje</h1>
       </div>

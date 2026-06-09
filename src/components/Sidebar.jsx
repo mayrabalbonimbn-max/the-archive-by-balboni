@@ -60,6 +60,30 @@ const SettingsIcon = ({ filled }) => (
   </svg>
 )
 
+const MessagesIcon = ({ filled }) => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5h-8L7 20.5V18H4a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 4 5.5z"/>
+  </svg>
+)
+
+const CapsulesIcon = ({ filled }) => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <polyline points="12 6 12 12 16 14"/>
+  </svg>
+)
+
+const StoriesArchiveIcon = ({ filled }) => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <circle cx="12" cy="12" r="3"/>
+    <line x1="12" y1="2" x2="12" y2="5"/>
+    <line x1="12" y1="19" x2="12" y2="22"/>
+    <line x1="2" y1="12" x2="5" y2="12"/>
+    <line x1="19" y1="12" x2="22" y2="12"/>
+  </svg>
+)
+
 const LogoutIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
@@ -119,10 +143,11 @@ function MobileActionItem({ label, Icon, onClick }) {
 
 // ── Desktop sidebar nav item ──────────────────────────────────────────────────
 
-function DSidebarItem({ icon, label, active, onClick, badge }) {
+function DSidebarItem({ icon, label, active, onClick, badge, tourId }) {
   return (
     <button
       onClick={onClick}
+      data-onboarding={tourId || undefined}
       style={{
         display: 'flex', alignItems: 'center', gap: 12, width: '100%',
         padding: '9px 12px', borderRadius: 10, border: 'none', cursor: 'pointer',
@@ -177,6 +202,8 @@ export default function Sidebar({ profile, onLogout, onCompose }) {
   function isExplore() { return location.pathname === '/explore' }
   function isPeople() { return location.pathname === '/friends' }
   function isNotices() { return location.pathname === '/notifications' }
+  function isMessages() { return location.pathname.startsWith('/messages') }
+  function isCapsules() { return location.pathname === '/capsules' }
   function isArchiveSection(s) {
     if (location.pathname !== '/archive') return false
     if (s === 'overview') return archiveSection === 'overview'
@@ -205,6 +232,7 @@ export default function Sidebar({ profile, onLogout, onCompose }) {
         {/* Keep something button */}
         <div style={{ padding: '0 16px 16px' }}>
           <button
+            data-onboarding="compose-btn"
             onClick={onCompose}
             style={{
               width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -224,20 +252,23 @@ export default function Sidebar({ profile, onLogout, onCompose }) {
           <DSidebarItem icon="today"   label="Hoje"     active={isToday()}   onClick={() => navigate('/')} />
           <DSidebarItem icon="explore" label="Explorar" active={isExplore()} onClick={() => navigate('/explore')} />
           <DSidebarItem icon="people"  label="Pessoas"  active={isPeople()}  onClick={() => navigate('/friends')} />
-          <DSidebarItem icon="bell"    label="Avisos"   active={isNotices()} onClick={() => navigate('/notifications')} badge />
+          <DSidebarItem icon="bell"    label="Avisos"   active={isNotices()}   onClick={() => navigate('/notifications')} badge />
+          <DSidebarItem icon="comment" label="Mensagens" active={isMessages()} onClick={() => navigate('/messages')} />
+          <DSidebarItem icon="clock" label="Cápsulas" active={isCapsules()} onClick={() => navigate('/capsules')} tourId="capsules-nav" />
         </nav>
 
         {/* YOUR ARCHIVE group */}
-        <div style={{ padding: '20px 24px 8px', fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.16em', color: 'var(--ink-3)' }}>
+        <div data-onboarding="archive-section" style={{ padding: '20px 24px 8px', fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.16em', color: 'var(--ink-3)' }}>
           SEU ARQUIVO
         </div>
         <nav style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: 2 }}>
           <DSidebarItem icon="archive"     label="Visão geral" active={isArchiveSection('overview')}    onClick={() => navigate('/archive')} />
-          <DSidebarItem icon="sparkle"     label="Memórias"    active={isArchiveSection('memories')}    onClick={() => navigate('/archive?s=memories')} />
-          <DSidebarItem icon="calendar"    label="Calendário"  active={isArchiveSection('calendar')}    onClick={() => navigate('/archive?s=calendar')} />
+          <DSidebarItem icon="sparkle"     label="Memórias"    active={isArchiveSection('memories')}    onClick={() => navigate('/archive?s=memories')} tourId="memories-nav" />
+          <DSidebarItem icon="calendar"    label="Calendário"  active={isArchiveSection('calendar')}    onClick={() => navigate('/archive?s=calendar')} tourId="calendar-nav" />
           <DSidebarItem icon="collections" label="Coleções"    active={isArchiveSection('collections')} onClick={() => navigate('/archive?s=collections')} />
-          <DSidebarItem icon="library"     label="Biblioteca"  active={isArchiveSection('library')}     onClick={() => navigate('/archive?s=library')} />
-          <DSidebarItem icon="photo"       label="Fotografia"  active={isArchiveSection('photography')}  onClick={() => navigate('/archive?s=photography')} />
+          <DSidebarItem icon="library"     label="Arquivos"    active={isArchiveSection('library')}     onClick={() => navigate('/archive?s=library')} />
+          <DSidebarItem icon="photo"       label="Fotografia"  active={isArchiveSection('photography')}  onClick={() => navigate('/archive?s=photography')} tourId="photo-nav" />
+          <DSidebarItem icon="stories"     label="Stories"     active={location.pathname === '/archive/stories'} onClick={() => navigate('/archive/stories')} />
         </nav>
 
         <div style={{ flex: 1 }} />
@@ -245,6 +276,7 @@ export default function Sidebar({ profile, onLogout, onCompose }) {
         {/* User chip */}
         <div style={{ margin: 12 }}>
           <button
+            data-onboarding="profile-chip"
             onClick={() => navigate('/profile')}
             style={{
               width: '100%', padding: '10px 12px', borderRadius: 12,
@@ -319,6 +351,9 @@ export default function Sidebar({ profile, onLogout, onCompose }) {
               <MobileNavItem to="/profile"              label="Perfil"        Icon={UserIcon}    onClick={close} />
               <MobileNavItem to="/friends"              label="Conexões"      Icon={FriendsIcon} onClick={close} />
               <MobileNavItem to="/notifications"        label="Notificações"  Icon={BellIcon}    onClick={close} />
+              <MobileNavItem to="/messages"             label="Mensagens"     Icon={MessagesIcon} onClick={close} />
+              <MobileNavItem to="/capsules"             label="Cápsulas"      Icon={CapsulesIcon} onClick={close} />
+              <MobileNavItem to="/archive/stories"      label="Stories"       Icon={StoriesArchiveIcon} onClick={close} />
               <MobileNavItem to="/settings"             label="Ajustes"       Icon={SettingsIcon} onClick={close} />
             </nav>
 

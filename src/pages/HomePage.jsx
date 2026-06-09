@@ -6,6 +6,7 @@ import PhotoTile from '../components/ui/PhotoTile'
 import SectionLabel from '../components/ui/SectionLabel'
 import EntryCard from '../components/ui/EntryCard'
 import { api } from '../utils/api'
+import StoriesBar from '../components/StoriesBar'
 
 // ── Masthead ──────────────────────────────────────────────────────────────────
 function Masthead({ profile, posts }) {
@@ -226,6 +227,9 @@ export default function HomePage({ posts, profile, searchQuery, onPost, onLike, 
           </>
         }
       />
+
+      {/* Stories */}
+      <StoriesBar profile={profile} />
 
       {/* Masthead */}
       <Masthead profile={profile} posts={posts} />

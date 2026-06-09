@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppBar from '../components/ui/AppBar'
 import Icon from '../components/ui/Icon'
@@ -6,12 +6,22 @@ import Avatar from '../components/ui/Avatar'
 import SectionLabel from '../components/ui/SectionLabel'
 import EntryCard from '../components/ui/EntryCard'
 import { useCollections } from '../hooks/useCollections'
+import { useStoryProfiles } from '../hooks/useStories'
+import { api } from '../utils/api'
 
-function Stat({ n, label }) {
+const STATUS_COLORS = {
+  ideia: '#6b7280', construindo: '#f59e0b', ativo: '#10b981',
+  pausado: '#6b7280', concluído: '#8b5cf6',
+}
+
+function Stat({ n, label, onClick }) {
   return (
-    <div style={{ textAlign: 'center' }}>
+    <div
+      onClick={onClick}
+      style={{ textAlign: 'center', cursor: onClick ? 'pointer' : 'default' }}
+    >
       <div style={{ fontFamily: 'var(--serif)', fontSize: 21, color: 'var(--ink)', letterSpacing: '-0.01em' }}>{n}</div>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.1em', color: 'var(--ink-3)', textTransform: 'uppercase', marginTop: 2 }}>{label}</div>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.1em', color: onClick ? 'var(--accent)' : 'var(--ink-3)', textTransform: 'uppercase', marginTop: 2 }}>{label}</div>
     </div>
   )
 }
@@ -27,8 +37,17 @@ const TYPE_FILTERS = [
 export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }) {
   const navigate = useNavigate()
   const { collections } = useCollections()
+  const storyProfiles = useStoryProfiles()
   const [typeFilter, setTypeFilter] = useState('all')
   const [tagFilter, setTagFilter] = useState(null)
+  const [projects, setProjects] = useState([])
+  const [showNewProject, setShowNewProject] = useState(false)
+  const [newProject, setNewProject] = useState({ emoji: '🌱', title: '', description: '', status: 'ativo' })
+  const [creating, setCreating] = useState(false)
+
+  useEffect(() => {
+    api.get('/projects').then(setProjects).catch(() => {})
+  }, [])
 
   const sorted = useMemo(
     () => [...posts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
@@ -79,11 +98,11 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
 
       {/* Identity */}
       <div style={{ padding: '20px 20px 0' }}>
-        <Avatar name={profile.name} src={profile.avatar} size={76} ring />
+        <Avatar name={profile.name} src={profile.avatar} size={76} ring={!storyProfiles.has(profile.id)} story={storyProfiles.has(profile.id)} />
         <h1 style={{ margin: '16px 0 3px', fontFamily: 'var(--serif)', fontSize: 28, color: 'var(--ink)', fontWeight: 400, letterSpacing: '-0.01em' }}>
           {profile.name}
         </h1>
-        <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--accent)' }}>@{profile.handle}</div>
+        <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--accent)' }}>{profile.handle}</div>
         {profile.title && (
           <div style={{ fontFamily: 'var(--serif)', fontSize: 15.5, fontStyle: 'italic', color: 'var(--ink-2)', marginTop: 3 }}>
             {profile.title}
@@ -127,7 +146,7 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
       }}>
         <Stat n={posts.length.toLocaleString('pt-BR')} label="Entradas" />
         <Stat n={collections.length} label="Coleções" />
-        <Stat n={profile.followerCount ?? 0} label="Círculo" />
+        <Stat n={profile.followerCount ?? 0} label="Círculo" onClick={() => navigate('/friends')} />
         <Stat n={daysKept.toLocaleString('pt-BR')} label="Dias" />
       </div>
 
@@ -167,13 +186,130 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
         </div>
       )}
 
+      {/* Projects */}
+      {(projects.length > 0 || true) && (
+        <div style={{ marginTop: 28 }}>
+          <SectionLabel
+            action="+ Novo projeto"
+            onAction={() => setShowNewProject(true)}
+          >
+            Projetos
+          </SectionLabel>
+
+          {projects.length === 0 ? (
+            <div style={{ padding: '16px 20px' }}>
+              <p style={{ margin: 0, fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 14, color: 'var(--ink-3)', lineHeight: 1.6 }}>
+                Registre seus projetos — do diário ao portfólio.
+              </p>
+            </div>
+          ) : (
+            <div style={{ padding: '8px 20px 4px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+              {projects.filter(p => p.isFeatured).concat(projects.filter(p => !p.isFeatured)).slice(0, 6).map(proj => {
+                const color = STATUS_COLORS[proj.status] || '#6b7280'
+                return (
+                  <div
+                    key={proj.id}
+                    onClick={() => navigate(`/projects/${proj.slug}`)}
+                    style={{
+                      padding: '14px', borderRadius: 14,
+                      border: '1px solid var(--line)', background: 'var(--surface-2)',
+                      cursor: 'pointer', position: 'relative', overflow: 'hidden',
+                      transition: 'border-color 0.15s',
+                    }}
+                  >
+                    {proj.isFeatured && (
+                      <div style={{ position: 'absolute', top: 8, right: 10, fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--accent)', letterSpacing: '0.1em' }}>★</div>
+                    )}
+                    <div style={{ fontSize: 28, marginBottom: 10 }}>{proj.emoji}</div>
+                    <div style={{ fontFamily: 'var(--serif)', fontSize: 14.5, color: 'var(--ink)', lineHeight: 1.3, marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {proj.title}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--ink-3)', letterSpacing: '0.06em' }}>
+                        {proj.status.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {projects.length > 6 && (
+            <div style={{ padding: '6px 20px 0' }}>
+              <button
+                onClick={() => navigate('/projects')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)', letterSpacing: '0.05em' }}
+              >
+                Ver todos ({projects.length})
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* New project modal */}
+      {showNewProject && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--bg)', borderRadius: '20px 20px 0 0', border: '1px solid var(--line)', width: '100%', maxWidth: 500, padding: '24px 24px 40px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <span style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 18, color: 'var(--ink)' }}>Novo Projeto</span>
+              <button onClick={() => setShowNewProject(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-3)', fontSize: 20 }}>✕</button>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+              <input
+                value={newProject.emoji}
+                onChange={e => setNewProject(p => ({ ...p, emoji: e.target.value }))}
+                style={{ width: 56, textAlign: 'center', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 8, padding: '10px', fontFamily: 'var(--sans)', fontSize: 20, color: 'var(--ink)' }}
+              />
+              <input
+                value={newProject.title}
+                onChange={e => setNewProject(p => ({ ...p, title: e.target.value }))}
+                placeholder="Nome do projeto"
+                style={{ flex: 1, background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 8, padding: '10px 12px', fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink)' }}
+              />
+            </div>
+            <textarea
+              value={newProject.description}
+              onChange={e => setNewProject(p => ({ ...p, description: e.target.value }))}
+              placeholder="Descrição breve (opcional)"
+              rows={2}
+              style={{ width: '100%', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 8, padding: '10px 12px', fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink)', resize: 'none', boxSizing: 'border-box', marginBottom: 16 }}
+            />
+            <button
+              onClick={async () => {
+                if (!newProject.title.trim()) return
+                setCreating(true)
+                try {
+                  const proj = await api.post('/projects', newProject)
+                  setProjects(prev => [proj, ...prev])
+                  setShowNewProject(false)
+                  setNewProject({ emoji: '🌱', title: '', description: '', status: 'ativo' })
+                } catch {}
+                setCreating(false)
+              }}
+              disabled={creating || !newProject.title.trim()}
+              style={{
+                width: '100%', padding: '12px', borderRadius: 10, border: 'none',
+                background: 'var(--accent)', cursor: creating ? 'default' : 'pointer',
+                fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 600, color: '#fff',
+                opacity: creating || !newProject.title.trim() ? 0.5 : 1,
+              }}
+            >
+              {creating ? 'Criando…' : 'Criar projeto'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Pinned */}
       {pinned.length > 0 && (
         <div style={{ marginTop: 26 }}>
           <SectionLabel>Fixados</SectionLabel>
           <div style={{ borderTop: '1px solid var(--line)' }}>
             {pinned.map(p => (
-              <EntryCard key={p.id} post={p} showAuthor={false} onLike={() => onLike?.(p.id)} onSave={() => onSave?.(p.id)} />
+              <EntryCard key={p.id} post={p} showAuthor={false} onLike={() => onLike?.(p.id)} onSave={() => onSave?.(p.id)} onDelete={() => onDelete?.(p.id)} onEdit={() => {}} />
             ))}
           </div>
         </div>
@@ -230,6 +366,8 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
                 showAuthor={false}
                 onLike={() => onLike?.(p.id)}
                 onSave={() => onSave?.(p.id)}
+                onDelete={() => onDelete?.(p.id)}
+                onEdit={() => {}}
               />
             ))
           )}

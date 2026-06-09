@@ -239,3 +239,34 @@ ALTER TABLE posts ADD COLUMN IF NOT EXISTS link_preview JSONB;
 CREATE INDEX IF NOT EXISTS idx_posts_pinned ON posts(profile_id, pinned, pin_order) WHERE pinned = true;
 CREATE INDEX IF NOT EXISTS idx_posts_type ON posts(profile_id, type);
 CREATE INDEX IF NOT EXISTS idx_posts_is_article ON posts(profile_id, is_article) WHERE is_article = true;
+
+-- Time capsules
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_time_capsule BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS unlock_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS idx_posts_capsule ON posts(profile_id, is_time_capsule) WHERE is_time_capsule = true;
+
+-- Projects
+CREATE TABLE IF NOT EXISTS projects (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  profile_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  title VARCHAR(200) NOT NULL,
+  slug VARCHAR(200) NOT NULL,
+  emoji VARCHAR(10) DEFAULT '🌱',
+  description TEXT DEFAULT '',
+  status VARCHAR(20) NOT NULL DEFAULT 'ativo',
+  github_url TEXT,
+  website_url TEXT,
+  cover_image TEXT,
+  tags TEXT[] DEFAULT '{}',
+  is_featured BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  CONSTRAINT projects_profile_slug_unique UNIQUE (profile_id, slug),
+  CONSTRAINT projects_status_check CHECK (status IN ('ideia', 'construindo', 'ativo', 'pausado', 'concluído'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_projects_profile ON projects(profile_id);
+CREATE INDEX IF NOT EXISTS idx_projects_featured ON projects(profile_id, is_featured) WHERE is_featured = true;
+
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES projects(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_posts_project_id ON posts(project_id);

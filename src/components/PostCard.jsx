@@ -5,6 +5,7 @@ import PostAttachments from './PostAttachments'
 import CodeBlock from './CodeBlock'
 import LinkPreviewCard from './LinkPreviewCard'
 import { api } from '../utils/api'
+import Avatar from './ui/Avatar'
 
 const HeartIcon = ({ filled }) => (
   <svg width="17" height="17" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -244,12 +245,7 @@ export default function PostCard({ post, profile, onLike, onSave, onPin, onDelet
         )}
         <div className="flex gap-3.5">
           <button className="shrink-0 mt-0.5" onClick={() => navigate(profilePath)}>
-            <div className="w-[38px] h-[38px] rounded-full overflow-hidden ring-1 ring-dark-border/50">
-              {displayProfile.avatar
-                ? <img src={displayProfile.avatar} alt={displayProfile.name} className="w-full h-full object-cover" />
-                : <div className="w-full h-full avatar-gradient flex items-center justify-center text-white font-bold text-sm">{displayProfile.name?.[0] || 'M'}</div>
-              }
-            </div>
+            <Avatar name={displayProfile.name} src={displayProfile.avatar} profileId={displayProfile.id} size={38} />
           </button>
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-1.5 flex-wrap mb-2">
@@ -335,15 +331,7 @@ export default function PostCard({ post, profile, onLike, onSave, onPin, onDelet
       <div className="flex gap-3.5">
         {/* Avatar */}
         <button className="shrink-0 mt-0.5" onClick={() => navigate(profilePath)} aria-label="Abrir perfil">
-          <div className="w-[38px] h-[38px] rounded-full overflow-hidden ring-1 ring-dark-border/50">
-            {displayProfile.avatar ? (
-              <img src={displayProfile.avatar} alt={displayProfile.name} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full avatar-gradient flex items-center justify-center text-white font-bold text-sm">
-                {displayProfile.name?.[0] || 'M'}
-              </div>
-            )}
-          </div>
+          <Avatar name={displayProfile.name} src={displayProfile.avatar} profileId={displayProfile.id} size={38} />
         </button>
 
         {/* Content */}

@@ -88,7 +88,7 @@ function NoticeRow({ item, onFollowBack }) {
 
       {/* Avatar + badge */}
       <div style={{ position: 'relative', flexShrink: 0 }}>
-        <Avatar name={actorName} src={item.actor?.avatar} size={40} />
+        <Avatar name={actorName} src={item.actor?.avatar} profileId={item.actor?.id} size={40} />
         {iconName && (
           <div style={{
             position: 'absolute', right: -2, bottom: -2,

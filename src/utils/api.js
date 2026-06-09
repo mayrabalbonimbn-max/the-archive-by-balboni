@@ -40,7 +40,12 @@ export async function apiFetch(path, options = {}) {
   }
   if (res.status === 204) return null
   const data = await readResponse(res)
-  if (!res.ok) throw new Error(data.error || `Erro ${res.status}`)
+  if (!res.ok) {
+    const err = new Error(data.error || `Erro ${res.status}`)
+    err.status = res.status
+    err.data = data
+    throw err
+  }
   return data
 }
 

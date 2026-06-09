@@ -1,10 +1,24 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { api } from '../utils/api'
+import { api, publicProfileMediaBlob } from '../utils/api'
 import { formatFullDate, TYPE_CONFIG } from '../utils/helpers'
 import PostAttachments from '../components/PostAttachments'
 import CodeBlock from '../components/CodeBlock'
 import MarkdownRenderer from '../components/MarkdownRenderer'
+import Avatar from '../components/ui/Avatar'
+
+function useAuthorAvatar(authorId, hasAvatar) {
+  const [src, setSrc] = useState(null)
+  useEffect(() => {
+    if (!authorId || !hasAvatar) return
+    let alive = true
+    publicProfileMediaBlob(authorId, 'avatar')
+      .then(blob => { if (alive) setSrc(URL.createObjectURL(blob)) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [authorId, hasAvatar])
+  return src
+}
 
 export default function ArticlePage({ profile, onLike, onSave, onDelete }) {
   const { id } = useParams()
@@ -19,6 +33,12 @@ export default function ArticlePage({ profile, onLike, onSave, onDelete }) {
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
   }, [id])
+
+  // All hooks before any conditional return
+  const isOwner = post?.profileId === profile?.id
+  const authorHasAvatar = !isOwner && Boolean(post?.author?.avatar) && !post?.author?.avatar.startsWith('blob:')
+  const authorAvatarBlob = useAuthorAvatar(post?.author?.id ?? null, authorHasAvatar)
+  const avatarSrc = isOwner ? profile?.avatar : authorAvatarBlob
 
   if (loading) {
     return (
@@ -41,7 +61,6 @@ export default function ArticlePage({ profile, onLike, onSave, onDelete }) {
 
   const typeConfig = TYPE_CONFIG[post.type] || TYPE_CONFIG.aleatório
   const displayProfile = post.author || profile
-  const isOwner = post.profileId === profile.id
 
   return (
     <div>
@@ -58,6 +77,28 @@ export default function ArticlePage({ profile, onLike, onSave, onDelete }) {
       </div>
 
       <article className="max-w-2xl mx-auto px-5 py-8 animate-fade-in">
+        {post.openedAt && (() => {
+          const diff = Date.now() - new Date(post.createdAt).getTime()
+          const days = Math.round(diff / 86400000)
+          const years = Math.floor(days / 365)
+          const months = Math.floor(days / 30)
+          const ago = years >= 1
+            ? `${years} ${years === 1 ? 'ano' : 'anos'}`
+            : months >= 1
+              ? `${months} ${months === 1 ? 'mês' : 'meses'}`
+              : `${days} ${days === 1 ? 'dia' : 'dias'}`
+          return (
+            <div style={{ margin: '0 0 28px', textAlign: 'center' }}>
+              <div style={{ height: 1, background: 'linear-gradient(90deg, transparent, var(--accent), transparent)', marginBottom: 14 }} />
+              <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-2)', lineHeight: 1.6, margin: 0 }}>
+                Uma mensagem atravessou o tempo para chegar até você.<br />
+                <span style={{ color: 'var(--ink-3)', fontSize: 13 }}>Escrito por você há {ago}.</span>
+              </p>
+              <div style={{ height: 1, background: 'linear-gradient(90deg, transparent, var(--accent), transparent)', marginTop: 14 }} />
+            </div>
+          )
+        })()}
+
         {/* Metadata */}
         <div className="flex items-center gap-2 mb-5 flex-wrap">
           <span className={`pill-badge ${typeConfig.color}`}>{typeConfig.label}</span>
@@ -76,15 +117,7 @@ export default function ArticlePage({ profile, onLike, onSave, onDelete }) {
 
         {/* Author */}
         <div className="flex items-center gap-3 mb-8 pb-6 border-b border-dark-border/60">
-          <div className="w-10 h-10 rounded-full overflow-hidden ring-1 ring-dark-border/50 shrink-0">
-            {displayProfile.avatar ? (
-              <img src={displayProfile.avatar} alt={displayProfile.name} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full avatar-gradient flex items-center justify-center text-white font-bold text-sm">
-                {displayProfile.name?.[0] || 'M'}
-              </div>
-            )}
-          </div>
+          <Avatar name={displayProfile?.name} src={avatarSrc} size={40} />
           <div>
             <p className="font-semibold text-dark-text text-sm">{displayProfile.name}</p>
             <p className="text-dark-muted text-xs">{displayProfile.handle}</p>
