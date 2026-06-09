@@ -35,8 +35,8 @@ export default function PhotosPage() {
       )}
       {open && (
         <div className="fixed inset-0 z-50 bg-black/92 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setOpen(null)}>
-          <button className="absolute top-4 right-4 text-white bg-black/70 rounded-full px-3 py-2">Fechar</button>
-          <img src={open} alt="Fotografia" className="max-w-full max-h-[90vh] rounded-lg object-contain" />
+          <button className="absolute top-4 right-4 text-white bg-black/70 rounded-full px-3 py-2" onClick={() => setOpen(null)}>Fechar</button>
+          <img src={open} alt="Fotografia" className="max-w-full max-h-[90vh] rounded-lg object-contain" onClick={e => e.stopPropagation()} />
         </div>
       )}
     </div>

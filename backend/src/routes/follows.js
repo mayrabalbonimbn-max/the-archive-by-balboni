@@ -1,6 +1,7 @@
 const express = require('express')
 const pool = require('../db')
 const requireAuth = require('../middleware/auth')
+const { sendPushToUser } = require('../utils/push')
 
 const router = express.Router()
 router.use(requireAuth)
@@ -105,7 +106,9 @@ router.post('/:profileId', async (req, res) => {
       [req.user.profileId, req.params.profileId]
     )
     const actor = await pool.query('SELECT name FROM profiles WHERE id = $1', [req.user.profileId])
-    await notify(req.params.profileId, req.user.profileId, 'follow', `${actor.rows[0]?.name || 'Alguém'} começou a seguir você.`)
+    const followMsg = `${actor.rows[0]?.name || 'Alguém'} começou a seguir você.`
+    await notify(req.params.profileId, req.user.profileId, 'follow', followMsg)
+    sendPushToUser(req.params.profileId, { title: 'The Archive', body: followMsg, url: '/notifications', tag: `follow-${req.user.profileId}` }).catch(() => {})
     res.status(201).json({ ok: true })
   } catch (err) {
     console.error('POST /follows/:profileId error:', err)

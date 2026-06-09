@@ -192,7 +192,7 @@ function DocumentPreview({ file }) {
   )
 }
 
-function LibraryCard({ file, onOpenImage }) {
+function LibraryCard({ file, onOpenImage, onOpenText }) {
   const [downloading, setDownloading] = useState(false)
   const title = displayTitle(file)
   const meta = FILE_META[file.fileType] || FILE_META.markdown
@@ -213,12 +213,21 @@ function LibraryCard({ file, onOpenImage }) {
     }
   }
 
+  async function handleView() {
+    try {
+      const text = await viewFile(file)
+      if (text !== null && text !== undefined) onOpenText({ file, content: text })
+    } catch {}
+  }
+
   return (
     <article className="group overflow-hidden rounded-lg border border-dark-border bg-dark-card transition-colors hover:border-dark-muted/70 animate-fade-in">
       {file.fileType === 'image' ? (
         <ImagePreview file={file} title={title} onOpen={onOpenImage} />
       ) : (
-        <DocumentPreview file={file} />
+        <button type="button" onClick={handleView} className="block w-full text-left">
+          <DocumentPreview file={file} />
+        </button>
       )}
 
       <div className="p-4">
@@ -246,27 +255,37 @@ function LibraryCard({ file, onOpenImage }) {
           </p>
         )}
 
-        <div className="mt-4 flex items-center justify-between border-t border-dark-border/60 pt-3">
+        <div className="mt-4 flex items-center justify-between gap-2 border-t border-dark-border/60 pt-3">
           <span className="text-xs text-dark-muted">{meta.label}</span>
-          <button
-            onClick={handleDownload}
-            disabled={downloading}
-            className="inline-flex items-center gap-1.5 rounded-full border border-dark-border px-3 py-1.5 text-xs font-medium text-dark-text hover:bg-dark-hover disabled:opacity-40 transition-colors"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-            {downloading ? 'Baixando' : 'Baixar'}
-          </button>
+          <div className="flex items-center gap-2">
+            {file.fileType !== 'image' && (
+              <button
+                onClick={handleView}
+                className="inline-flex items-center gap-1.5 rounded-full border border-dark-border px-3 py-1.5 text-xs font-medium text-brand-rose hover:bg-brand-rose/10 transition-colors"
+              >
+                Abrir
+              </button>
+            )}
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              className="inline-flex items-center gap-1.5 rounded-full border border-dark-border px-3 py-1.5 text-xs font-medium text-dark-text hover:bg-dark-hover disabled:opacity-40 transition-colors"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              {downloading ? 'Baixando' : 'Baixar'}
+            </button>
+          </div>
         </div>
       </div>
     </article>
   )
 }
 
-function LibraryListItem({ file, onOpenImage }) {
+function LibraryListItem({ file, onOpenImage, onOpenText }) {
   const [downloading, setDownloading] = useState(false)
   const title = displayTitle(file)
   const meta = FILE_META[file.fileType] || FILE_META.markdown
@@ -287,9 +306,19 @@ function LibraryListItem({ file, onOpenImage }) {
     }
   }
 
+  async function handleView() {
+    try {
+      const text = await viewFile(file)
+      if (text !== null && text !== undefined) onOpenText({ file, content: text })
+    } catch {}
+  }
+
   return (
     <article className="flex gap-3 border-b border-dark-border/60 px-4 py-3 hover:bg-dark-hover/30 transition-colors">
-      <div className="w-16 h-16 rounded-lg overflow-hidden border border-dark-border bg-dark-card shrink-0">
+      <div
+        className="w-16 h-16 rounded-lg overflow-hidden border border-dark-border bg-dark-card shrink-0 cursor-pointer"
+        onClick={file.fileType === 'image' ? undefined : handleView}
+      >
         {file.fileType === 'image' ? (
           <ImagePreview file={file} title={title} onOpen={onOpenImage} />
         ) : (
@@ -301,11 +330,41 @@ function LibraryListItem({ file, onOpenImage }) {
         <p className="text-dark-muted text-xs mt-1 truncate">{meta.label} · {formatSize(file.size)} · {formatRelativeTime(file.createdAt)}</p>
         <p className="text-dark-text/60 text-xs mt-1 line-clamp-1">{file.description || file.articleTitle || humanizePostContent(file.postContent) || file.originalName}</p>
       </div>
-      <button onClick={handleDownload} disabled={downloading} className="self-center rounded-full border border-dark-border px-3 py-1.5 text-xs text-dark-text hover:bg-dark-hover disabled:opacity-40">
-        Baixar
-      </button>
+      <div className="self-center flex gap-2">
+        {file.fileType !== 'image' && (
+          <button onClick={handleView} className="rounded-full border border-dark-border px-3 py-1.5 text-xs text-brand-rose hover:bg-brand-rose/10">
+            Abrir
+          </button>
+        )}
+        <button onClick={handleDownload} disabled={downloading} className="rounded-full border border-dark-border px-3 py-1.5 text-xs text-dark-text hover:bg-dark-hover disabled:opacity-40">
+          Baixar
+        </button>
+      </div>
     </article>
   )
+}
+
+async function viewFile(file) {
+  if (file.fileType === 'image') return
+  const windowRef = file.fileType === 'pdf' ? window.open('', '_blank') : null
+  try {
+    const blob = await attachmentBlob(file.id)
+    if (file.fileType === 'python' || file.fileType === 'markdown') {
+      return blob.text()
+    }
+    const url = URL.createObjectURL(blob)
+    if (windowRef) {
+      windowRef.opener = null
+      windowRef.location = url
+    } else {
+      window.open(url, '_blank', 'noopener,noreferrer')
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    return null
+  } catch (err) {
+    windowRef?.close()
+    throw err
+  }
 }
 
 export default function LibraryPage() {
@@ -316,6 +375,8 @@ export default function LibraryPage() {
   const [viewMode, setViewMode] = useState('gallery')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [imageUrl, setImageUrl] = useState(null)
+  const [textModal, setTextModal] = useState(null)
+  const [viewError, setViewError] = useState('')
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300)
@@ -392,13 +453,13 @@ export default function LibraryPage() {
           {viewMode === 'gallery' ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {files.map(file => (
-                <LibraryCard key={file.id} file={file} onOpenImage={setImageUrl} />
+                <LibraryCard key={file.id} file={file} onOpenImage={setImageUrl} onOpenText={setTextModal} />
               ))}
             </div>
           ) : (
             <div className="border border-dark-border rounded-lg overflow-hidden bg-dark-card">
               {files.map(file => (
-                <LibraryListItem key={file.id} file={file} onOpenImage={setImageUrl} />
+                <LibraryListItem key={file.id} file={file} onOpenImage={setImageUrl} onOpenText={setTextModal} />
               ))}
             </div>
           )}
@@ -409,6 +470,41 @@ export default function LibraryPage() {
         <div className="fixed inset-0 z-50 bg-black/92 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setImageUrl(null)}>
           <button className="absolute top-4 right-4 text-white bg-black/70 rounded-full px-3 py-2" onClick={() => setImageUrl(null)}>Fechar</button>
           <img src={imageUrl} alt="Imagem da biblioteca" className="max-w-full max-h-[90vh] rounded-lg object-contain" onClick={event => event.stopPropagation()} />
+        </div>
+      )}
+
+      {textModal && (
+        <div className="fixed inset-0 z-50 bg-black/92 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setTextModal(null)}>
+          <div className="bg-dark-card border border-dark-border rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-dark-border">
+              <p className="text-dark-text text-sm font-medium truncate flex-1">{displayTitle(textModal.file)}</p>
+              <button onClick={() => navigator.clipboard.writeText(textModal.content)} className="text-brand-rose text-xs hover:underline">Copiar</button>
+              <button
+                onClick={async () => {
+                  const blob = await attachmentBlob(textModal.file.id, 'download')
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url
+                  a.download = downloadName(textModal.file)
+                  a.click()
+                  setTimeout(() => URL.revokeObjectURL(url), 1000)
+                }}
+                className="text-dark-muted text-xs hover:text-dark-text"
+              >
+                Baixar
+              </button>
+              <button onClick={() => setTextModal(null)} className="text-dark-muted hover:text-dark-text text-sm">Fechar</button>
+            </div>
+            <pre className="p-4 overflow-auto text-sm text-dark-text whitespace-pre font-mono leading-relaxed flex-1">
+              <code>{textModal.content}</code>
+            </pre>
+          </div>
+        </div>
+      )}
+
+      {viewError && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-red-900/90 text-red-200 text-sm px-4 py-2 rounded-xl">
+          {viewError}
         </div>
       )}
     </div>

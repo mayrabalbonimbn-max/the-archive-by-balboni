@@ -39,11 +39,12 @@ export const CODE_LANGUAGES = [
   ['plaintext', 'Texto'],
 ]
 
-const aliases = { html: 'markup', plaintext: 'plain' }
+const aliases = { html: 'markup' }
 
 export function highlightCode(code, language) {
   const prismLanguage = aliases[language] || language
-  const grammar = Prism.languages[prismLanguage] || Prism.languages.plain
+  const grammar = Prism.languages[prismLanguage] || Prism.languages.plaintext || Prism.languages.clike
+  if (!grammar) return code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   return Prism.highlight(code, grammar, prismLanguage)
 }
 

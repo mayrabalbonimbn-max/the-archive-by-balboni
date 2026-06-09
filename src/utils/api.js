@@ -90,3 +90,15 @@ export const api = {
   delete: (path)       => apiFetch(path, { method: 'DELETE' }),
   upload: (path, form) => apiFetch(path, { method: 'POST', body: form }),
 }
+
+export async function getPushVapidKey() {
+  return apiFetch('/push/vapid-public-key')
+}
+
+export async function subscribePush(subscription) {
+  return apiFetch('/push/subscribe', { method: 'POST', body: JSON.stringify({ subscription }) })
+}
+
+export async function unsubscribePush(endpoint) {
+  return apiFetch('/push/subscribe', { method: 'DELETE', body: JSON.stringify({ endpoint }) })
+}

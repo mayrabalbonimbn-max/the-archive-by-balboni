@@ -4,6 +4,7 @@ const path = require('path')
 const pool = require('../db')
 const requireAuth = require('../middleware/auth')
 const { REACTIONS, attachmentVisibleSql, normalizeVisibility, reactionCountsSql, viewerReactionsSql, visibleSql } = require('../utils/social')
+const { sendPushToUser } = require('../utils/push')
 
 const router = express.Router()
 const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, '..', '..', 'storage', 'uploads')
@@ -58,6 +59,12 @@ async function notifyPostOwner(post, actorId, type, message) {
      VALUES ($1, $2, $3, $4, $5)`,
     [post.profile_id, actorId, post.id, type, message]
   )
+  sendPushToUser(post.profile_id, {
+    title: 'The Archive',
+    body: message,
+    url: post.id ? `/posts/${post.id}` : '/',
+    tag: `${type}-${post.id}`,
+  }).catch(() => {})
 }
 
 const attachmentJsonSql = `

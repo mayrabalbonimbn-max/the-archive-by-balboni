@@ -9,6 +9,7 @@ const { attachmentVisibleSql } = require('../utils/social')
 
 const router = express.Router()
 const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, '..', '..', 'storage', 'uploads')
+const MAX_IMAGE_SIZE = 25 * 1024 * 1024
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const MAX_ATTACHMENTS = 3
 
@@ -69,7 +70,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: MAX_FILE_SIZE, files: MAX_ATTACHMENTS },
+  limits: { fileSize: MAX_IMAGE_SIZE, files: MAX_ATTACHMENTS },
   fileFilter(req, file, callback) {
     const extension = path.extname(file.originalname).toLowerCase()
     const config = allowed[extension]
@@ -133,7 +134,7 @@ router.post('/posts/:id/attachments', requireAuth, ownedPost, (req, res) => {
     if (err) {
       await removeUploadedFiles(req.files)
       const message = err.code === 'LIMIT_FILE_SIZE'
-        ? 'Cada arquivo deve ter no máximo 10 MB.'
+        ? 'Arquivo muito grande. Imagens: máx. 25 MB. PDFs e scripts: máx. 10 MB.'
         : err.code === 'LIMIT_FILE_COUNT'
           ? 'Máximo de 3 anexos por post.'
           : 'Tipo de arquivo inválido. Use PY, MD, PDF, JPG, PNG ou WebP.'
@@ -142,6 +143,12 @@ router.post('/posts/:id/attachments', requireAuth, ownedPost, (req, res) => {
 
     const files = req.files || []
     if (files.length === 0) return res.status(400).json({ error: 'Selecione ao menos um arquivo.' })
+
+    const oversized = files.filter(f => f.fileType !== 'image' && f.size > MAX_FILE_SIZE)
+    if (oversized.length > 0) {
+      await removeUploadedFiles(files)
+      return res.status(400).json({ error: 'PDFs e scripts: máximo 10 MB cada.' })
+    }
 
     let client
     try {

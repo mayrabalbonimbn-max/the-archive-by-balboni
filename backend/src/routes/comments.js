@@ -2,6 +2,7 @@ const express = require('express')
 const pool = require('../db')
 const requireAuth = require('../middleware/auth')
 const { visibleSql } = require('../utils/social')
+const { sendPushToUser } = require('../utils/push')
 
 const router = express.Router()
 router.use(requireAuth)
@@ -101,7 +102,9 @@ router.post('/posts/:postId/comments', async (req, res) => {
       [req.params.postId, req.user.profileId, content]
     )
     const author = await pool.query('SELECT name FROM profiles WHERE id = $1', [req.user.profileId])
-    await notify(post.profile_id, req.user.profileId, 'comment', `${author.rows[0]?.name || 'Alguém'} comentou seu post.`, post.id, result.rows[0].id)
+    const msg = `${author.rows[0]?.name || 'Alguém'} comentou seu post.`
+    await notify(post.profile_id, req.user.profileId, 'comment', msg, post.id, result.rows[0].id)
+    sendPushToUser(post.profile_id, { title: 'The Archive', body: msg, url: `/posts/${post.id}`, tag: `comment-${post.id}` }).catch(() => {})
     res.status(201).json(result.rows[0])
   } catch (err) {
     console.error('POST /comments error:', err)
@@ -158,7 +161,9 @@ router.post('/comments/:id/replies', async (req, res) => {
       [req.params.id, req.user.profileId, content]
     )
     const author = await pool.query('SELECT name FROM profiles WHERE id = $1', [req.user.profileId])
-    await notify(comment.rows[0].author_id, req.user.profileId, 'reply', `${author.rows[0]?.name || 'Alguém'} respondeu seu comentário.`, comment.rows[0].post_id, req.params.id)
+    const replyMsg = `${author.rows[0]?.name || 'Alguém'} respondeu seu comentário.`
+    await notify(comment.rows[0].author_id, req.user.profileId, 'reply', replyMsg, comment.rows[0].post_id, req.params.id)
+    sendPushToUser(comment.rows[0].author_id, { title: 'The Archive', body: replyMsg, url: `/posts/${comment.rows[0].post_id}`, tag: `reply-${req.params.id}` }).catch(() => {})
     res.status(201).json(result.rows[0])
   } catch (err) {
     console.error('POST /comments/:id/replies error:', err)

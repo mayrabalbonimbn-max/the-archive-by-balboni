@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { exportPostsAsMarkdown } from '../utils/storage'
-import { api } from '../utils/api'
+import { api, getPushVapidKey, subscribePush, unsubscribePush } from '../utils/api'
 import AppBar from '../components/ui/AppBar'
 import Avatar from '../components/ui/Avatar'
 import Icon from '../components/ui/Icon'
@@ -103,6 +103,74 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
   const [confirmPassword, setConfirmPassword] = useState('')
   const [passwordStatus, setPasswordStatus] = useState(null)
   const [passwordLoading, setPasswordLoading] = useState(false)
+
+  const [pushPermission, setPushPermission] = useState(Notification?.permission || 'default')
+  const [pushSubscribed, setPushSubscribed] = useState(false)
+  const [pushLoading, setPushLoading] = useState(false)
+  const [pushMsg, setPushMsg] = useState('')
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
+    navigator.serviceWorker.ready.then(reg => {
+      reg.pushManager.getSubscription().then(sub => setPushSubscribed(!!sub))
+    }).catch(() => {})
+  }, [])
+
+  async function handleEnablePush() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      return setPushMsg('Seu navegador não suporta push notifications.')
+    }
+    setPushLoading(true)
+    setPushMsg('')
+    try {
+      const perm = await Notification.requestPermission()
+      setPushPermission(perm)
+      if (perm !== 'granted') {
+        return setPushMsg('Permissão negada. Habilite notificações nas configurações do navegador.')
+      }
+      const { publicKey } = await getPushVapidKey()
+      const reg = await navigator.serviceWorker.ready
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      })
+      await subscribePush(sub.toJSON())
+      setPushSubscribed(true)
+      setPushMsg('Notificações push ativadas!')
+    } catch (err) {
+      setPushMsg(err.message || 'Não foi possível ativar as notificações.')
+    } finally {
+      setPushLoading(false)
+      setTimeout(() => setPushMsg(''), 4000)
+    }
+  }
+
+  async function handleDisablePush() {
+    setPushLoading(true)
+    setPushMsg('')
+    try {
+      const reg = await navigator.serviceWorker.ready
+      const sub = await reg.pushManager.getSubscription()
+      if (sub) {
+        await unsubscribePush(sub.endpoint)
+        await sub.unsubscribe()
+      }
+      setPushSubscribed(false)
+      setPushMsg('Notificações push desativadas.')
+    } catch (err) {
+      setPushMsg(err.message || 'Erro ao desativar notificações.')
+    } finally {
+      setPushLoading(false)
+      setTimeout(() => setPushMsg(''), 3000)
+    }
+  }
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4)
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+    const rawData = window.atob(base64)
+    return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)))
+  }
 
   async function handleSaveProfile() {
     try {
@@ -315,6 +383,34 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
             <div style={{ marginTop: 12, padding: '11px 14px', borderRadius: 10, fontFamily: 'var(--sans)', fontSize: 13, color: importStatus.ok ? '#4ade80' : '#f87171', border: `1px solid ${importStatus.ok ? 'rgba(74,222,128,0.2)' : 'rgba(248,113,113,0.2)'}`, background: importStatus.ok ? 'rgba(74,222,128,0.05)' : 'rgba(248,113,113,0.05)' }}>
               {importStatus.ok ? `✓ ${importStatus.count} registros importados!` : `Erro: ${importStatus.msg}`}
             </div>
+          )}
+        </div>
+
+        {/* ── Notificações Push ── */}
+        <div style={{ marginBottom: 40 }}>
+          <SectionHead label="Notificações" />
+          <div style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', marginBottom: 16 }}>
+            {!('serviceWorker' in navigator) || !('PushManager' in window)
+              ? 'Seu navegador não suporta push notifications.'
+              : pushPermission === 'denied'
+              ? 'Notificações bloqueadas no navegador. Habilite nas configurações do site.'
+              : pushSubscribed
+              ? 'Notificações push ativas. Você receberá alertas de curtidas, comentários e seguidores.'
+              : 'Receba notificações no celular ou navegador quando alguém interagir com suas entradas.'}
+          </div>
+          {pushMsg && (
+            <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: pushMsg.includes('negad') || pushMsg.includes('não') ? '#f87171' : '#4ade80', marginBottom: 12 }}>
+              {pushMsg}
+            </div>
+          )}
+          {pushSubscribed ? (
+            <OutlineBtn onClick={handleDisablePush} disabled={pushLoading}>
+              {pushLoading ? 'Aguarde…' : 'Desativar notificações push'}
+            </OutlineBtn>
+          ) : (
+            <AccentBtn onClick={handleEnablePush} disabled={pushLoading || pushPermission === 'denied' || !('PushManager' in window)}>
+              {pushLoading ? 'Ativando…' : 'Ativar notificações push'}
+            </AccentBtn>
           )}
         </div>
 

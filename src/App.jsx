@@ -11,6 +11,7 @@ import CollectionsPage from './pages/CollectionsPage'
 import CollectionDetailPage from './pages/CollectionDetailPage'
 import LibraryPage from './pages/LibraryPage'
 import ArticlePage from './pages/ArticlePage'
+import PostDetailPage from './pages/PostDetailPage'
 import FriendsPage from './pages/FriendsPage'
 import NotificationsPage from './pages/NotificationsPage'
 import PublicProfilePage from './pages/PublicProfilePage'
@@ -78,6 +79,7 @@ function AuthenticatedApp({ onLogout }) {
         <Route path="/collections/:id" element={<CollectionDetailPage {...sharedProps} />} />
         <Route path="/library" element={<LibraryPage />} />
         <Route path="/articles/:id" element={<ArticlePage profile={profile} onLike={toggleLike} onSave={toggleSave} onDelete={deletePost} />} />
+        <Route path="/posts/:id" element={<PostDetailPage profile={profile} onLike={toggleLike} onSave={toggleSave} onDelete={deletePost} />} />
       </Routes>
     </Layout>
   )

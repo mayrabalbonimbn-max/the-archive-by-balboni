@@ -366,7 +366,10 @@ export default function PostCard({ post, profile, onLike, onSave, onPin, onDelet
           </div>
 
           {/* Text */}
-          <p className="post-content mt-1.5 whitespace-pre-wrap break-words">
+          <p
+            className="post-content mt-1.5 whitespace-pre-wrap break-words cursor-pointer hover:text-dark-text/90 transition-colors"
+            onClick={() => navigate(`/posts/${post.id}`)}
+          >
             {post.content}
           </p>
           <ContentLinks text={post.content} />

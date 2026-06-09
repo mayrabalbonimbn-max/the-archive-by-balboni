@@ -60,11 +60,23 @@ PASSWORD_RECOVERY_CODE=generate_a_private_code_at_least_12_chars
 NODE_ENV=production
 FRONTEND_URL=https://social.balbonilab.com
 UPLOAD_DIR=/var/www/mayra-social/backend/storage/uploads
+
+# Web Push / VAPID (required for push notifications)
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+VAPID_SUBJECT=mailto:seu@email.com
 ```
 
 Generate a secure JWT secret:
 ```bash
 node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+```
+
+Generate VAPID keys (one time, on the server):
+```bash
+cd /var/www/mayra-social/backend
+npx web-push generate-vapid-keys
+# Copy the output into VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in .env
 ```
 
 ---

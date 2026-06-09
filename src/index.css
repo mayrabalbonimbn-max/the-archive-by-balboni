@@ -67,6 +67,7 @@
 /* ============================================================
    Prism code highlighting
    ============================================================ */
+pre code { color: #e6edf3; }
 .token.comment,
 .token.prolog,
 .token.doctype,

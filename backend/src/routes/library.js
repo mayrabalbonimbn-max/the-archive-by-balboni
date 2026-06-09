@@ -14,8 +14,10 @@ router.get('/', async (req, res) => {
     let i = 2
 
     if (q && q.trim()) {
-      conditions.push(`a.original_name ILIKE $${i++}`)
-      params.push(`%${q.trim()}%`)
+      const pattern = `%${q.trim()}%`
+      conditions.push(`(a.original_name ILIKE $${i} OR a.title ILIKE $${i} OR p.content ILIKE $${i})`)
+      params.push(pattern)
+      i++
     }
     if (type && type !== 'all') {
       conditions.push(`a.file_type = $${i++}`)

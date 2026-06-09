@@ -5,13 +5,19 @@ import { useCollections } from '../hooks/useCollections'
 import Icon from './ui/Icon'
 import Chip from './ui/Chip'
 
+const MAX_IMAGE_SIZE = 25 * 1024 * 1024
 const MAX_FILE_SIZE = 10 * 1024 * 1024
-const ALLOWED_EXTENSIONS = ['py', 'md', 'pdf', 'jpg', 'jpeg', 'png', 'webp']
+const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp']
+const ALLOWED_EXTENSIONS = ['py', 'md', 'pdf', ...IMAGE_EXTENSIONS]
 
 function validateFile(file) {
   const ext = file.name.split('.').pop()?.toLowerCase()
   if (!ALLOWED_EXTENSIONS.includes(ext)) return 'Formato inválido. Use PY, MD, PDF, JPG, PNG ou WebP.'
-  if (file.size > MAX_FILE_SIZE) return 'Arquivo muito grande. Máximo 10 MB.'
+  const isImage = IMAGE_EXTENSIONS.includes(ext)
+  const limit = isImage ? MAX_IMAGE_SIZE : MAX_FILE_SIZE
+  if (file.size > limit) {
+    return isImage ? 'Imagem muito grande. Máximo 25 MB.' : 'Arquivo muito grande. Máximo 10 MB.'
+  }
   return null
 }
 
