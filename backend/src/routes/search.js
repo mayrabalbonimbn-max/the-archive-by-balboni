@@ -67,10 +67,10 @@ router.get('/', async (req, res) => {
          FROM posts p
          JOIN profiles owner ON owner.id = p.profile_id
          WHERE p.visibility = 'public'
-           AND (p.content ILIKE $2 OR p.article_title ILIKE $2)
+           AND (p.content ILIKE $1 OR p.article_title ILIKE $1)
          ORDER BY p.created_at DESC
          LIMIT 30`,
-        [req.user.profileId, like]
+        [like]
       ),
     ])
 
