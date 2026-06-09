@@ -157,7 +157,7 @@ export default function CommentsBox({ postId, initialCount = 0, autoOpen = false
                 }}
               >
                 <p style={S.meta}>
-                  <button onClick={() => navigate(`/profiles/${comment.author.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 600 }}>{comment.author.name}</button>
+                  <button onClick={() => navigate(comment.author.handle ? `/@${comment.author.handle}` : `/profiles/${comment.author.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 600 }}>{comment.author.name}</button>
                   {' · '}{formatRelativeTime(comment.createdAt)}
                 </p>
 
@@ -187,7 +187,7 @@ export default function CommentsBox({ postId, initialCount = 0, autoOpen = false
                     {comment.replies.map(reply => (
                       <div key={reply.id} style={S.reply}>
                         <p style={S.meta}>
-                          <button onClick={() => navigate(`/profiles/${reply.author.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 600 }}>{reply.author.name}</button>
+                          <button onClick={() => navigate(reply.author.handle ? `/@${reply.author.handle}` : `/profiles/${reply.author.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 600 }}>{reply.author.name}</button>
                           {' · '}{formatRelativeTime(reply.createdAt)}
                         </p>
                         {editing?.kind === 'reply' && editing.id === reply.id ? (

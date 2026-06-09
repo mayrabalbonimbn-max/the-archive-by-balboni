@@ -23,7 +23,7 @@ export default function PersonRow({ person, hairline = true, storyProfiles }) {
 
   return (
     <div
-      onClick={() => navigate(`/profiles/${person.id}`)}
+      onClick={() => navigate(person.handle ? `/@${person.handle}` : `/profiles/${person.id}`)}
       style={{
         display: 'flex', alignItems: 'center', gap: 13, padding: '14px 20px',
         borderBottom: hairline ? '1px solid var(--line)' : 'none',

@@ -74,6 +74,34 @@ function toPost(row) {
   }
 }
 
+// GET /profiles/username/:username — lookup by handle (case-insensitive)
+router.get('/username/:username', async (req, res) => {
+  const handle = req.params.username.replace(/^@/, '').trim().toLowerCase()
+  if (!handle) return res.status(400).json({ error: 'Username inválido.' })
+  try {
+    const result = await pool.query(
+      `SELECT p.*,
+        EXISTS (SELECT 1 FROM follows fl WHERE fl.follower_id = $1 AND fl.following_id = p.id) AS is_following,
+        EXISTS (
+          SELECT 1 FROM friendships f
+          WHERE f.status = 'accepted'
+            AND ((f.requester_id = $1 AND f.receiver_id = p.id) OR (f.receiver_id = $1 AND f.requester_id = p.id))
+        ) AS is_friend,
+        (SELECT COUNT(*)::int FROM follows fl WHERE fl.following_id = p.id) AS follower_count,
+        (SELECT COUNT(*)::int FROM follows fl WHERE fl.follower_id = p.id) AS following_count,
+        (SELECT COUNT(*)::int FROM friendships f WHERE f.status = 'accepted' AND (f.requester_id = p.id OR f.receiver_id = p.id)) AS friend_count
+       FROM profiles p
+       WHERE LOWER(p.handle) = $2`,
+      [req.user.profileId, handle]
+    )
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Perfil não encontrado.' })
+    res.json(toPublicProfile(result.rows[0]))
+  } catch (err) {
+    console.error('GET /profiles/username/:username error:', err)
+    res.status(500).json({ error: 'Erro interno do servidor.' })
+  }
+})
+
 router.get('/:id', async (req, res) => {
   try {
     const result = await pool.query(

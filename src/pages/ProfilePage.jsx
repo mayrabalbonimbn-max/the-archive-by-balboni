@@ -22,6 +22,34 @@ const STATUS_COLORS = {
   pausado: '#6b7280', concluído: '#8b5cf6',
 }
 
+function CopyLinkButton({ handle }) {
+  const [copied, setCopied] = useState(false)
+  function copy() {
+    const url = `${window.location.origin}/@${handle}`
+    navigator.clipboard?.writeText(url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }).catch(() => {})
+  }
+  return (
+    <button
+      onClick={copy}
+      title={`Copiar link do perfil`}
+      style={{
+        padding: '12px 14px', borderRadius: 13, cursor: 'pointer',
+        fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.04em',
+        border: '1px solid var(--line-strong)', background: copied ? 'var(--accent-soft)' : 'transparent',
+        color: copied ? 'var(--accent)' : 'var(--ink-3)',
+        display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
+        transition: 'all 0.15s',
+      }}
+    >
+      <Icon name={copied ? 'check' : 'link'} size={15} />
+      {copied ? 'Copiado' : 'Link'}
+    </button>
+  )
+}
+
 function Stat({ n, label, onClick }) {
   return (
     <div
@@ -133,18 +161,19 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
       </div>
 
       {/* Action */}
-      <div style={{ padding: '18px 20px 20px' }}>
+      <div style={{ padding: '18px 20px 20px', display: 'flex', gap: 10 }}>
         <button
           onClick={() => navigate('/settings')}
           style={{
-            width: '100%', padding: 12, borderRadius: 13, cursor: 'pointer',
+            flex: 1, padding: 12, borderRadius: 13, cursor: 'pointer',
             fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 600,
             border: '1px solid var(--line-strong)', background: 'transparent', color: 'var(--ink)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}
         >
-          <Icon name="edit" size={17} /> Editar seu arquivo
+          <Icon name="edit" size={17} /> Editar
         </button>
+        <CopyLinkButton handle={profile.handle} />
       </div>
 
       {/* Stats card */}

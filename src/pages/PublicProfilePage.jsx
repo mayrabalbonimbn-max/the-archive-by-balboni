@@ -18,7 +18,7 @@ function Stat({ n, label, onClick }) {
 }
 
 export default function PublicProfilePage({ profile: viewerProfile }) {
-  const { id } = useParams()
+  const { id, username } = useParams()
   const navigate = useNavigate()
   const storyProfiles = useStoryProfiles()
   const [profile, setProfile] = useState(null)
@@ -33,11 +33,25 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
   async function load() {
     setLoading(true)
     try {
-      const [profileData, postsData, summaryData] = await Promise.all([
-        api.get(`/profiles/${id}`),
-        api.get(`/profiles/${id}/posts`),
-        api.get(`/profiles/${id}/summary`).catch(() => null),
+      let profileData
+      let profileId
+
+      if (username) {
+        // Route: /@:username — resolve by handle
+        const handle = username.replace(/^@/, '')
+        profileData = await api.get(`/profiles/username/${handle}`)
+        profileId = profileData.id
+      } else {
+        // Route: /profiles/:id — resolve by UUID
+        profileId = id
+        profileData = await api.get(`/profiles/${profileId}`)
+      }
+
+      const [postsData, summaryData] = await Promise.all([
+        api.get(`/profiles/${profileId}/posts`),
+        api.get(`/profiles/${profileId}/summary`).catch(() => null),
       ])
+
       // hydrate avatar blob if needed
       const next = { ...profileData }
       if (profileData.hasAvatar && !profileData.avatar) {
@@ -51,6 +65,8 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
       setProfile(next)
       setPosts(postsData)
       setSummary(summaryData)
+    } catch {
+      setProfile(null)
     } finally {
       setLoading(false)
     }
@@ -59,7 +75,12 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
   useEffect(() => {
     load()
     return () => { Object.values(mediaUrls.current).forEach(u => u && URL.revokeObjectURL(u)) }
-  }, [id])
+  }, [id, username])
+
+  useEffect(() => {
+    if (profile?.handle) document.title = `The Archive — @${profile.handle}`
+    return () => { document.title = 'The Archive' }
+  }, [profile?.handle])
 
   async function toggleFollow() {
     if (!profile || busy) return

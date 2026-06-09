@@ -128,6 +128,9 @@ function AuthenticatedApp({ onLogout }) {
             <Route path="/achievements"     element={<AchievementsPage />} />
             <Route path="/story"            element={<StoryPage />} />
             <Route path="/trajetoria"       element={<TrajetoriaPage />} />
+
+            {/* Public profile by @username — catch-all, must be last */}
+            <Route path="/:username"        element={<PublicProfilePage {...sharedProps} />} />
           </Routes>
         </Suspense>
       </Layout>

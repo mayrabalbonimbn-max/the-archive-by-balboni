@@ -56,7 +56,7 @@ function PublicArchiveCard({ user, idx }) {
 
   return (
     <div
-      onClick={() => navigate(`/profiles/${user.id}`)}
+      onClick={() => navigate(user.handle ? `/@${user.handle}` : `/profiles/${user.id}`)}
       style={{ flexShrink: 0, width: 256, cursor: 'pointer' }}
     >
       <PhotoTile tone1={tone1} tone2={tone2} radius={16} style={{ height: 150 }}>

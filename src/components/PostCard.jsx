@@ -76,7 +76,7 @@ export default function PostCard({ post, profile, onLike, onSave, onPin, onDelet
   const visibilityLabel = post.visibility === 'public' ? 'Público' : post.visibility === 'followers' ? 'Seguidores' : post.visibility === 'friends' ? 'Amigos' : 'Privado'
   const reactionCounts = post.reactionCounts || {}
   const viewerReactions = post.viewerReactions || []
-  const profilePath = isOwner ? '/profile' : `/profiles/${post.profileId}`
+  const profilePath = isOwner ? '/profile' : (post.author?.handle ? `/@${post.author.handle}` : `/profiles/${post.profileId}`)
 
   function handleLike() {
     setLikeAnimating(true)
