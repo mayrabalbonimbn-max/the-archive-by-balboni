@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import Avatar from './Avatar'
 import TypeTag from './TypeTag'
@@ -191,18 +190,17 @@ export default function EntryCard({ post, showAuthor = true, onLike, onSave, hai
       <ReactionRow post={post} onLike={onLike} onSave={onSave} onOpen={openDetail} />
 
       {/* Lightbox */}
-      {lightboxId && createPortal(
+      {lightboxId && (
         <div
-          onClick={e => { e.stopPropagation(); if (Date.now() - lightboxOpenedAt.current < 400) return; setLightboxId(null) }}
-          style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(0,0,0,0.93)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, touchAction: 'none' }}
+          onClick={e => { e.stopPropagation(); setLightboxId(null) }}
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.93)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
         >
           <button
             onClick={e => { e.stopPropagation(); setLightboxId(null) }}
             style={{ position: 'absolute', top: 16, right: 16, color: 'white', background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}
           >×</button>
           <LightboxImage id={lightboxId} alt="Imagem" />
-        </div>,
-        document.body
+        </div>
       )}
     </article>
   )

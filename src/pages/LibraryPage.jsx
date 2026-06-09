@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import { createPortal } from 'react-dom'
 import { api, attachmentBlob } from '../utils/api'
 import { formatRelativeTime } from '../utils/helpers'
 
@@ -477,8 +476,8 @@ export default function LibraryPage() {
         </section>
       )}
 
-      {textModal && createPortal(
-        <div className="fixed inset-0 bg-black/92 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: 999 }} onClick={() => setTextModal(null)}>
+      {textModal && (
+        <div className="fixed inset-0 bg-black/92 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: 9999 }} onClick={() => setTextModal(null)}>
           <div className="bg-dark-card border border-dark-border rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 px-4 py-3 border-b border-dark-border">
               <p className="text-dark-text text-sm font-medium truncate flex-1">{displayTitle(textModal.file)}</p>
@@ -503,8 +502,7 @@ export default function LibraryPage() {
               <code>{textModal.content}</code>
             </pre>
           </div>
-        </div>,
-        document.body
+        </div>
       )}
 
       {viewError && (
