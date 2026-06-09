@@ -1,6 +1,7 @@
 import { useLocation, useNavigate, NavLink } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Icon from './ui/Icon'
+import { api } from '../utils/api'
 
 // ── Mobile drawer icons ───────────────────────────────────────────────────────
 
@@ -190,10 +191,22 @@ function DAvatar({ profile, size = 36 }) {
 
 export default function Sidebar({ profile, onLogout, onCompose }) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
   const navigate = useNavigate()
   const location = useLocation()
   const params = new URLSearchParams(location.search)
   const archiveSection = params.get('s') ?? 'overview'
+
+  // Fetch unread notification count; reset when on notifications page
+  useEffect(() => {
+    if (location.pathname === '/notifications') {
+      setUnreadCount(0)
+      return
+    }
+    api.get('/notifications')
+      .then(items => setUnreadCount(items.filter(n => !n.readAt).length))
+      .catch(() => {})
+  }, [location.pathname])
 
   function close() { setMobileOpen(false) }
 
@@ -252,7 +265,7 @@ export default function Sidebar({ profile, onLogout, onCompose }) {
           <DSidebarItem icon="today"   label="Hoje"     active={isToday()}   onClick={() => navigate('/')} />
           <DSidebarItem icon="explore" label="Explorar" active={isExplore()} onClick={() => navigate('/explore')} />
           <DSidebarItem icon="people"  label="Pessoas"  active={isPeople()}  onClick={() => navigate('/friends')} />
-          <DSidebarItem icon="bell"    label="Avisos"   active={isNotices()}   onClick={() => navigate('/notifications')} badge />
+          <DSidebarItem icon="bell"    label="Avisos"   active={isNotices()}   onClick={() => navigate('/notifications')} badge={unreadCount > 0} />
           <DSidebarItem icon="comment" label="Mensagens" active={isMessages()} onClick={() => navigate('/messages')} />
           <DSidebarItem icon="clock" label="Cápsulas" active={isCapsules()} onClick={() => navigate('/capsules')} tourId="capsules-nav" />
         </nav>
