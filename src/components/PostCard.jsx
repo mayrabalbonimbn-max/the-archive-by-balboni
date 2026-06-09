@@ -6,6 +6,7 @@ import CodeBlock from './CodeBlock'
 import LinkPreviewCard from './LinkPreviewCard'
 import { api } from '../utils/api'
 import Avatar from './ui/Avatar'
+import CommentsBox from './CommentsBox'
 
 const HeartIcon = ({ filled }) => (
   <svg width="17" height="17" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -62,139 +63,6 @@ function ContentLinks({ text = '' }) {
       {links.map(link => (
         <button key={`link-${link}`} onClick={() => navigate(`/backlinks/${encodeURIComponent(link)}`)} className="pill-badge bg-brand-rose/10 border border-brand-rose/20 text-brand-rose">[[{link}]]</button>
       ))}
-    </div>
-  )
-}
-
-function CommentsBox({ postId, initialCount = 0 }) {
-  const [open, setOpen] = useState(false)
-  const [comments, setComments] = useState([])
-  const [content, setContent] = useState('')
-  const [replyingTo, setReplyingTo] = useState('')
-  const [replyContent, setReplyContent] = useState('')
-  const [editing, setEditing] = useState(null)
-  const [editContent, setEditContent] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  async function load() {
-    setLoading(true)
-    setError('')
-    try {
-      setComments(await api.get(`/posts/${postId}/comments`))
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function toggleOpen() {
-    const next = !open
-    setOpen(next)
-    if (next && comments.length === 0) await load()
-  }
-
-  async function addComment() {
-    if (!content.trim()) return
-    await api.post(`/posts/${postId}/comments`, { content })
-    setContent('')
-    await load()
-  }
-
-  async function addReply(commentId) {
-    if (!replyContent.trim()) return
-    await api.post(`/comments/${commentId}/replies`, { content: replyContent })
-    setReplyContent('')
-    setReplyingTo('')
-    await load()
-  }
-
-  async function removeComment(id) {
-    await api.delete(`/comments/${id}`)
-    await load()
-  }
-
-  async function removeReply(id) {
-    await api.delete(`/replies/${id}`)
-    await load()
-  }
-
-  async function saveEdit() {
-    if (!editing || !editContent.trim()) return
-    const path = editing.kind === 'reply' ? `/replies/${editing.id}` : `/comments/${editing.id}`
-    await api.patch(path, { content: editContent })
-    setEditing(null)
-    setEditContent('')
-    await load()
-  }
-
-  return (
-    <div className="mt-3">
-      <button onClick={toggleOpen} className="text-xs text-dark-muted hover:text-dark-text">
-        {open ? 'Ocultar conversa' : `Comentários${initialCount ? ` (${initialCount})` : ''}`}
-      </button>
-      {open && (
-        <div className="mt-3 rounded-lg border border-dark-border/70 bg-black/20 p-3 space-y-3">
-          <div className="flex gap-2">
-            <input value={content} onChange={event => setContent(event.target.value)} placeholder="Comentar..." className="input-dark text-sm py-2" />
-            <button onClick={addComment} className="rounded-full bg-brand-rose px-3 py-1.5 text-xs font-semibold text-white">Enviar</button>
-          </div>
-          {loading && <p className="text-dark-muted text-xs">Carregando conversa...</p>}
-          {error && <p className="text-red-400 text-xs">{error}</p>}
-          {comments.map(comment => (
-            <div key={comment.id} className="border-t border-dark-border/60 pt-3 first:border-t-0 first:pt-0">
-              <div className="flex items-start gap-2">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs text-dark-muted">{comment.author.name} · {formatRelativeTime(comment.createdAt)}</p>
-                  {editing?.kind === 'comment' && editing.id === comment.id ? (
-                    <div className="mt-2 flex gap-2">
-                      <input value={editContent} onChange={event => setEditContent(event.target.value)} className="input-dark text-sm py-2" />
-                      <button onClick={saveEdit} className="rounded-full border border-dark-border px-3 py-1.5 text-xs text-dark-text hover:bg-dark-hover">Salvar</button>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-dark-text mt-1 whitespace-pre-wrap">{comment.content}</p>
-                  )}
-                  <div className="mt-1 flex gap-3 text-xs">
-                    <button onClick={() => setReplyingTo(replyingTo === comment.id ? '' : comment.id)} className="text-dark-muted hover:text-dark-text">Responder</button>
-                    {comment.canEdit && <button onClick={() => { setEditing({ kind: 'comment', id: comment.id }); setEditContent(comment.content) }} className="text-dark-muted hover:text-dark-text">Editar</button>}
-                    {comment.canEdit && <button onClick={() => removeComment(comment.id)} className="text-dark-muted hover:text-red-400">Excluir</button>}
-                  </div>
-                </div>
-              </div>
-              {comment.replies?.length > 0 && (
-                <div className="ml-5 mt-2 space-y-2 border-l border-dark-border/60 pl-3">
-                  {comment.replies.map(reply => (
-                    <div key={reply.id}>
-                      <p className="text-xs text-dark-muted">{reply.author.name} · {formatRelativeTime(reply.createdAt)}</p>
-                      {editing?.kind === 'reply' && editing.id === reply.id ? (
-                        <div className="mt-2 flex gap-2">
-                          <input value={editContent} onChange={event => setEditContent(event.target.value)} className="input-dark text-sm py-2" />
-                          <button onClick={saveEdit} className="rounded-full border border-dark-border px-3 py-1.5 text-xs text-dark-text hover:bg-dark-hover">Salvar</button>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-dark-text mt-1 whitespace-pre-wrap">{reply.content}</p>
-                      )}
-                      {reply.canEdit && (
-                        <div className="mt-1 flex gap-3">
-                          <button onClick={() => { setEditing({ kind: 'reply', id: reply.id }); setEditContent(reply.content) }} className="text-xs text-dark-muted hover:text-dark-text">Editar</button>
-                          <button onClick={() => removeReply(reply.id)} className="text-xs text-dark-muted hover:text-red-400">Excluir</button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-              {replyingTo === comment.id && (
-                <div className="ml-5 mt-2 flex gap-2">
-                  <input value={replyContent} onChange={event => setReplyContent(event.target.value)} placeholder="Responder..." className="input-dark text-sm py-2" />
-                  <button onClick={() => addReply(comment.id)} className="rounded-full border border-dark-border px-3 py-1.5 text-xs text-dark-text hover:bg-dark-hover">Enviar</button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   )
 }
