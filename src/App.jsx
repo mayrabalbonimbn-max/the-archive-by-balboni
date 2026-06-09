@@ -28,6 +28,8 @@ import ConversationPage from './pages/ConversationPage'
 import CapsulesPage from './pages/CapsulesPage'
 import StoriesArchivePage from './pages/StoriesArchivePage'
 import ProjectDetailPage from './pages/ProjectDetailPage'
+import ProjectsPage from './pages/ProjectsPage'
+import LifeMapPage from './pages/LifeMapPage'
 import OnboardingTour from './components/OnboardingTour'
 import { usePosts } from './hooks/usePosts'
 import { useProfile } from './hooks/useProfile'
@@ -92,7 +94,9 @@ function AuthenticatedApp({ onLogout }) {
         <Route path="/messages/:id" element={<ConversationPage profile={profile} />} />
         <Route path="/capsules" element={<CapsulesPage />} />
         <Route path="/archive/stories" element={<StoriesArchivePage />} />
+        <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/projects/:slug" element={<ProjectDetailPage />} />
+        <Route path="/life-map" element={<LifeMapPage />} />
       </Routes>
     </Layout>
     </>

@@ -3,7 +3,7 @@ const fs = require('fs/promises')
 const path = require('path')
 const pool = require('../db')
 const requireAuth = require('../middleware/auth')
-const { REACTIONS, attachmentVisibleSql, normalizeVisibility, reactionCountsSql, viewerReactionsSql, visibleSql } = require('../utils/social')
+const { REACTIONS, PRIMARY_REACTIONS, attachmentVisibleSql, normalizeVisibility, reactionCountsSql, viewerReactionsSql, visibleSql } = require('../utils/social')
 const { sendPushToUser } = require('../utils/push')
 
 const router = express.Router()
@@ -32,6 +32,8 @@ function toPost(row) {
     isTimeCapsule: row.is_time_capsule || false,
     unlockAt: row.unlock_at || null,
     projectId: row.project_id || null,
+    parentMemoryPostId: row.parent_memory_post_id || null,
+    reflectionCount: Number(row.reflection_count || 0),
     attachments: row.attachments || [],
     tags: row.tags || [],
     linkPreview: row.link_preview || null,
@@ -247,7 +249,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   const client = await pool.connect()
   try {
-    const { content, type, isDiary, isPrivate, visibility, hasAttachments, codeBlock, isArticle, articleTitle, collectionId, tags, linkPreview, isTimeCapsule, unlockAt, projectId } = req.body
+    const { content, type, isDiary, isPrivate, visibility, hasAttachments, codeBlock, isArticle, articleTitle, collectionId, tags, linkPreview, isTimeCapsule, unlockAt, projectId, parentMemoryPostId } = req.body
 
     const cleanContent = (content || '').trim()
     const cleanCode = typeof codeBlock?.code === 'string' ? codeBlock.code.trimEnd() : ''
@@ -297,6 +299,13 @@ router.post('/', async (req, res) => {
       if (proj.rows.length > 0) validProjectId = projectId
     }
 
+    // Validate parentMemoryPostId
+    let validParentMemoryPostId = null
+    if (parentMemoryPostId) {
+      const parent = await client.query('SELECT id FROM posts WHERE id = $1 AND profile_id = $2', [parentMemoryPostId, req.user.profileId])
+      if (parent.rows.length > 0) validParentMemoryPostId = parentMemoryPostId
+    }
+
     // Validate unlockAt for time capsules
     const isCapsule = isTimeCapsule === true && unlockAt
     let cleanUnlockAt = null
@@ -306,8 +315,8 @@ router.post('/', async (req, res) => {
     }
 
     const result = await client.query(
-      `INSERT INTO posts (profile_id, content, type, is_diary, is_private, visibility, code_language, code_content, is_article, article_title, collection_id, link_preview, is_time_capsule, unlock_at, project_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      `INSERT INTO posts (profile_id, content, type, is_diary, is_private, visibility, code_language, code_content, is_article, article_title, collection_id, link_preview, is_time_capsule, unlock_at, project_id, parent_memory_post_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
        RETURNING *`,
       [
         req.user.profileId, cleanContent, type || 'pensamento', isDiary === true,
@@ -316,6 +325,7 @@ router.post('/', async (req, res) => {
         isArticle === true, cleanTitle || null, validCollectionId,
         cleanLinkPreview ? JSON.stringify(cleanLinkPreview) : null,
         isCapsule ? true : false, cleanUnlockAt, validProjectId,
+        validParentMemoryPostId,
       ]
     )
     const postId = result.rows[0].id
@@ -362,13 +372,24 @@ router.patch('/:id', async (req, res) => {
     if (action === 'react') {
       const reactionType = req.body.reactionType
       if (!REACTIONS.has(reactionType)) return res.status(400).json({ error: 'Reação inválida.' })
+
       const existing = await pool.query(
-        'SELECT id FROM post_reactions WHERE post_id = $1 AND profile_id = $2 AND reaction_type = $3',
+        'SELECT id, reaction_type FROM post_reactions WHERE post_id = $1 AND profile_id = $2 AND reaction_type = $3',
         [id, req.user.profileId, reactionType]
       )
+
       if (existing.rowCount > 0) {
+        // Toggle off
         await pool.query('DELETE FROM post_reactions WHERE id = $1', [existing.rows[0].id])
       } else {
+        // Primary reactions are mutually exclusive — remove any existing primary reaction first
+        if (PRIMARY_REACTIONS.has(reactionType)) {
+          await pool.query(
+            `DELETE FROM post_reactions WHERE post_id = $1 AND profile_id = $2
+             AND reaction_type = ANY($3::text[])`,
+            [id, req.user.profileId, [...PRIMARY_REACTIONS]]
+          )
+        }
         await pool.query(
           'INSERT INTO post_reactions (post_id, profile_id, reaction_type) VALUES ($1, $2, $3)',
           [id, req.user.profileId, reactionType]

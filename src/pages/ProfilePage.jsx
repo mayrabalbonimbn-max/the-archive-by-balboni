@@ -9,6 +9,14 @@ import { useCollections } from '../hooks/useCollections'
 import { useStoryProfiles } from '../hooks/useStories'
 import { api } from '../utils/api'
 
+function useStreak() {
+  const [streak, setStreak] = useState(null)
+  useEffect(() => {
+    api.get('/archive/streak').then(setStreak).catch(() => {})
+  }, [])
+  return streak
+}
+
 const STATUS_COLORS = {
   ideia: '#6b7280', construindo: '#f59e0b', ativo: '#10b981',
   pausado: '#6b7280', concluído: '#8b5cf6',
@@ -40,6 +48,7 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
   const storyProfiles = useStoryProfiles()
   const [typeFilter, setTypeFilter] = useState('all')
   const [tagFilter, setTagFilter] = useState(null)
+  const streak = useStreak()
   const [projects, setProjects] = useState([])
   const [showNewProject, setShowNewProject] = useState(false)
   const [newProject, setNewProject] = useState({ emoji: '🌱', title: '', description: '', status: 'ativo' })
@@ -149,6 +158,48 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
         <Stat n={profile.followerCount ?? 0} label="Círculo" onClick={() => navigate('/friends')} />
         <Stat n={daysKept.toLocaleString('pt-BR')} label="Dias" />
       </div>
+
+      {/* Streak row */}
+      {streak && (streak.current > 0 || streak.best > 0) && (
+        <div style={{
+          display: 'flex', gap: 10, padding: '14px 20px 0',
+        }}>
+          {streak.current > 0 && (
+            <div style={{
+              flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+              padding: '10px 14px', borderRadius: 13,
+              border: '1px solid var(--line)', background: 'var(--surface-2)',
+            }}>
+              <span style={{ fontSize: 20, lineHeight: 1 }}>🔥</span>
+              <div>
+                <div style={{ fontFamily: 'var(--serif)', fontSize: 18, color: 'var(--ink)', lineHeight: 1 }}>
+                  {streak.current} {streak.current === 1 ? 'dia' : 'dias'}
+                </div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.08em', color: 'var(--ink-3)', marginTop: 2 }}>
+                  SEQUÊNCIA
+                </div>
+              </div>
+            </div>
+          )}
+          {streak.best > 0 && (
+            <div style={{
+              flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+              padding: '10px 14px', borderRadius: 13,
+              border: '1px solid var(--line)', background: 'var(--surface-2)',
+            }}>
+              <span style={{ fontSize: 20, lineHeight: 1 }}>🏆</span>
+              <div>
+                <div style={{ fontFamily: 'var(--serif)', fontSize: 18, color: 'var(--ink)', lineHeight: 1 }}>
+                  {streak.best} {streak.best === 1 ? 'dia' : 'dias'}
+                </div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.08em', color: 'var(--ink-3)', marginTop: 2 }}>
+                  MELHOR
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Mobile shortcuts — hidden on desktop (sidebar covers these) */}
       <div className="md:hidden" style={{ padding: '20px 20px 0' }}>

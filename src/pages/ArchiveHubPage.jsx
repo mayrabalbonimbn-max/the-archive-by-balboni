@@ -158,6 +158,7 @@ function OverviewSection({ profile }) {
 // ── Memories ──────────────────────────────────────────────────────────────────
 function MemoriesSection() {
   const [memories, setMemories] = useState(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     api.get('/archive/memories').then(setMemories).catch(() => setMemories([]))
@@ -165,6 +166,17 @@ function MemoriesSection() {
 
   const today = new Date()
   const todayLabel = today.toLocaleDateString('pt-BR', { month: 'long', day: 'numeric' }).toUpperCase()
+
+  function handleReflect(m) {
+    const dateStr = new Date(m.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    const excerpt = (m.articleTitle || m.content || '').slice(0, 200)
+    const initialContent = `---\nReflexão sobre uma memória\n\nEm ${dateStr} eu escrevi:\n\n"${excerpt}${excerpt.length >= 200 ? '…' : ''}"\n\nHoje eu penso:\n`
+    window.dispatchEvent(new CustomEvent('open-compose', { detail: { initialContent, parentMemoryPostId: m.id } }))
+  }
+
+  function handleRevisit(m) {
+    navigate(m.isArticle ? `/articles/${m.id}` : `/posts/${m.id}`)
+  }
 
   return (
     <div style={{ paddingTop: 6 }}>
@@ -195,7 +207,7 @@ function MemoriesSection() {
       ) : (
         <div style={{ padding: '14px 20px 0' }}>
           {memories.map((m, i) => (
-            <div key={m.id} style={{ display: 'flex', gap: 16, paddingBottom: i === memories.length - 1 ? 0 : 24 }}>
+            <div key={m.id} style={{ display: 'flex', gap: 16, paddingBottom: i === memories.length - 1 ? 0 : 28 }}>
               <div style={{ flexShrink: 0, width: 46, textAlign: 'right', paddingTop: 2 }}>
                 <div style={{ fontFamily: 'var(--serif)', fontSize: 19, color: 'var(--accent)', fontStyle: 'italic' }}>
                   {m.yearsAgo ?? '?'}a
@@ -206,15 +218,49 @@ function MemoriesSection() {
               </div>
               <div style={{ flex: 1, minWidth: 0, position: 'relative', paddingLeft: 18, borderLeft: '1px solid var(--line)', paddingBottom: 4 }}>
                 <div style={{ position: 'absolute', left: -4.5, top: 4, width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)' }} />
-                {(m.type === 'photo' || m.photo) && (
-                  <PhotoTile tone1={m.tone1 ?? '#2a3140'} tone2={m.tone2 ?? '#11141c'} style={{ height: 150, marginBottom: 10 }} />
+                {/* Label */}
+                {m.label && (
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.1em', color: 'var(--accent)', marginBottom: 6 }}>
+                    {m.label.toUpperCase()}
+                  </div>
                 )}
                 <div style={{ fontFamily: 'var(--serif)', fontSize: 17, color: 'var(--ink)', marginBottom: 4 }}>
                   {m.articleTitle ?? m.title ?? ''}
                 </div>
-                <p style={{ margin: 0, fontFamily: 'var(--sans)', fontSize: 13.5, lineHeight: 1.55, color: 'var(--ink-2)' }}>
-                  {m.body ?? m.content ?? ''}
+                <p style={{ margin: '0 0 12px', fontFamily: 'var(--sans)', fontSize: 13.5, lineHeight: 1.55, color: 'var(--ink-2)' }}>
+                  {(m.content || '').slice(0, 200)}{(m.content || '').length > 200 && '…'}
                 </p>
+                {/* Action buttons */}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <button
+                    onClick={() => handleRevisit(m)}
+                    style={{
+                      padding: '5px 12px', borderRadius: 8,
+                      border: '1px solid var(--line)', background: 'transparent',
+                      cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: 12,
+                      color: 'var(--ink-3)', display: 'flex', alignItems: 'center', gap: 5,
+                    }}
+                  >
+                    ↻ Revisitar
+                  </button>
+                  <button
+                    onClick={() => handleReflect(m)}
+                    style={{
+                      padding: '5px 12px', borderRadius: 8,
+                      border: '1px solid rgba(232,108,180,0.35)',
+                      background: 'rgba(232,108,180,0.07)',
+                      cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: 12,
+                      color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 5,
+                    }}
+                  >
+                    💭 Refletir
+                  </button>
+                  {m.reflectionCount > 0 && (
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--ink-3)' }}>
+                      {m.reflectionCount} reflexão{m.reflectionCount > 1 ? 'ões' : ''}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           ))}

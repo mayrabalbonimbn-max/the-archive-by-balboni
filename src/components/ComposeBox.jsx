@@ -67,12 +67,12 @@ function useIsDesktop() {
   return isDesktop
 }
 
-export default function ComposeBox({ profile, onPost, onClose }) {
+export default function ComposeBox({ profile, onPost, onClose, initialContent, parentMemoryPostId }) {
   const { collections } = useCollections()
   const isDesktop = useIsDesktop()
   const [entryType, setEntryType] = useState('note')
   const [title, setTitle] = useState('')
-  const [body, setBody] = useState('')
+  const [body, setBody] = useState(initialContent || '')
   const [collectionId, setCollectionId] = useState('')
   const [privacy, setPrivacy] = useState('private')
   const [attachments, setAttachments] = useState([])
@@ -217,6 +217,7 @@ export default function ComposeBox({ profile, onPost, onClose }) {
         isTimeCapsule: isCapsule,
         unlockAt: isCapsule ? unlockAt : undefined,
         projectId: projectId || undefined,
+        parentMemoryPostId: parentMemoryPostId || undefined,
       })
       onClose?.()
     } catch (err) {

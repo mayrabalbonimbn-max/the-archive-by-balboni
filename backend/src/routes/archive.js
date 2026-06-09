@@ -58,7 +58,8 @@ router.get('/memories', async (req, res) => {
           WHEN EXTRACT(MONTH FROM p.created_at) = EXTRACT(MONTH FROM CURRENT_DATE)
                AND EXTRACT(YEAR FROM p.created_at) < EXTRACT(YEAR FROM CURRENT_DATE) THEN 'Mesmo mês'
           ELSE NULL
-        END AS memory_label
+        END AS memory_label,
+        (SELECT COUNT(*)::int FROM posts r WHERE r.parent_memory_post_id = p.id AND r.profile_id = $1) AS reflection_count
        FROM posts p
        LEFT JOIN collections c ON c.id = p.collection_id
        WHERE p.profile_id = $1
@@ -71,10 +72,121 @@ router.get('/memories', async (req, res) => {
        LIMIT 60`,
       [req.user.profileId]
     )
-    res.json(result.rows.map(row => ({ ...postJson(row), label: row.memory_label })))
+    res.json(result.rows.map(row => ({ ...postJson(row), label: row.memory_label, reflectionCount: Number(row.reflection_count || 0) })))
   } catch (err) {
     console.error('GET /archive/memories error:', err)
     res.status(500).json({ error: 'Erro interno do servidor.' })
+  }
+})
+
+router.get('/streak', async (req, res) => {
+  try {
+    // Get all distinct posting dates descending
+    const { rows } = await pool.query(
+      `SELECT DISTINCT created_at::date AS day FROM posts
+       WHERE profile_id = $1 AND (is_time_capsule = false OR is_time_capsule IS NULL)
+       ORDER BY day DESC`,
+      [req.user.profileId]
+    )
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const days = rows.map(r => new Date(r.day).setHours(0, 0, 0, 0))
+
+    // Current streak: consecutive days ending today or yesterday
+    let current = 0
+    let cursor = today.valueOf()
+    const DAY = 86400000
+    if (days.includes(cursor) || days.includes(cursor - DAY)) {
+      if (!days.includes(cursor)) cursor -= DAY
+      while (days.includes(cursor)) {
+        current++
+        cursor -= DAY
+      }
+    }
+
+    // Best streak
+    let best = 0, run = 0, prev = null
+    for (const d of [...days].reverse()) {
+      if (prev === null || d - prev === DAY) { run++; best = Math.max(best, run) }
+      else run = 1
+      prev = d
+    }
+
+    res.json({ current, best, totalActiveDays: days.length })
+  } catch (err) {
+    console.error('GET /archive/streak error:', err)
+    res.status(500).json({ error: 'Erro interno.' })
+  }
+})
+
+router.get('/life-map', async (req, res) => {
+  try {
+    const posts = await pool.query(
+      `SELECT
+        EXTRACT(YEAR FROM created_at)::int AS year,
+        EXTRACT(MONTH FROM created_at)::int AS month,
+        COUNT(*)::int AS post_count,
+        COUNT(*) FILTER (WHERE is_article)::int AS article_count,
+        COUNT(*) FILTER (WHERE code_language IS NOT NULL)::int AS code_count
+       FROM posts
+       WHERE profile_id = $1 AND (is_time_capsule = false OR is_time_capsule IS NULL)
+       GROUP BY year, month ORDER BY year DESC, month DESC`,
+      [req.user.profileId]
+    )
+    const photos = await pool.query(
+      `SELECT
+        EXTRACT(YEAR FROM created_at)::int AS year,
+        EXTRACT(MONTH FROM created_at)::int AS month,
+        COUNT(*)::int AS photo_count
+       FROM post_attachments
+       WHERE profile_id = $1 AND file_type = 'image'
+       GROUP BY year, month`,
+      [req.user.profileId]
+    )
+    const projects = await pool.query(
+      `SELECT
+        EXTRACT(YEAR FROM created_at)::int AS year,
+        EXTRACT(MONTH FROM created_at)::int AS month,
+        COUNT(*)::int AS project_count
+       FROM projects WHERE profile_id = $1
+       GROUP BY year, month`,
+      [req.user.profileId]
+    )
+
+    // Merge into year → months map
+    const map = new Map()
+    const key = (y, m) => `${y}-${m}`
+    for (const r of posts.rows) {
+      map.set(key(r.year, r.month), { year: r.year, month: r.month, postCount: r.post_count, articleCount: r.article_count, codeCount: r.code_count, photoCount: 0, projectCount: 0 })
+    }
+    for (const r of photos.rows) {
+      const k = key(r.year, r.month)
+      if (map.has(k)) map.get(k).photoCount = r.photo_count
+      else map.set(k, { year: r.year, month: r.month, postCount: 0, articleCount: 0, codeCount: 0, photoCount: r.photo_count, projectCount: 0 })
+    }
+    for (const r of projects.rows) {
+      const k = key(r.year, r.month)
+      if (map.has(k)) map.get(k).projectCount = r.project_count
+      else map.set(k, { year: r.year, month: r.month, postCount: 0, articleCount: 0, codeCount: 0, photoCount: 0, projectCount: r.project_count })
+    }
+
+    const sorted = [...map.values()].sort((a, b) => b.year - a.year || b.month - a.month)
+    // Group by year
+    const byYear = []
+    let currentYear = null
+    for (const m of sorted) {
+      if (!currentYear || currentYear.year !== m.year) {
+        currentYear = { year: m.year, months: [] }
+        byYear.push(currentYear)
+      }
+      currentYear.months.push(m)
+    }
+
+    res.json(byYear)
+  } catch (err) {
+    console.error('GET /archive/life-map error:', err)
+    res.status(500).json({ error: 'Erro interno.' })
   }
 })
 

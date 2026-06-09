@@ -1,54 +1,146 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../utils/api'
+import AppBar from '../components/ui/AppBar'
+import Icon from '../components/ui/Icon'
+
+function StatCard({ emoji, value, label }) {
+  return (
+    <div style={{
+      padding: '16px 16px 14px', borderRadius: 14,
+      border: '1px solid var(--line)', background: 'var(--surface-2)',
+    }}>
+      {emoji && <div style={{ fontSize: 20, lineHeight: 1, marginBottom: 8 }}>{emoji}</div>}
+      <div style={{ fontFamily: 'var(--serif)', fontSize: 26, color: 'var(--ink)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+        {value ?? 0}
+      </div>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.1em', color: 'var(--ink-3)', marginTop: 5, textTransform: 'uppercase' }}>
+        {label}
+      </div>
+    </div>
+  )
+}
+
+function InfoRow({ label, value }) {
+  return (
+    <div style={{
+      padding: '14px 16px', borderRadius: 13,
+      border: '1px solid var(--line)', background: 'var(--surface-2)',
+    }}>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.1em', color: 'var(--ink-3)', marginBottom: 5 }}>
+        {label.toUpperCase()}
+      </div>
+      <div style={{ fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink)' }}>{value}</div>
+    </div>
+  )
+}
 
 export default function StatsPage() {
+  const navigate = useNavigate()
   const [data, setData] = useState(null)
+  const [streak, setStreak] = useState(null)
 
-  useEffect(() => { api.get('/archive/stats').then(setData) }, [])
+  useEffect(() => {
+    api.get('/archive/stats').then(setData).catch(() => {})
+    api.get('/archive/streak').then(setStreak).catch(() => {})
+  }, [])
 
-  if (!data) return <div className="flex justify-center py-16"><div className="w-6 h-6 rounded-full border-2 border-brand-rose border-t-transparent animate-spin" /></div>
-
-  const stats = [
-    ['Posts', data.posts],
-    ['Artigos', data.articles],
-    ['Códigos', data.codes],
-    ['PDFs', data.pdfs],
-    ['Imagens', data.images],
-    ['Dias ativos', data.active_days],
-  ]
+  const loading = !data && !streak
 
   return (
-    <div>
-      <div className="sticky top-0 z-10 bg-black/85 backdrop-blur-md border-b border-dark-border px-4 py-4">
-        <p className="text-[11px] uppercase tracking-[0.18em] text-dark-muted font-bold">Arquivo em números</p>
-        <h1 className="font-bold text-2xl text-dark-text mt-1">Estatísticas</h1>
+    <div style={{ animation: 'fadeUp var(--dur-screen) var(--ease-out)' }}>
+      <AppBar
+        left={
+          <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="back" size={22} />
+          </button>
+        }
+      />
+
+      <div style={{ padding: '24px 24px 8px' }}>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.16em', color: 'var(--accent)', marginBottom: 14 }}>
+          ESTATÍSTICAS
+        </div>
+        <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 36, lineHeight: 1.05, color: 'var(--ink)', fontWeight: 400, fontStyle: 'italic', letterSpacing: '-0.02em' }}>
+          Arquivo em números.
+        </h1>
       </div>
-      <section className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {stats.map(([label, value]) => (
-          <div key={label} className="rounded-lg border border-dark-border bg-dark-card p-4">
-            <p className="text-2xl font-bold text-dark-text">{value || 0}</p>
-            <p className="text-dark-muted text-xs mt-1">{label}</p>
-          </div>
-        ))}
-      </section>
-      <section className="px-4 pb-5 space-y-3">
-        <div className="rounded-lg border border-dark-border bg-dark-card p-4">
-          <p className="text-dark-muted text-xs">Primeira publicação</p>
-          <p className="text-dark-text mt-1">{data.first_post ? new Date(data.first_post).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) : 'Ainda sem publicações'}</p>
+
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
+          <div className="w-5 h-5 rounded-full border-2 border-accent border-t-transparent animate-spin" />
         </div>
-        <div className="rounded-lg border border-dark-border bg-dark-card p-4">
-          <p className="text-dark-muted text-xs">Coleção mais usada</p>
-          <p className="text-dark-text mt-1">{data.topCollection?.name || 'Sem coleção dominante'}</p>
+      ) : (
+        <div style={{ padding: '20px 24px 80px' }}>
+          {/* Streak section */}
+          {streak && (
+            <>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.15em', color: 'var(--ink-3)', marginBottom: 12 }}>
+                SEQUÊNCIA
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 28 }}>
+                <StatCard emoji="🔥" value={streak.current} label="Dias seguidos" />
+                <StatCard emoji="🏆" value={streak.best} label="Melhor" />
+                <StatCard emoji="📅" value={streak.totalActiveDays} label="Dias ativos" />
+              </div>
+            </>
+          )}
+
+          {/* Content section */}
+          {data && (
+            <>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.15em', color: 'var(--ink-3)', marginBottom: 12 }}>
+                CONTEÚDO
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 28 }}>
+                <StatCard value={data.posts} label="Posts" />
+                <StatCard value={data.articles} label="Artigos" />
+                <StatCard value={data.codes} label="Códigos" />
+                <StatCard value={data.images} label="Imagens" />
+                <StatCard value={data.pdfs} label="PDFs" />
+                <StatCard value={data.active_days} label="Dias ativos" />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <InfoRow
+                  label="Primeira publicação"
+                  value={data.first_post
+                    ? new Date(data.first_post).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })
+                    : 'Ainda sem publicações'}
+                />
+                {data.topCollection && (
+                  <InfoRow label="Coleção mais usada" value={data.topCollection.name} />
+                )}
+                {(data.topTags || []).length > 0 && (
+                  <div style={{
+                    padding: '14px 16px', borderRadius: 13,
+                    border: '1px solid var(--line)', background: 'var(--surface-2)',
+                  }}>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.1em', color: 'var(--ink-3)', marginBottom: 10 }}>
+                      TAGS MAIS USADAS
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {data.topTags.map(item => (
+                        <span
+                          key={item.tag}
+                          style={{
+                            fontFamily: 'var(--mono)', fontSize: 11,
+                            padding: '4px 10px', borderRadius: 20,
+                            border: '1px solid var(--line)', color: 'var(--ink-3)',
+                            background: 'var(--surface-3)',
+                          }}
+                        >
+                          #{item.tag} · {item.count}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
-        <div className="rounded-lg border border-dark-border bg-dark-card p-4">
-          <p className="text-dark-muted text-xs mb-3">Tags mais usadas</p>
-          <div className="flex flex-wrap gap-2">
-            {(data.topTags || []).map(item => (
-              <span key={item.tag} className="pill-badge bg-dark-hover border border-dark-border text-dark-muted">#{item.tag} · {item.count}</span>
-            ))}
-          </div>
-        </div>
-      </section>
+      )}
     </div>
   )
 }

@@ -1,5 +1,7 @@
 const VISIBILITIES = new Set(['private', 'followers', 'friends', 'public'])
-const REACTIONS = new Set(['heart', 'spark', 'save'])
+const REACTIONS = new Set(['heart', 'spark', 'save', 'inspirador', 'aprendizado', 'codigo', 'fotografia'])
+// Primary reactions are mutually exclusive per user per post (one of these replaces another)
+const PRIMARY_REACTIONS = new Set(['heart', 'inspirador', 'aprendizado', 'codigo', 'fotografia'])
 
 function normalizeVisibility(value, fallback = 'private') {
   return VISIBILITIES.has(value) ? value : fallback
@@ -109,6 +111,7 @@ function viewerReactionsSql(postAlias = 'p', viewerParam = '$1') {
 
 module.exports = {
   REACTIONS,
+  PRIMARY_REACTIONS,
   VISIBILITIES,
   attachmentVisibleSql,
   canSeeContent,

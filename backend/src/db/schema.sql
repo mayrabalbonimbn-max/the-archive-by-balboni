@@ -300,3 +300,16 @@ CREATE INDEX IF NOT EXISTS idx_posts_project_id ON posts(project_id);
 
 -- Onboarding
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN NOT NULL DEFAULT false;
+
+-- Memory reflections
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS parent_memory_post_id UUID REFERENCES posts(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_posts_parent_memory ON posts(parent_memory_post_id) WHERE parent_memory_post_id IS NOT NULL;
+
+-- Expanded reactions (keep save separate, new primary emoji reactions)
+ALTER TABLE post_reactions DROP CONSTRAINT IF EXISTS post_reactions_type_check;
+ALTER TABLE post_reactions ADD CONSTRAINT post_reactions_type_check
+  CHECK (reaction_type IN ('heart', 'spark', 'save', 'inspirador', 'aprendizado', 'codigo', 'fotografia'));
+
+-- Projects: dates
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS start_date DATE;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS end_date DATE;

@@ -4,7 +4,7 @@ import Avatar from './Avatar'
 import TypeTag from './TypeTag'
 import ReactionRow from './ReactionRow'
 import { useAttachmentUrl } from '../../hooks/useAttachmentUrl'
-import { attachmentBlob } from '../../utils/api'
+import { api, attachmentBlob } from '../../utils/api'
 import CommentsBox from '../CommentsBox'
 import EditPostModal from '../EditPostModal'
 
@@ -244,7 +244,24 @@ export default function EntryCard({ post, showAuthor = true, onLike, onSave, onD
         </div>
       ))}
 
-      <ReactionRow post={localPost} onLike={onLike} onSave={onSave} onOpen={openDetail} />
+      <ReactionRow
+        post={localPost}
+        onReact={async (reactionType) => {
+          try {
+            const updated = await api.patch(`/posts/${localPost.id}`, { action: 'react', reactionType })
+            setLocalPost(updated)
+            if (reactionType === 'heart') onLike?.()
+          } catch {}
+        }}
+        onSave={async () => {
+          try {
+            const updated = await api.patch(`/posts/${localPost.id}`, { action: 'save' })
+            setLocalPost(updated)
+            onSave?.()
+          } catch {}
+        }}
+        onOpen={openDetail}
+      />
       <CommentsBox postId={localPost.id} initialCount={localPost.commentCount} />
 
       {editOpen && (
