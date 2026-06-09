@@ -204,28 +204,32 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
       {/* Mobile shortcuts — hidden on desktop (sidebar covers these) */}
       <div className="md:hidden" style={{ padding: '20px 20px 0' }}>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', color: 'var(--ink-3)', marginBottom: 10 }}>
-          ATALHOS
+          SEU ESPAÇO
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
           {[
-            { to: '/messages',      icon: 'comment',  label: 'Mensagens' },
-            { to: '/notifications', icon: 'bell',     label: 'Avisos' },
-            { to: '/friends',       icon: 'people',   label: 'Pessoas' },
-            { to: '/capsules',      icon: 'clock',    label: 'Cápsulas' },
-            { to: '/settings',      icon: 'settings', label: 'Ajustes' },
-          ].map(({ to, icon, label }) => (
+            { to: '/projects',      emoji: '🌱', label: 'Projetos' },
+            { to: '/dashboard',     emoji: '📊', label: 'Dashboard' },
+            { to: '/achievements',  emoji: '🏆', label: 'Conquistas' },
+            { to: '/graph',         emoji: '🕸️', label: 'Graph' },
+            { to: '/growth',        emoji: '📈', label: 'Crescimento' },
+            { to: '/story',         emoji: '📖', label: 'Minha História' },
+            { to: '/messages',      emoji: '💬', label: 'Mensagens' },
+            { to: '/capsules',      emoji: '📦', label: 'Cápsulas' },
+            { to: '/settings',      emoji: '⚙️', label: 'Ajustes' },
+          ].map(({ to, emoji, label }) => (
             <button
               key={to}
               onClick={() => navigate(to)}
               style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-                flex: 1, padding: '10px 4px', borderRadius: 12,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                padding: '12px 8px', borderRadius: 13,
                 border: '1px solid var(--line)', background: 'var(--surface-2)',
                 cursor: 'pointer', color: 'var(--ink-3)',
-                fontFamily: 'var(--sans)', fontSize: 10, fontWeight: 500,
+                fontFamily: 'var(--sans)', fontSize: 10.5, fontWeight: 500,
               }}
             >
-              <Icon name={icon} size={19} stroke={1.5} />
+              <span style={{ fontSize: 22, lineHeight: 1 }}>{emoji}</span>
               <span style={{ lineHeight: 1.2, textAlign: 'center' }}>{label}</span>
             </button>
           ))}

@@ -337,7 +337,7 @@ function StoryComposer({ profile, onCreated, onClose }) {
                 <span style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)' }}>Escolher foto</span>
               </button>
             )}
-            <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFile} />
+            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
           </div>
         )}
 
