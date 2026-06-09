@@ -96,11 +96,12 @@ function AccentBtn({ onClick, children, disabled = false, type = 'button' }) {
 
 export default function SettingsPage({ profile, posts, onUpdateProfile, onUploadProfileMedia, onRemoveProfileMedia, onImportPosts, onLogout, onResetOnboarding }) {
   const navigate = useNavigate()
-  const [name, setName] = useState(profile.name)
-  const [handle, setHandle] = useState(profile.handle)
-  const [bio, setBio] = useState(profile.bio ?? '')
-  const [title, setTitle] = useState(profile.title ?? '')
-  const [location, setLocation] = useState(profile.location ?? '')
+  // Safe defaults so hooks are always called unconditionally (rules of hooks)
+  const [name, setName] = useState(profile?.name ?? '')
+  const [handle, setHandle] = useState(profile?.handle ?? '')
+  const [bio, setBio] = useState(profile?.bio ?? '')
+  const [title, setTitle] = useState(profile?.title ?? '')
+  const [location, setLocation] = useState(profile?.location ?? '')
   const [saved, setSaved] = useState(false)
   const [importMode, setImportMode] = useState('merge')
   const [importStatus, setImportStatus] = useState(null)
@@ -252,6 +253,19 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
       setPasswordLoading(false)
       setTimeout(() => setPasswordStatus(null), 3000)
     }
+  }
+
+  console.log('[SettingsPage] rendering — profile:', profile?.handle ?? 'NULL', 'name:', name)
+
+  // Diagnostic guard (should never happen if App.jsx is working correctly)
+  if (!profile) {
+    return (
+      <div style={{ minHeight: '100dvh', background: '#000', color: '#f2ede6', fontFamily: 'monospace', fontSize: 13, padding: '32px 20px' }}>
+        <div style={{ color: '#f87171', marginBottom: 12 }}>BUG: SettingsPage recebeu profile=null</div>
+        <div style={{ color: '#aba49a' }}>token: {!!localStorage.getItem('ms_token') ? 'presente' : 'ausente'}</div>
+        <button onClick={() => navigate(-1)} style={{ marginTop: 16, padding: '8px 16px', border: '1px solid #333', background: 'transparent', color: '#f2ede6', cursor: 'pointer', borderRadius: 8 }}>Voltar</button>
+      </div>
+    )
   }
 
   return (

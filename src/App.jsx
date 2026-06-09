@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 
 // ── Always eager: shell + highest-traffic pages ────────────────────────────────
 import Layout from './components/Layout'
@@ -8,9 +8,33 @@ import HomePage from './pages/HomePage'
 import ProfilePage from './pages/ProfilePage'
 import ArchiveHubPage from './pages/ArchiveHubPage'
 import OnboardingTour from './components/OnboardingTour'
+import ErrorBoundary from './components/ErrorBoundary'
 import { usePosts } from './hooks/usePosts'
 import { useProfile } from './hooks/useProfile'
 import { useSession } from './hooks/useSession'
+
+// ── Debug page — renders with zero deps on profile/session ────────────────────
+function SettingsDebugPage() {
+  const info = {
+    ua: navigator.userAgent,
+    standalone: window.matchMedia?.('(display-mode: standalone)')?.matches,
+    token: !!localStorage.getItem('ms_token'),
+    sw: 'serviceWorker' in navigator,
+    push: 'PushManager' in window,
+    notif: typeof Notification !== 'undefined' ? Notification.permission : 'unavailable',
+    href: location.href,
+    ts: new Date().toISOString(),
+  }
+  return (
+    <div style={{ minHeight: '100dvh', background: '#000', color: '#f2ede6', fontFamily: 'monospace', fontSize: 13, padding: '32px 20px', overflowY: 'auto' }}>
+      <div style={{ color: '#e86cb4', fontWeight: 700, fontSize: 16, marginBottom: 16 }}>settings-debug — renderizou ✓</div>
+      <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#aba49a' }}>{JSON.stringify(info, null, 2)}</pre>
+      <button onClick={() => location.href = '/settings'} style={{ marginTop: 24, padding: '10px 20px', border: '1px solid #333', background: 'transparent', color: '#f2ede6', cursor: 'pointer', fontFamily: 'monospace', borderRadius: 8 }}>
+        Ir para /settings
+      </button>
+    </div>
+  )
+}
 
 // ── Lazy: every other page ─────────────────────────────────────────────────────
 const PublicProfilePage    = lazy(() => import('./pages/PublicProfilePage'))
@@ -59,6 +83,7 @@ function PageLoader() {
 // ── App root ───────────────────────────────────────────────────────────────────
 export default function App() {
   const { session, login, logout } = useSession()
+  console.log('[App] session:', !!session, 'token:', !!localStorage.getItem('ms_token'))
   if (!session) return <LoginPage onLogin={login} />
   return <AuthenticatedApp onLogout={logout} />
 }
@@ -67,6 +92,8 @@ function AuthenticatedApp({ onLogout }) {
   const { profile, loading: profileLoading, updateProfile, uploadProfileMedia, removeProfileMedia, completeOnboarding, resetOnboarding } = useProfile()
   const { posts, loading: postsLoading, addPost, toggleLike, toggleSave, togglePin, deletePost, importPosts } = usePosts()
   const [searchQuery, setSearchQuery] = useState('')
+
+  console.log('[AuthenticatedApp] profileLoading:', profileLoading, 'profile:', profile?.handle ?? null)
 
   if (profileLoading) {
     return (
@@ -77,7 +104,11 @@ function AuthenticatedApp({ onLogout }) {
     )
   }
 
-  if (!profile) { onLogout(); return null }
+  if (!profile) {
+    console.warn('[AuthenticatedApp] profile is null after loading — forcing logout')
+    onLogout()
+    return null
+  }
 
   const sharedProps = { posts, profile, onLike: toggleLike, onSave: toggleSave, onPin: togglePin, onDelete: deletePost }
 
@@ -86,6 +117,7 @@ function AuthenticatedApp({ onLogout }) {
       {!profile.onboardingCompleted && <OnboardingTour onComplete={completeOnboarding} />}
       <Layout profile={profile} posts={posts} searchQuery={searchQuery} onSearch={setSearchQuery} onLogout={onLogout} onPost={addPost}>
         <Suspense fallback={<PageLoader />}>
+          <ErrorBoundary>
           <Routes>
             {/* Eager */}
             <Route path="/"        element={<HomePage {...sharedProps} searchQuery={searchQuery} onPost={addPost} />} />
@@ -106,6 +138,7 @@ function AuthenticatedApp({ onLogout }) {
             <Route path="/backlinks/:title" element={<ArchiveListPage kind="backlink" />} />
             <Route path="/diary"          element={<DiaryPage {...sharedProps} searchQuery={searchQuery} />} />
             <Route path="/saved"          element={<SavedPage {...sharedProps} searchQuery={searchQuery} />} />
+            <Route path="/settings-debug" element={<SettingsDebugPage />} />
             <Route path="/settings"       element={
               <SettingsPage profile={profile} posts={posts} onUpdateProfile={updateProfile} onUploadProfileMedia={uploadProfileMedia} onRemoveProfileMedia={removeProfileMedia} onImportPosts={importPosts} onLogout={onLogout} onResetOnboarding={resetOnboarding} />
             } />
@@ -133,6 +166,7 @@ function AuthenticatedApp({ onLogout }) {
             {/* Public profile by @username — catch-all, must be last */}
             <Route path="/:username"        element={<PublicProfilePage {...sharedProps} />} />
           </Routes>
+          </ErrorBoundary>
         </Suspense>
       </Layout>
     </>
