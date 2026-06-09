@@ -1,189 +1,165 @@
-import { useMemo, useState } from 'react'
-import PostCard from '../components/PostCard'
-import ComposeBox from '../components/ComposeBox'
-import { formatRelativeTime, TYPE_CONFIG } from '../utils/helpers'
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import AppBar from '../components/ui/AppBar'
+import Icon from '../components/ui/Icon'
+import Avatar from '../components/ui/Avatar'
+import SectionLabel from '../components/ui/SectionLabel'
+import EntryCard from '../components/ui/EntryCard'
+import { useCollections } from '../hooks/useCollections'
 
-function formatJoinDate(iso) {
-  if (!iso) return ''
-  return new Date(iso).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+function Stat({ n, label }) {
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ fontFamily: 'var(--serif)', fontSize: 21, color: 'var(--ink)', letterSpacing: '-0.01em' }}>{n}</div>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.1em', color: 'var(--ink-3)', textTransform: 'uppercase', marginTop: 2 }}>{label}</div>
+    </div>
+  )
 }
 
-export default function ProfilePage({ profile, posts, onPost, onLike, onSave, onPin, onDelete }) {
+export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }) {
   const navigate = useNavigate()
-  const [tab, setTab] = useState('posts')
+  const { collections } = useCollections()
 
-  const allPosts = useMemo(
+  const sorted = useMemo(
     () => [...posts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
     [posts]
   )
-  const regularPosts = allPosts.filter(p => !p.isArticle)
-  const articlePosts = allPosts.filter(p => p.isArticle)
-  const pinnedPost = posts.find(p => p.pinned)
 
-  const postCount = posts.length
-  const likedCount = posts.filter(p => p.liked).length
-  const savedCount = posts.filter(p => p.saved).length
-  const articleCount = articlePosts.length
+  const daysKept = profile.createdAt
+    ? Math.max(1, Math.floor((Date.now() - new Date(profile.createdAt)) / 86400000))
+    : 0
 
-  const displayPosts = tab === 'artigos' ? articlePosts : regularPosts
+  const joinedLabel = profile.createdAt
+    ? new Date(profile.createdAt).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+    : ''
 
   return (
-    <div>
-      {/* Header bar */}
-      <div className="sticky top-0 z-10 bg-black/80 backdrop-blur-md border-b border-dark-border px-4 py-3 flex items-center gap-4">
-        <button onClick={() => navigate(-1)} className="text-dark-muted hover:text-dark-text transition-colors p-1 -ml-1 rounded-full hover:bg-dark-hover">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
-          </svg>
-        </button>
-        <div>
-          <h1 className="font-bold text-xl text-dark-text">{profile.name}</h1>
-          <p className="text-dark-muted text-sm">{postCount} entradas</p>
-        </div>
-      </div>
-
-      {/* Cover image / gradient */}
-      <div className="h-36 md:h-52 w-full overflow-hidden relative">
-        {profile.coverImage ? (
-          <img src={profile.coverImage} alt="capa" className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full" style={{ background: profile.headerColor || 'linear-gradient(135deg, #8b5cf6, #1d9bf0)' }} />
-        )}
-      </div>
-
-      {/* Profile info */}
-      <div className="px-4 pb-4">
-        {/* Avatar */}
-        <div className="relative -mt-12 mb-4">
-          <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-4 border-black">
-            {profile.avatar ? (
-              <img src={profile.avatar} alt={profile.name} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full avatar-gradient flex items-center justify-center text-white font-bold text-3xl">
-                {profile.name?.[0] || 'M'}
-              </div>
-            )}
-          </div>
+    <div style={{ animation: 'fadeUp var(--dur-screen) var(--ease-out)' }}>
+      <AppBar
+        left={
+          <span style={{ fontFamily: 'var(--serif)', fontSize: 19, color: 'var(--ink)', fontStyle: 'italic' }}>Você</span>
+        }
+        right={
           <button
             onClick={() => navigate('/settings')}
-            className="absolute right-0 top-2 border border-dark-border text-dark-text px-4 py-1.5 rounded-full text-sm font-semibold hover:bg-dark-hover transition-colors"
+            style={{ width: 38, height: 38, borderRadius: '50%', border: 'none', cursor: 'pointer', background: 'var(--surface-3)', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
-            Editar perfil
+            <Icon name="more" size={19} />
           </button>
-        </div>
+        }
+      />
 
-        {/* Info */}
-        <div className="mb-4">
-          <h2 className="font-bold text-xl text-dark-text">{profile.name}</h2>
-          <p className="text-dark-muted">{profile.handle}</p>
-          {profile.bio && <p className="text-dark-text mt-2 text-[15px] leading-relaxed">{profile.bio}</p>}
-
-          {/* Interests */}
-          {profile.interests && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {profile.interests.split(',').map(i => i.trim()).filter(Boolean).map(interest => (
-                <span
-                  key={interest}
-                  className="pill-badge bg-dark-hover border border-dark-border text-dark-muted text-[11px]"
-                >
-                  {interest}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Join date */}
-          {profile.createdAt && (
-            <p className="text-dark-muted text-xs mt-3 flex items-center gap-1.5">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-              </svg>
-              Jardim criado em {formatJoinDate(profile.createdAt)}
-            </p>
-          )}
-        </div>
-
-        {/* Stats */}
-        <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
-          <div>
-            <span className="font-bold text-dark-text">{postCount}</span>
-            <span className="text-dark-muted ml-1">Entradas</span>
+      {/* Identity */}
+      <div style={{ padding: '20px 20px 0' }}>
+        <Avatar name={profile.name} src={profile.avatar} size={76} ring />
+        <h1 style={{ margin: '16px 0 3px', fontFamily: 'var(--serif)', fontSize: 28, color: 'var(--ink)', fontWeight: 400, letterSpacing: '-0.01em' }}>
+          {profile.name}
+        </h1>
+        <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--accent)' }}>@{profile.handle}</div>
+        {profile.title && (
+          <div style={{ fontFamily: 'var(--serif)', fontSize: 15.5, fontStyle: 'italic', color: 'var(--ink-2)', marginTop: 3 }}>
+            {profile.title}
           </div>
-          <div>
-            <span className="font-bold text-dark-text">{articleCount}</span>
-            <span className="text-dark-muted ml-1">Artigos</span>
-          </div>
-          <div>
-            <span className="font-bold text-dark-text">{profile.followerCount || 0}</span>
-            <span className="text-dark-muted ml-1">Seguidores</span>
-          </div>
-          <div>
-            <span className="font-bold text-dark-text">{profile.followingCount || 0}</span>
-            <span className="text-dark-muted ml-1">Seguindo</span>
-          </div>
-          <div>
-            <span className="font-bold text-dark-text">{likedCount}</span>
-            <span className="text-dark-muted ml-1">Apreciados</span>
-          </div>
-          <div>
-            <span className="font-bold text-dark-text">{savedCount}</span>
-            <span className="text-dark-muted ml-1">Salvos</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="border-t border-dark-border/60">
-        <ComposeBox profile={profile} onPost={onPost} />
-      </div>
-
-      {/* Pinned post */}
-      {pinnedPost && tab === 'posts' && (
-        <div className="mx-4 mb-4 border border-yellow-500/30 rounded-2xl overflow-hidden bg-yellow-500/5">
-          <div className="flex items-center gap-2 px-4 py-2 text-yellow-500/70 text-xs font-medium border-b border-yellow-500/20">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-              <line x1="12" y1="17" x2="12" y2="22" stroke="currentColor" strokeWidth="2"/><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 000-4H8a2 2 0 000 4h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17z"/>
-            </svg>
-            Post fixado
-          </div>
-          <PostCard post={pinnedPost} profile={profile} onLike={onLike} onSave={onSave} onPin={onPin} onDelete={onDelete} />
-        </div>
-      )}
-
-      {/* Tabs */}
-      <div className="border-b border-dark-border flex">
-        {['posts', 'artigos'].map(t => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`filter-tab flex-1 text-center capitalize ${tab === t ? 'active' : ''}`}
-          >
-            {t === 'artigos' ? `Artigos${articleCount > 0 ? ` (${articleCount})` : ''}` : 'Entradas'}
-          </button>
-        ))}
-      </div>
-
-      {/* Posts list */}
-      {displayPosts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-dark-muted">
-          <p className="text-dark-text/50">Nenhum {tab === 'artigos' ? 'artigo' : 'entrada'} ainda</p>
-          <p className="text-sm mt-1">
-            {tab === 'artigos' ? 'Use o modo "Artigo" ao criar um post ✍️' : 'Comece a escrever na página inicial ✨'}
+        )}
+        {profile.bio && (
+          <p style={{ margin: '13px 0 0', fontFamily: 'var(--sans)', fontSize: 14, lineHeight: 1.6, color: 'var(--ink-2)', maxWidth: 340 }}>
+            {profile.bio}
           </p>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 12, fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>
+          {profile.location && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <Icon name="pin" size={13} />{profile.location}
+            </span>
+          )}
+          {joinedLabel && <span>Desde {joinedLabel}</span>}
         </div>
-      ) : (
-        displayPosts.map(post => (
-          <PostCard
-            key={post.id}
-            post={post}
-            profile={profile}
-            onLike={onLike}
-            onSave={onSave}
-            onPin={onPin}
-            onDelete={onDelete}
-          />
-        ))
+      </div>
+
+      {/* Action */}
+      <div style={{ padding: '18px 20px 20px' }}>
+        <button
+          onClick={() => navigate('/settings')}
+          style={{
+            width: '100%', padding: 12, borderRadius: 13, cursor: 'pointer',
+            fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 600,
+            border: '1px solid var(--line-strong)', background: 'transparent', color: 'var(--ink)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}
+        >
+          <Icon name="edit" size={17} /> Editar seu arquivo
+        </button>
+      </div>
+
+      {/* Stats card */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-around', padding: '18px 20px',
+        margin: '0 20px', borderRadius: 16,
+        border: '1px solid var(--line)', background: 'rgba(255,255,255,0.015)',
+      }}>
+        <Stat n={posts.length.toLocaleString('pt-BR')} label="Entradas" />
+        <Stat n={collections.length} label="Coleções" />
+        <Stat n={profile.followerCount ?? 0} label="Círculo" />
+        <Stat n={daysKept.toLocaleString('pt-BR')} label="Dias" />
+      </div>
+
+      {/* Collections strip */}
+      {collections.length > 0 && (
+        <div style={{ marginTop: 28 }}>
+          <SectionLabel action="Ver tudo" onAction={() => navigate('/archive?s=collections')}>
+            Suas coleções
+          </SectionLabel>
+          <div style={{ display: 'flex', gap: 11, overflowX: 'auto', padding: '12px 20px 6px', scrollbarWidth: 'none' }}>
+            {collections.map(c => {
+              const tone = c.color ?? '#7AA2F7'
+              return (
+                <div
+                  key={c.id}
+                  onClick={() => navigate(`/collections/${c.id}`)}
+                  style={{ flexShrink: 0, width: 140, cursor: 'pointer' }}
+                >
+                  <div style={{
+                    height: 92, borderRadius: 13,
+                    background: `linear-gradient(150deg, ${tone}55, #0c0c0e)`,
+                    border: '1px solid var(--line-strong)',
+                    display: 'flex', alignItems: 'flex-end', padding: 10,
+                  }}>
+                    <span style={{ fontSize: 20 }}>{c.emoji}</span>
+                  </div>
+                  <div style={{ fontFamily: 'var(--serif)', fontSize: 15, color: 'var(--ink)', marginTop: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {c.name}
+                  </div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)', marginTop: 1 }}>
+                    {c.postCount ?? 0} entradas
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
       )}
+
+      {/* Recent entries */}
+      <div style={{ marginTop: 26 }}>
+        <SectionLabel>Recentes</SectionLabel>
+        <div style={{ borderTop: '1px solid var(--line)' }}>
+          {sorted.length === 0 ? (
+            <p style={{ padding: '32px 20px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-3)' }}>
+              Nenhuma entrada ainda.
+            </p>
+          ) : (
+            sorted.map(p => (
+              <EntryCard
+                key={p.id}
+                post={p}
+                showAuthor={false}
+                onLike={() => onLike?.(p.id)}
+                onSave={() => onSave?.(p.id)}
+              />
+            ))
+          )}
+        </div>
+      </div>
     </div>
   )
 }

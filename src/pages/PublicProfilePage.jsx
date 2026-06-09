@@ -1,15 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, publicProfileMediaBlob } from '../utils/api'
-import PostCard from '../components/PostCard'
-import ArchiveMiniCard from '../components/ArchiveMiniCard'
+import AppBar from '../components/ui/AppBar'
+import Icon from '../components/ui/Icon'
+import Avatar from '../components/ui/Avatar'
+import SectionLabel from '../components/ui/SectionLabel'
+import EntryCard from '../components/ui/EntryCard'
 
-function formatJoinDate(iso) {
-  if (!iso) return ''
-  return new Date(iso).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+function Stat({ n, label }) {
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ fontFamily: 'var(--serif)', fontSize: 21, color: 'var(--ink)', letterSpacing: '-0.01em' }}>{n}</div>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.1em', color: 'var(--ink-3)', textTransform: 'uppercase', marginTop: 2 }}>{label}</div>
+    </div>
+  )
 }
 
-export default function PublicProfilePage({ profile: viewerProfile, onLike, onSave, onPin, onDelete }) {
+export default function PublicProfilePage({ profile: viewerProfile }) {
   const { id } = useParams()
   const navigate = useNavigate()
   const [profile, setProfile] = useState(null)
@@ -17,32 +24,7 @@ export default function PublicProfilePage({ profile: viewerProfile, onLike, onSa
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
-  const mediaUrls = useRef({ avatar: null, cover: null })
-
-  async function hydrateMedia(raw) {
-    const next = { ...raw }
-    await Promise.all([
-      raw.hasAvatar && !raw.avatar
-        ? publicProfileMediaBlob(raw.id, 'avatar')
-            .then(blob => {
-              if (mediaUrls.current.avatar) URL.revokeObjectURL(mediaUrls.current.avatar)
-              mediaUrls.current.avatar = URL.createObjectURL(blob)
-              next.avatar = mediaUrls.current.avatar
-            })
-            .catch(() => {})
-        : null,
-      raw.hasCoverImage && !raw.coverImage
-        ? publicProfileMediaBlob(raw.id, 'cover')
-            .then(blob => {
-              if (mediaUrls.current.cover) URL.revokeObjectURL(mediaUrls.current.cover)
-              mediaUrls.current.cover = URL.createObjectURL(blob)
-              next.coverImage = mediaUrls.current.cover
-            })
-            .catch(() => {})
-        : null,
-    ])
-    return next
-  }
+  const mediaUrls = useRef({ avatar: null })
 
   async function load() {
     setLoading(true)
@@ -50,10 +32,19 @@ export default function PublicProfilePage({ profile: viewerProfile, onLike, onSa
       const [profileData, postsData, summaryData] = await Promise.all([
         api.get(`/profiles/${id}`),
         api.get(`/profiles/${id}/posts`),
-        api.get(`/profiles/${id}/summary`),
+        api.get(`/profiles/${id}/summary`).catch(() => null),
       ])
-      const hydrated = await hydrateMedia(profileData)
-      setProfile(hydrated)
+      // hydrate avatar blob if needed
+      const next = { ...profileData }
+      if (profileData.hasAvatar && !profileData.avatar) {
+        try {
+          const blob = await publicProfileMediaBlob(profileData.id, 'avatar')
+          if (mediaUrls.current.avatar) URL.revokeObjectURL(mediaUrls.current.avatar)
+          mediaUrls.current.avatar = URL.createObjectURL(blob)
+          next.avatar = mediaUrls.current.avatar
+        } catch {}
+      }
+      setProfile(next)
       setPosts(postsData)
       setSummary(summaryData)
     } finally {
@@ -63,9 +54,7 @@ export default function PublicProfilePage({ profile: viewerProfile, onLike, onSa
 
   useEffect(() => {
     load()
-    return () => {
-      Object.values(mediaUrls.current).forEach(url => url && URL.revokeObjectURL(url))
-    }
+    return () => { Object.values(mediaUrls.current).forEach(u => u && URL.revokeObjectURL(u)) }
   }, [id])
 
   async function toggleFollow() {
@@ -82,157 +71,151 @@ export default function PublicProfilePage({ profile: viewerProfile, onLike, onSa
 
   if (loading) {
     return (
-      <div className="flex justify-center py-16">
-        <div className="w-6 h-6 rounded-full border-2 border-brand-rose border-t-transparent animate-spin" />
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '64px 0' }}>
+        <div className="w-5 h-5 rounded-full border-2 border-accent border-t-transparent animate-spin" />
       </div>
     )
   }
 
   if (!profile) {
-    return <div className="py-16 text-center text-dark-muted">Perfil não encontrado.</div>
+    return (
+      <div style={{ padding: '64px 20px', textAlign: 'center', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 16, color: 'var(--ink-3)' }}>
+        Perfil não encontrado.
+      </div>
+    )
   }
 
+  const isSelf = profile.id === viewerProfile?.id
+  const joinedLabel = profile.createdAt
+    ? new Date(profile.createdAt).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+    : ''
+  const daysKept = profile.createdAt
+    ? Math.max(1, Math.floor((Date.now() - new Date(profile.createdAt)) / 86400000))
+    : 0
+  const collections = summary?.collections ?? []
+
   return (
-    <div>
-      <div className="sticky top-0 z-10 bg-black/80 backdrop-blur-md border-b border-dark-border px-4 py-3 flex items-center gap-4">
-        <button onClick={() => navigate(-1)} className="text-dark-muted hover:text-dark-text transition-colors p-1 -ml-1 rounded-full hover:bg-dark-hover">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
-          </svg>
-        </button>
-        <div>
-          <h1 className="font-bold text-xl text-dark-text">{profile.name}</h1>
-          <p className="text-dark-muted text-sm">{posts.length} posts visíveis</p>
-        </div>
-      </div>
+    <div style={{ animation: 'fadeUp var(--dur-screen) var(--ease-out)' }}>
+      <AppBar
+        left={
+          <button
+            onClick={() => navigate(-1)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink)', display: 'flex', alignItems: 'center' }}
+          >
+            <Icon name="back" size={22} />
+          </button>
+        }
+        right={
+          <button style={{ width: 38, height: 38, borderRadius: '50%', border: 'none', cursor: 'pointer', background: 'var(--surface-3)', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="more" size={19} />
+          </button>
+        }
+      />
 
-      <div className="h-36 md:h-52 w-full overflow-hidden relative">
-        {profile.coverImage ? (
-          <img
-            src={profile.coverImage}
-            alt="capa"
-            className="w-full h-full object-cover"
-            onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling?.removeAttribute('style') }}
-          />
-        ) : null}
-        <div
-          className="w-full h-full"
-          style={{ background: profile.headerColor || 'linear-gradient(135deg, #8b5cf6, #1d9bf0)', display: profile.coverImage ? 'none' : undefined }}
-        />
-      </div>
-
-      <div className="px-4 pb-4">
-        <div className="relative -mt-12 mb-4">
-          <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-4 border-black">
-            {profile.avatar ? (
-              <img
-                src={profile.avatar}
-                alt={profile.name}
-                className="w-full h-full object-cover"
-                onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling?.removeAttribute('style') }}
-              />
-            ) : null}
-            <div className="w-full h-full avatar-gradient flex items-center justify-center text-white font-bold text-3xl" style={{ display: profile.avatar ? 'none' : undefined }}>
-              {profile.name?.[0] || '@'}
-            </div>
+      {/* Identity */}
+      <div style={{ padding: '20px 20px 0' }}>
+        <Avatar name={profile.name} src={profile.avatar} size={76} ring />
+        <h1 style={{ margin: '16px 0 3px', fontFamily: 'var(--serif)', fontSize: 28, color: 'var(--ink)', fontWeight: 400, letterSpacing: '-0.01em' }}>
+          {profile.name}
+        </h1>
+        <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--accent)' }}>@{profile.handle}</div>
+        {profile.title && (
+          <div style={{ fontFamily: 'var(--serif)', fontSize: 15.5, fontStyle: 'italic', color: 'var(--ink-2)', marginTop: 3 }}>
+            {profile.title}
           </div>
-          {profile.id !== viewerProfile.id && (
-            <button
-              onClick={toggleFollow}
-              disabled={busy}
-              className={`absolute right-0 top-2 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors disabled:opacity-50 ${profile.isFollowing ? 'border border-dark-border text-dark-text hover:bg-dark-hover' : 'bg-brand-rose text-white hover:bg-brand-rosehover'}`}
-            >
-              {profile.isFollowing ? 'Deixar de seguir' : 'Seguir'}
-            </button>
+        )}
+        {profile.bio && (
+          <p style={{ margin: '13px 0 0', fontFamily: 'var(--sans)', fontSize: 14, lineHeight: 1.6, color: 'var(--ink-2)', maxWidth: 340 }}>
+            {profile.bio}
+          </p>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 12, fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>
+          {profile.location && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <Icon name="pin" size={13} />{profile.location}
+            </span>
           )}
+          {joinedLabel && <span>Desde {joinedLabel}</span>}
         </div>
-
-        <h2 className="font-bold text-xl text-dark-text">{profile.name}</h2>
-        <p className="text-dark-muted">{profile.handle}</p>
-        {profile.bio && <p className="text-dark-text mt-2 text-[15px] leading-relaxed">{profile.bio}</p>}
-        <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm mt-4">
-          <div><span className="font-bold text-dark-text">{profile.followerCount || 0}</span><span className="text-dark-muted ml-1">Seguidores</span></div>
-          <div><span className="font-bold text-dark-text">{profile.followingCount || 0}</span><span className="text-dark-muted ml-1">Seguindo</span></div>
-          <div><span className="font-bold text-dark-text">{profile.friendCount || 0}</span><span className="text-dark-muted ml-1">Amigos</span></div>
-        </div>
-        {profile.createdAt && <p className="text-dark-muted text-xs mt-3">No arquivo desde {formatJoinDate(profile.createdAt)}</p>}
       </div>
 
-      {summary && (
-        <div className="border-t border-dark-border/60 px-4 py-5 space-y-5">
-          {(summary.collections?.length > 0 || summary.tags?.length > 0) && (
-            <div className="grid gap-4 md:grid-cols-2">
-              {summary.collections?.length > 0 && (
-                <section>
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-dark-muted font-bold mb-2">Coleções frequentes</p>
-                  <div className="flex flex-wrap gap-2">
-                    {summary.collections.map(collection => (
-                      <button key={collection.id} onClick={() => navigate(`/collections/${collection.id}`)} className="rounded-full border border-dark-border bg-dark-card px-3 py-1 text-xs text-dark-text hover:bg-dark-hover">
-                        {collection.name} <span className="text-dark-muted">{collection.count}</span>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              )}
-              {summary.tags?.length > 0 && (
-                <section>
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-dark-muted font-bold mb-2">Tags mais usadas</p>
-                  <div className="flex flex-wrap gap-2">
-                    {summary.tags.map(item => (
-                      <button key={item.tag} onClick={() => navigate(`/tags/${item.tag}`)} className="rounded-full border border-dark-border bg-dark-card px-3 py-1 text-xs text-dark-text hover:bg-dark-hover">
-                        #{item.tag} <span className="text-dark-muted">{item.count}</span>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              )}
-            </div>
-          )}
-
-          {summary.recentPhotos?.length > 0 && (
-            <section>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-dark-muted font-bold mb-2">Fotografias recentes</p>
-              <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-                {summary.recentPhotos.map(photo => (
-                  <img key={photo.id} src={`/api/attachments/${photo.id}/view`} alt={photo.title || photo.originalName} className="aspect-square w-full rounded-md object-cover border border-dark-border bg-dark-card" />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {(summary.recentArticles?.length > 0 || summary.recentActivity?.length > 0) && (
-            <div className="grid gap-4 md:grid-cols-2">
-              {summary.recentArticles?.length > 0 && (
-                <section>
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-dark-muted font-bold mb-2">Artigos recentes</p>
-                  <div className="space-y-2">{summary.recentArticles.map(item => <ArchiveMiniCard key={item.id} item={item} />)}</div>
-                </section>
-              )}
-              {summary.recentActivity?.length > 0 && (
-                <section>
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-dark-muted font-bold mb-2">Atividade recente</p>
-                  <div className="space-y-2">{summary.recentActivity.map(item => <ArchiveMiniCard key={item.id} item={item} />)}</div>
-                </section>
-              )}
-            </div>
-          )}
+      {/* Action */}
+      {!isSelf && (
+        <div style={{ padding: '18px 20px 20px', display: 'flex', gap: 10 }}>
+          <button
+            onClick={toggleFollow}
+            disabled={busy}
+            style={{
+              flex: 1, padding: 12, borderRadius: 13, cursor: 'pointer',
+              fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 600,
+              border: `1px solid ${profile.isFollowing ? 'var(--line-strong)' : 'transparent'}`,
+              background: profile.isFollowing ? 'transparent' : 'var(--accent)',
+              color: profile.isFollowing ? 'var(--ink)' : '#fff',
+              opacity: busy ? 0.5 : 1,
+            }}
+          >
+            {profile.isFollowing ? 'Seguindo' : 'Seguir'}
+          </button>
+          <button style={{ width: 48, borderRadius: 13, cursor: 'pointer', border: '1px solid var(--line-strong)', background: 'transparent', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="comment" size={18} />
+          </button>
         </div>
       )}
 
-      <div className="border-t border-dark-border/60">
-        {posts.length === 0 ? (
-          <div className="py-16 text-center text-dark-muted text-sm">Nenhum post visível para você.</div>
-        ) : posts.map(post => (
-          <PostCard
-            key={post.id}
-            post={post}
-            profile={viewerProfile}
-            onLike={onLike}
-            onSave={onSave}
-            onPin={onPin}
-            onDelete={onDelete}
-          />
-        ))}
+      {/* Stats card */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-around', padding: '18px 20px',
+        margin: isSelf ? '18px 20px 0' : '0 20px',
+        borderRadius: 16, border: '1px solid var(--line)', background: 'rgba(255,255,255,0.015)',
+      }}>
+        <Stat n={posts.length.toLocaleString('pt-BR')} label="Entradas" />
+        <Stat n={collections.length || profile.collectionsCount || 0} label="Coleções" />
+        <Stat n={profile.followerCount ?? 0} label="Círculo" />
+        <Stat n={daysKept.toLocaleString('pt-BR')} label="Dias" />
+      </div>
+
+      {/* Collections strip */}
+      {collections.length > 0 && (
+        <div style={{ marginTop: 28 }}>
+          <SectionLabel>Coleções</SectionLabel>
+          <div style={{ display: 'flex', gap: 11, overflowX: 'auto', padding: '12px 20px 6px', scrollbarWidth: 'none' }}>
+            {collections.map((c, i) => {
+              const tone = c.color ?? ['#7AA2F7', '#E86CB4', '#9ECE6A', '#E0AF68'][i % 4]
+              return (
+                <div key={c.id} style={{ flexShrink: 0, width: 140, cursor: 'pointer' }}>
+                  <div style={{
+                    height: 92, borderRadius: 13,
+                    background: `linear-gradient(150deg, ${tone}55, #0c0c0e)`,
+                    border: '1px solid var(--line-strong)',
+                    display: 'flex', alignItems: 'flex-end', padding: 10,
+                  }}>
+                    <span style={{ fontSize: 20 }}>{c.emoji ?? '📁'}</span>
+                  </div>
+                  <div style={{ fontFamily: 'var(--serif)', fontSize: 15, color: 'var(--ink)', marginTop: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {c.name}
+                  </div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)', marginTop: 1 }}>
+                    {c.count ?? c.postCount ?? 0} entradas
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Recent entries */}
+      <div style={{ marginTop: 26 }}>
+        <SectionLabel>Recentes</SectionLabel>
+        <div style={{ borderTop: '1px solid var(--line)' }}>
+          {posts.length === 0 ? (
+            <p style={{ padding: '32px 20px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-3)' }}>
+              Nenhuma entrada pública ainda.
+            </p>
+          ) : (
+            posts.map(p => <EntryCard key={p.id} post={p} showAuthor={false} />)
+          )}
+        </div>
       </div>
     </div>
   )
