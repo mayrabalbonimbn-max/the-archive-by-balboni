@@ -313,6 +313,21 @@ router.post('/', async (req, res) => {
       }
     }
 
+    // Duplicate check — same content + code for this user in the last 30 days
+    const dupCheck = await pool.query(
+      `SELECT id FROM posts
+       WHERE profile_id = $1
+         AND LOWER(TRIM(content)) = LOWER(TRIM($2))
+         AND COALESCE(LOWER(TRIM(code_content)), '') = COALESCE(LOWER(TRIM($3)), '')
+         AND created_at > NOW() - INTERVAL '30 days'
+       LIMIT 1`,
+      [req.user.profileId, cleanContent, cleanCode || '']
+    )
+    if (dupCheck.rows.length > 0) {
+      client.release()
+      return res.status(409).json({ error: 'Você já tem uma entrada idêntica a essa. Verifique seu arquivo antes de publicar.' })
+    }
+
     await client.query('BEGIN')
 
     // Validate collectionId
