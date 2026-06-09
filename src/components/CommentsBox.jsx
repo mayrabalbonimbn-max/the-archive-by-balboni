@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../utils/api'
 import { formatRelativeTime } from '../utils/helpers'
 
 export default function CommentsBox({ postId, initialCount = 0, autoOpen = false, highlightId = null }) {
+  const navigate = useNavigate()
   const [open, setOpen] = useState(autoOpen)
   const [comments, setComments] = useState([])
   const [content, setContent] = useState('')
@@ -154,7 +156,10 @@ export default function CommentsBox({ postId, initialCount = 0, autoOpen = false
                   } : {}),
                 }}
               >
-                <p style={S.meta}>{comment.author.name} · {formatRelativeTime(comment.createdAt)}</p>
+                <p style={S.meta}>
+                  <button onClick={() => navigate(`/profiles/${comment.author.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 600 }}>{comment.author.name}</button>
+                  {' · '}{formatRelativeTime(comment.createdAt)}
+                </p>
 
                 {editing?.kind === 'comment' && editing.id === comment.id ? (
                   <div style={S.row}>
@@ -181,7 +186,10 @@ export default function CommentsBox({ postId, initialCount = 0, autoOpen = false
                   <div style={S.replies}>
                     {comment.replies.map(reply => (
                       <div key={reply.id} style={S.reply}>
-                        <p style={S.meta}>{reply.author.name} · {formatRelativeTime(reply.createdAt)}</p>
+                        <p style={S.meta}>
+                          <button onClick={() => navigate(`/profiles/${reply.author.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 600 }}>{reply.author.name}</button>
+                          {' · '}{formatRelativeTime(reply.createdAt)}
+                        </p>
                         {editing?.kind === 'reply' && editing.id === reply.id ? (
                           <div style={S.row}>
                             <input value={editContent} onChange={e => setEditContent(e.target.value)} style={{ ...S.input, flex: 1 }} />
