@@ -1,490 +1,198 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate, useLocation } from 'react-router-dom'
 
-// ── Step definitions ───────────────────────────────────────────────────────────
+// ── Illustrations ──────────────────────────────────────────────────────────────
 
-const STEPS = [
-  {
-    id: 'welcome',
-    route: '/',
-    target: null,
-    title: 'Bem-vinda ao The Archive.',
-    parts: [
-      { kind: 'text', text: 'O Archive nasceu para pessoas que criam.' },
-      { kind: 'text', text: 'Fotógrafos, desenvolvedores, artistas, escritores, estudantes e curiosos.' },
-      { kind: 'emph', text: 'Aqui não existem algoritmos agressivos. O objetivo é simples: guardar aquilo que importa.' },
-    ],
-  },
-  {
-    id: 'compose',
-    route: '/',
-    target: '[data-onboarding="compose-btn"]',
-    title: 'Tudo começa aqui.',
-    parts: [
-      { kind: 'haiku', lines: ['Uma ideia.', 'Uma fotografia.', 'Um código.', 'Uma memória.'] },
-      { kind: 'text', text: 'Tudo entra no Archive pelo mesmo botão.' },
-      { kind: 'emph', text: 'Você não está publicando para um algoritmo. Está registrando algo para o seu futuro.' },
-    ],
-  },
-  {
-    id: 'archive',
-    route: '/archive',
-    target: '[data-onboarding="archive-section"]',
-    title: 'Sua biblioteca pessoal.',
-    parts: [
-      { kind: 'text', text: 'Esta é a seção SEU ARQUIVO — o coração do sistema.' },
-      { kind: 'text', text: 'Aqui tudo se organiza automaticamente por área:' },
-      { kind: 'bullets', items: ['Memórias', 'Calendário', 'Coleções', 'Arquivos', 'Fotografia', 'Stories'] },
-    ],
-  },
-  {
-    id: 'photos',
-    route: '/archive',
-    target: '[data-onboarding="photo-nav"]',
-    title: 'Pensado para fotógrafos.',
-    parts: [
-      { kind: 'emph', text: 'Fotografias não são apenas imagens. São momentos.' },
-      { kind: 'text', text: 'O Archive preserva foto original, câmera, lente e metadados EXIF completos.' },
-      { kind: 'text', text: 'Seu trabalho permanece organizado e pesquisável ao longo do tempo.' },
-    ],
-  },
-  {
-    id: 'code',
-    route: '/',
-    target: '[data-onboarding="compose-btn"]',
-    title: 'Código também é memória.',
-    parts: [
-      { kind: 'text', text: 'Publique snippets, estudos e projetos técnicos.' },
-      { kind: 'text', text: 'O Sandbox permite executar código diretamente no Archive:' },
-      { kind: 'bullets', items: ['Python', 'JavaScript', 'HTML'] },
-      { kind: 'text', text: 'Ideal para documentar sua jornada de aprendizado.' },
-    ],
-  },
-  {
-    id: 'capsules',
-    route: '/capsules',
-    target: '[data-onboarding="capsules-page"]',
-    title: 'Escreva para seu futuro.',
-    parts: [
-      { kind: 'emph', text: 'Algumas mensagens precisam esperar.' },
-      { kind: 'text', text: 'Você pode criar cápsulas que serão abertas:' },
-      { kind: 'bullets', items: ['Daqui 1 mês', 'Daqui 1 ano', 'Em qualquer data escolhida'] },
-      { kind: 'text', text: 'Até lá, permanecem guardadas e seladas.' },
-    ],
-  },
-  {
-    id: 'profile',
-    route: '/profile',
-    target: '[data-onboarding="profile-chip"]',
-    title: 'Mais que um perfil.',
-    parts: [
-      { kind: 'text', text: 'Seu perfil é uma mistura de:' },
-      { kind: 'bullets', items: ['Diário', 'Portfólio', 'Biblioteca', 'Histórico de projetos'] },
-      { kind: 'emph', text: 'Ele mostra não apenas quem você é. Mas aquilo que você construiu ao longo do tempo.' },
-    ],
-  },
-  {
-    id: 'calendar',
-    route: '/archive',
-    target: '[data-onboarding="calendar-nav"]',
-    title: 'Navegue pela sua história.',
-    parts: [
-      { kind: 'text', text: 'Cada dia em que você registrou algo permanece marcado.' },
-      { kind: 'haiku', lines: ['Volte para qualquer data.', 'Veja quem você era.', 'Veja o que estava construindo.'] },
-    ],
-  },
-  {
-    id: 'memories',
-    route: '/archive',
-    target: '[data-onboarding="memories-nav"]',
-    title: 'O passado continua vivo.',
-    parts: [
-      { kind: 'text', text: 'O Archive relembra momentos importantes quando eles voltam a acontecer.' },
-      { kind: 'text', text: 'Você pode revisitar pensamentos, projetos e fotografias anos depois.' },
-      { kind: 'emph', text: 'Não para gerar nostalgia. Mas para perceber sua evolução.' },
-    ],
-  },
-  {
-    id: 'home',
-    route: '/',
-    target: null,
-    title: 'Seu canto da internet.',
-    parts: [
-      { kind: 'text', text: 'O Archive não foi criado para manter você online.' },
-      { kind: 'emph', text: 'Foi criado para garantir que aquilo que importa não se perca.' },
-      { kind: 'haiku', lines: ['Quando quiser registrar algo,', 'este lugar estará aqui.', 'Sempre.'] },
-    ],
-  },
-]
-
-// ── Spotlight SVG overlay ──────────────────────────────────────────────────────
-
-const PAD = 12
-const RADIUS = 14
-
-function SpotlightOverlay({ rect, transitioning }) {
+function IlloPhilosophy() {
   return (
-    <svg
-      style={{
-        position: 'fixed', inset: 0, width: '100%', height: '100%',
-        pointerEvents: 'none', zIndex: 9100,
-        transition: 'opacity 0.2s ease',
-        opacity: transitioning ? 0.6 : 1,
-      }}
-    >
-      <defs>
-        <mask id="tour-mask">
-          <rect x="0" y="0" width="100%" height="100%" fill="white" />
-          {rect && (
-            <rect
-              x={rect.x - PAD} y={rect.y - PAD}
-              width={rect.w + PAD * 2} height={rect.h + PAD * 2}
-              rx={RADIUS} fill="black"
-            />
-          )}
-        </mask>
-      </defs>
-      <rect x="0" y="0" width="100%" height="100%" fill="rgba(0,0,0,0.82)" mask="url(#tour-mask)" />
-      {rect && !transitioning && (
-        <>
-          <rect
-            x={rect.x - PAD} y={rect.y - PAD}
-            width={rect.w + PAD * 2} height={rect.h + PAD * 2}
-            rx={RADIUS} fill="none"
-            stroke="var(--accent, #e86cb4)" strokeWidth="1.5" strokeOpacity="0.7"
-          />
-          <rect
-            x={rect.x - PAD - 5} y={rect.y - PAD - 5}
-            width={rect.w + PAD * 2 + 10} height={rect.h + PAD * 2 + 10}
-            rx={RADIUS + 4} fill="none"
-            stroke="var(--accent, #e86cb4)" strokeWidth="1" strokeOpacity="0.18"
-          />
-        </>
-      )}
+    <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+      <circle cx="40" cy="40" r="5" fill="var(--accent)" />
+      <circle cx="40" cy="40" r="17" stroke="var(--accent)" strokeWidth="1" opacity="0.25" />
+      <circle cx="40" cy="40" r="30" stroke="var(--accent)" strokeWidth="0.5" opacity="0.1" />
     </svg>
   )
 }
 
-// ── Card positioning ────────────────────────────────────────────────────────────
-
-const CARD_W = 380
-
-function computeCardPos(rect, isMobile) {
-  // Mobile or no target → centered
-  if (isMobile || !rect) return null
-
-  const vw = window.innerWidth
-  const vh = window.innerHeight
-  const gap = 20
-  const SAFE = 40             // min distance from viewport edges
-  const MAX_H = vh - SAFE * 2 // card will be clamped to this by maxHeight
-
-  const spaceRight = vw - (rect.x + rect.w)
-  const spaceLeft  = rect.x
-  const targetCY   = rect.y + rect.h / 2
-
-  let x
-  if (spaceRight >= CARD_W + gap + 32)      x = rect.x + rect.w + PAD + gap
-  else if (spaceLeft >= CARD_W + gap + 32)  x = rect.x - PAD - gap - CARD_W
-  else                                       x = (vw - CARD_W) / 2
-
-  // Vertically: center on target, then clamp so top >= SAFE and card fits
-  let y = targetCY - MAX_H / 2
-  y = Math.max(SAFE, Math.min(y, vh - MAX_H - SAFE))
-
-  return { left: x, top: y }
-}
-
-// ── Body part renderer ─────────────────────────────────────────────────────────
-
-function BodyPart({ part }) {
-  if (part.kind === 'text') {
-    return (
-      <p style={{ margin: '0 0 10px', fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.65 }}>
-        {part.text}
-      </p>
-    )
-  }
-  if (part.kind === 'emph') {
-    return (
-      <p style={{ margin: '0 0 10px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15.5, color: 'var(--ink)', lineHeight: 1.55 }}>
-        {part.text}
-      </p>
-    )
-  }
-  if (part.kind === 'haiku') {
-    return (
-      <div style={{ margin: '0 0 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {part.lines.map((line, i) => (
-          <span key={i} style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink)', lineHeight: 1.55, display: 'block' }}>
-            {line}
-          </span>
-        ))}
-      </div>
-    )
-  }
-  if (part.kind === 'bullets') {
-    return (
-      <ul style={{ margin: '0 0 10px', paddingLeft: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {part.items.map((item, i) => (
-          <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0, marginTop: 1 }} />
-            <span style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.5 }}>{item}</span>
-          </li>
-        ))}
-      </ul>
-    )
-  }
-  return null
-}
-
-// ── Tour card ─────────────────────────────────────────────────────────────────
-
-function TourCard({ step, stepIdx, total, cardPos, isMobile, onBack, onNext, onSkip, isLast, transitioning }) {
-  const isFirst = stepIdx === 0
-
-  // Outer wrapper: positioned + sized
-  const outerStyle = cardPos
-    ? {
-        position: 'fixed',
-        left: cardPos.left,
-        top: cardPos.top,
-        width: CARD_W,
-        // maxHeight keeps card within viewport; body inside will scroll
-        maxHeight: 'calc(100dvh - 80px)',
-      }
-    : {
-        position: 'fixed',
-        left: '50%',
-        top: '50%',
-        transform: 'translate(-50%, -50%)',
-        width: isMobile ? 'calc(100vw - 32px)' : CARD_W,
-        maxWidth: CARD_W,
-        // On mobile use dvh + safe areas so the card never exceeds the screen
-        maxHeight: isMobile
-          ? 'calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 32px)'
-          : 'calc(100dvh - 80px)',
-      }
-
+function IlloCompose() {
   return (
-    <div
-      style={{
-        ...outerStyle,
-        zIndex: 9200,
-        background: 'var(--bg)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: 18,
-        boxShadow: '0 32px 80px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04)',
-        // flex column so footer is always at the bottom
-        display: 'flex',
-        flexDirection: 'column',
-        transition: 'opacity 0.18s ease, transform 0.18s ease',
-        opacity: transitioning ? 0 : 1,
-        transform: transitioning
-          ? (cardPos ? 'translateY(6px)' : 'translate(-50%, calc(-50% + 6px))')
-          : (cardPos ? 'translateY(0)' : 'translate(-50%, -50%)'),
-        pointerEvents: transitioning ? 'none' : 'auto',
-      }}
-    >
-      {/* ── Top accent line (fixed) ── */}
-      <div style={{ height: 2, background: 'linear-gradient(90deg, var(--accent) 0%, transparent 100%)', flexShrink: 0, borderRadius: '18px 18px 0 0' }} />
-
-      {/* ── Header (fixed, never scrolls) ── */}
-      <div style={{ padding: '18px 20px 14px', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', color: 'var(--ink-3)' }}>
-            {stepIdx + 1} / {total}
-          </span>
-          {/* X — always visible escape */}
-          <button
-            onClick={onSkip}
-            aria-label="Pular tour"
-            style={{
-              width: 28, height: 28, borderRadius: '50%',
-              border: '1px solid var(--line)', background: 'transparent',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--ink-3)', fontSize: 14, lineHeight: 1,
-            }}
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Progress bar */}
-        <div style={{ height: 2, background: 'var(--line)', borderRadius: 2, overflow: 'hidden' }}>
-          <div style={{
-            height: '100%',
-            width: `${((stepIdx + 1) / total) * 100}%`,
-            background: 'var(--accent)',
-            borderRadius: 2,
-            transition: 'width 0.35s ease',
-          }} />
-        </div>
-      </div>
-
-      {/* ── Scrollable body ── */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 4px', minHeight: 0 }}>
-        <h2 style={{
-          margin: '0 0 14px',
-          fontFamily: 'var(--serif)', fontStyle: 'italic', fontWeight: 400,
-          fontSize: 'clamp(19px, 4.5vw, 25px)',
-          color: 'var(--ink)', lineHeight: 1.15, letterSpacing: '-0.01em',
-        }}>
-          {step.title}
-        </h2>
-        {step.parts.map((part, i) => <BodyPart key={i} part={part} />)}
-      </div>
-
-      {/* ── Footer — always visible, never clipped ── */}
-      <div style={{
-        padding: '12px 20px 18px',
-        flexShrink: 0,
-        borderTop: '1px solid var(--line)',
-        display: 'flex',
-        gap: 8,
-        alignItems: 'center',
-      }}>
-        {/* Voltar */}
-        <button
-          onClick={onBack}
-          disabled={isFirst}
-          style={{
-            padding: '10px 16px', borderRadius: 10,
-            border: '1px solid var(--line)', background: 'transparent',
-            cursor: isFirst ? 'default' : 'pointer',
-            fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)',
-            opacity: isFirst ? 0 : 1,
-            transition: 'opacity 0.15s',
-            flexShrink: 0,
-          }}
-        >
-          Voltar
-        </button>
-
-        {/* Progress dots */}
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: 4, flexWrap: 'wrap', minWidth: 0 }}>
-          {STEPS.map((_, i) => (
-            <div
-              key={i}
-              style={{
-                width: i === stepIdx ? 16 : 5,
-                height: 5,
-                borderRadius: 99,
-                background: i === stepIdx ? 'var(--accent)' : 'var(--line-strong)',
-                transition: 'width 0.25s ease, background 0.25s ease',
-                flexShrink: 0,
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Próximo / Finalizar */}
-        <button
-          onClick={onNext}
-          style={{
-            padding: isLast ? '10px 20px' : '10px 16px',
-            borderRadius: 10, border: 'none',
-            background: isLast ? 'var(--accent)' : 'var(--surface-2)',
-            cursor: 'pointer',
-            fontFamily: 'var(--sans)', fontSize: 13,
-            fontWeight: isLast ? 600 : 500,
-            color: isLast ? '#fff' : 'var(--ink)',
-            flexShrink: 0,
-            transition: 'background 0.15s',
-          }}
-        >
-          {isLast ? 'Entrar no Archive' : 'Próximo'}
-        </button>
-      </div>
-    </div>
+    <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+      <path d="M58 16C48 12 30 22 22 48L24 55L31 52C38 28 52 20 58 16Z" stroke="var(--accent)" strokeWidth="1.5" fill="none" />
+      <line x1="24" y1="55" x2="19" y2="65" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="16" y1="60" x2="46" y2="30" stroke="var(--accent)" strokeWidth="0.75" opacity="0.25" strokeLinecap="round" />
+      <line x1="30" y1="62" x2="42" y2="62" stroke="var(--accent)" strokeWidth="1" opacity="0.2" strokeLinecap="round" />
+      <line x1="34" y1="67" x2="52" y2="67" stroke="var(--accent)" strokeWidth="1" opacity="0.15" strokeLinecap="round" />
+    </svg>
   )
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+function IlloProjects() {
+  return (
+    <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+      <line x1="16" y1="40" x2="64" y2="40" stroke="var(--accent)" strokeWidth="1" opacity="0.3" />
+      <circle cx="16" cy="40" r="4" stroke="var(--accent)" strokeWidth="1.5" fill="none" opacity="0.6" />
+      <circle cx="40" cy="40" r="5" fill="var(--accent)" />
+      <circle cx="64" cy="40" r="4" stroke="var(--accent)" strokeWidth="1.5" fill="none" opacity="0.35" />
+      <line x1="40" y1="22" x2="40" y2="33" stroke="var(--accent)" strokeWidth="1" opacity="0.4" strokeLinecap="round" />
+      <line x1="16" y1="40" x2="16" y2="26" stroke="var(--accent)" strokeWidth="1" opacity="0.2" strokeLinecap="round" />
+      <line x1="64" y1="40" x2="64" y2="52" stroke="var(--accent)" strokeWidth="1" opacity="0.15" strokeLinecap="round" strokeDasharray="2 2" />
+    </svg>
+  )
+}
+
+function IlloReflections() {
+  return (
+    <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+      <circle cx="40" cy="40" r="5" fill="var(--accent)" />
+      <circle cx="40" cy="40" r="13" stroke="var(--accent)" strokeWidth="1.5" fill="none" opacity="0.45" />
+      <circle cx="40" cy="40" r="22" stroke="var(--accent)" strokeWidth="1" fill="none" opacity="0.22" />
+      <circle cx="40" cy="40" r="32" stroke="var(--accent)" strokeWidth="0.5" fill="none" opacity="0.1" />
+    </svg>
+  )
+}
+
+function IlloCapsules() {
+  return (
+    <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+      <rect x="16" y="26" width="48" height="34" rx="3" stroke="var(--accent)" strokeWidth="1.5" fill="none" />
+      <polyline points="16,26 40,46 64,26" stroke="var(--accent)" strokeWidth="1.5" fill="none" strokeLinejoin="round" />
+      <line x1="40" y1="18" x2="40" y2="24" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" strokeDasharray="2 3" />
+      <circle cx="40" cy="14" r="3" stroke="var(--accent)" strokeWidth="1" fill="none" opacity="0.3" />
+    </svg>
+  )
+}
+
+function IlloEvolution() {
+  return (
+    <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+      <rect x="12" y="52" width="10" height="16" rx="2" fill="var(--accent)" opacity="0.2" />
+      <rect x="26" y="44" width="10" height="24" rx="2" fill="var(--accent)" opacity="0.35" />
+      <rect x="40" y="32" width="10" height="36" rx="2" fill="var(--accent)" opacity="0.55" />
+      <rect x="54" y="20" width="10" height="48" rx="2" fill="var(--accent)" opacity="0.85" />
+      <line x1="8" y1="70" x2="72" y2="70" stroke="var(--line-strong)" strokeWidth="1" opacity="0.5" />
+    </svg>
+  )
+}
+
+function IlloStory() {
+  return (
+    <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+      <path d="M40 20C31 18 14 24 12 32L12 62C14 54 31 52 40 56L40 20Z" stroke="var(--accent)" strokeWidth="1.5" fill="none" />
+      <path d="M40 20C49 18 66 24 68 32L68 62C66 54 49 52 40 56L40 20Z" stroke="var(--accent)" strokeWidth="1.5" fill="none" />
+      <line x1="40" y1="20" x2="40" y2="56" stroke="var(--accent)" strokeWidth="0.75" opacity="0.4" />
+      <line x1="20" y1="38" x2="34" y2="38" stroke="var(--accent)" strokeWidth="1" opacity="0.3" strokeLinecap="round" />
+      <line x1="20" y1="44" x2="34" y2="44" stroke="var(--accent)" strokeWidth="1" opacity="0.25" strokeLinecap="round" />
+      <line x1="46" y1="38" x2="60" y2="38" stroke="var(--accent)" strokeWidth="1" opacity="0.3" strokeLinecap="round" />
+      <line x1="46" y1="44" x2="56" y2="44" stroke="var(--accent)" strokeWidth="1" opacity="0.2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function IlloBegin() {
+  return (
+    <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+      <circle cx="40" cy="40" r="5" fill="var(--accent)" />
+      <circle cx="40" cy="40" r="12" fill="var(--accent)" opacity="0.12" />
+      <line x1="40" y1="14" x2="40" y2="23" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" />
+      <line x1="40" y1="57" x2="40" y2="66" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" />
+      <line x1="14" y1="40" x2="23" y2="40" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" />
+      <line x1="57" y1="40" x2="66" y2="40" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" />
+      <line x1="21" y1="21" x2="27" y2="27" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" opacity="0.55" />
+      <line x1="53" y1="53" x2="59" y2="59" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" opacity="0.55" />
+      <line x1="59" y1="21" x2="53" y2="27" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" opacity="0.55" />
+      <line x1="27" y1="53" x2="21" y2="59" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" opacity="0.55" />
+    </svg>
+  )
+}
+
+// ── Chapter data ───────────────────────────────────────────────────────────────
+
+const CHAPTERS = [
+  {
+    id: 'philosophy',
+    Illo: IlloPhilosophy,
+    title: 'O Archive não é uma rede social.',
+    lines: [
+      'Aqui você não disputa atenção.',
+      'Você guarda aquilo que vale a pena lembrar.',
+    ],
+  },
+  {
+    id: 'compose',
+    Illo: IlloCompose,
+    title: 'Comece registrando.',
+    lines: [
+      'Uma nota. Uma fotografia.',
+      'Um pensamento. Um trecho de código.',
+      'Tudo começa com um registro.',
+    ],
+  },
+  {
+    id: 'projects',
+    Illo: IlloProjects,
+    title: 'Projetos dão contexto.',
+    lines: ['Projetos agrupam registros ao longo do tempo.'],
+    examples: ['Python AI Agent', 'The Archive', 'Balboni Lab'],
+  },
+  {
+    id: 'reflections',
+    Illo: IlloReflections,
+    title: 'Memórias podem amadurecer.',
+    lines: [
+      'Você pode revisitar registros antigos.',
+      'Refletir sobre eles.',
+      'Adicionar novas camadas de significado.',
+    ],
+  },
+  {
+    id: 'capsules',
+    Illo: IlloCapsules,
+    title: 'Cápsulas guardam o futuro.',
+    lines: ['Escreva algo hoje.', 'Abra daqui a meses ou anos.'],
+  },
+  {
+    id: 'evolution',
+    Illo: IlloEvolution,
+    title: 'Sua evolução fica registrada.',
+    lines: ['Tudo nasce automaticamente dos registros que você cria.'],
+    tags: ['Dashboard', 'Graph', 'Conquistas', 'Crescimento', 'História'],
+  },
+  {
+    id: 'story',
+    Illo: IlloStory,
+    title: 'Seu arquivo conta sua história.',
+    lines: ['Com o tempo, o Archive constrói uma narrativa da sua vida criativa.'],
+  },
+  {
+    id: 'begin',
+    Illo: IlloBegin,
+    title: 'Agora comece.',
+    lines: [
+      'Não existe jeito certo de usar.',
+      'Apenas registre aquilo que importa para você.',
+    ],
+    cta: 'Começar a guardar',
+  },
+]
+
+// ── Main component ─────────────────────────────────────────────────────────────
 
 export default function OnboardingTour({ onComplete }) {
-  const navigate   = useNavigate()
-  const location   = useLocation()
-  const [stepIdx, setStepIdx]           = useState(0)
-  const [rect, setRect]                 = useState(null)
-  const [transitioning, setTransitioning] = useState(false)
-  const [isMobile, setIsMobile]         = useState(() => window.innerWidth < 768)
-  const roRef        = useRef(null)
-  const findTimerRef = useRef(null)
+  const [idx, setIdx]     = useState(0)
+  const [fading, setFading] = useState(false)
+  const touchStartX = useRef(null)
 
-  const step   = STEPS[stepIdx]
-  const isLast = stepIdx === STEPS.length - 1
+  const total  = CHAPTERS.length
+  const isLast = idx === total - 1
+  const ch     = CHAPTERS[idx]
 
-  // Find spotlight target with retries (DOM may not be ready after navigation)
-  const findAndSetRect = useCallback((selector) => {
-    clearInterval(findTimerRef.current)
-    if (!selector || isMobile) { setRect(null); return }
-
-    let attempts = 0
-    findTimerRef.current = setInterval(() => {
-      const el = document.querySelector(selector)
-      if (el) {
-        const r = el.getBoundingClientRect()
-        setRect({ x: r.left, y: r.top, w: r.width, h: r.height })
-        clearInterval(findTimerRef.current)
-      } else if (++attempts >= 15) {
-        setRect(null)
-        clearInterval(findTimerRef.current)
-      }
-    }, 80)
-  }, [isMobile])
-
-  useEffect(() => {
-    findAndSetRect(step.target)
-    return () => clearInterval(findTimerRef.current)
-  }, [step.target, stepIdx, findAndSetRect])
-
-  // ResizeObserver keeps rect fresh
-  useEffect(() => {
-    roRef.current?.disconnect()
-    if (!step.target || isMobile) return
-    const el = document.querySelector(step.target)
-    if (!el) return
-    roRef.current = new ResizeObserver(() => findAndSetRect(step.target))
-    roRef.current.observe(el)
-    return () => roRef.current?.disconnect()
-  }, [step.target, isMobile, findAndSetRect])
-
-  useEffect(() => {
-    function onResize() {
-      const mobile = window.innerWidth < 768
-      setIsMobile(mobile)
-      if (mobile) setRect(null)
-      else findAndSetRect(step.target)
-    }
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [step.target, findAndSetRect])
-
-  function changeStep(newIdx) {
-    const nextStep  = STEPS[newIdx]
-    setTransitioning(true)
-    setRect(null)
-    clearInterval(findTimerRef.current)
-
-    const needsNav = nextStep.route && location.pathname !== nextStep.route.split('?')[0]
-    if (needsNav) navigate(nextStep.route)
-    else if (nextStep.route && nextStep.route !== location.pathname + location.search) {
-      navigate(nextStep.route)
-    }
-
-    setTimeout(() => {
-      setStepIdx(newIdx)
-      setTransitioning(false)
-    }, needsNav ? 320 : 160)
+  function go(n) {
+    if (fading || n < 0 || n >= total) return
+    setFading(true)
+    setTimeout(() => { setIdx(n); setFading(false) }, 200)
   }
 
-  function next() {
-    if (isLast) { onComplete(); return }
-    changeStep(stepIdx + 1)
-  }
-  function back() { if (stepIdx > 0) changeStep(stepIdx - 1) }
+  function next() { isLast ? onComplete() : go(idx + 1) }
+  function back() { go(idx - 1) }
   function skip() { onComplete() }
 
   // Keyboard navigation
@@ -496,31 +204,200 @@ export default function OnboardingTour({ onComplete }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [stepIdx, isLast])
+  })
 
-  const displayRect = !transitioning && !isMobile ? rect : null
-  const cardPos     = computeCardPos(displayRect, isMobile)
+  // Touch swipe (mobile)
+  function onTouchStart(e) { touchStartX.current = e.touches[0].clientX }
+  function onTouchEnd(e) {
+    if (touchStartX.current === null) return
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    touchStartX.current = null
+    if (dx < -50) next()
+    else if (dx > 50) back()
+  }
+
+  const { Illo, title, lines, examples, tags, cta } = ch
 
   return createPortal(
-    <>
-      {/* Backdrop click blocker — does NOT close the tour (prevents accidental exit) */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 9099, cursor: 'default' }} />
+    <div
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9200,
+        background: 'var(--bg)',
+        display: 'flex', flexDirection: 'column',
+        fontFamily: 'var(--sans)',
+        userSelect: 'none',
+      }}
+    >
+      {/* ── Top bar: progress + skip ── */}
+      <div style={{
+        flexShrink: 0,
+        padding: 'max(20px, calc(env(safe-area-inset-top, 0px) + 14px)) 24px 0',
+        display: 'flex', alignItems: 'center', gap: 16,
+      }}>
+        <div style={{ flex: 1, height: 2, background: 'var(--line)', borderRadius: 2, overflow: 'hidden' }}>
+          <div style={{
+            height: '100%', background: 'var(--accent)', borderRadius: 2,
+            width: `${((idx + 1) / total) * 100}%`,
+            transition: 'width 0.35s ease',
+          }} />
+        </div>
+        <button
+          onClick={skip}
+          aria-label="Pular apresentação"
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.12em',
+            color: 'var(--ink-3)', padding: '4px 0', flexShrink: 0,
+          }}
+        >
+          PULAR
+        </button>
+      </div>
 
-      <SpotlightOverlay rect={displayRect} transitioning={transitioning} />
+      {/* ── Content: vertically centered ── */}
+      <div style={{
+        flex: 1,
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        padding: '24px 32px',
+        width: '100%', maxWidth: 520, margin: '0 auto',
+        transition: 'opacity 0.2s ease, transform 0.2s ease',
+        opacity: fading ? 0 : 1,
+        transform: fading ? 'translateY(10px)' : 'translateY(0)',
+        overflowY: 'auto',
+      }}>
+        {/* Illustration */}
+        <div style={{ marginBottom: 28, flexShrink: 0 }}>
+          <Illo />
+        </div>
 
-      <TourCard
-        step={step}
-        stepIdx={stepIdx}
-        total={STEPS.length}
-        cardPos={cardPos}
-        isMobile={isMobile}
-        onBack={back}
-        onNext={next}
-        onSkip={skip}
-        isLast={isLast}
-        transitioning={transitioning}
-      />
-    </>,
+        {/* Chapter counter */}
+        <div style={{
+          fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.18em',
+          color: 'var(--accent)', marginBottom: 16, opacity: 0.75,
+        }}>
+          {idx + 1} / {total}
+        </div>
+
+        {/* Title */}
+        <h1 style={{
+          fontFamily: 'var(--serif)', fontStyle: 'italic', fontWeight: 400,
+          fontSize: 'clamp(22px, 6.5vw, 34px)', lineHeight: 1.2,
+          color: 'var(--ink)', margin: '0 0 22px',
+          letterSpacing: '-0.01em', textAlign: 'center',
+        }}>
+          {title}
+        </h1>
+
+        {/* Body lines */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 22 }}>
+          {lines.map((line, i) => (
+            <p key={i} style={{
+              margin: 0,
+              fontFamily: 'var(--sans)', fontSize: 15.5, color: 'var(--ink-2)',
+              lineHeight: 1.65, textAlign: 'center',
+            }}>
+              {line}
+            </p>
+          ))}
+        </div>
+
+        {/* Project examples pill list */}
+        {examples && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 8 }}>
+            {examples.map(ex => (
+              <span key={ex} style={{
+                padding: '6px 16px', borderRadius: 999,
+                border: '1px solid var(--line-strong)',
+                fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 13.5,
+                color: 'var(--ink-2)',
+              }}>
+                {ex}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Feature tag chips */}
+        {tags && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, justifyContent: 'center', marginBottom: 8 }}>
+            {tags.map(tag => (
+              <span key={tag} style={{
+                padding: '5px 12px', borderRadius: 999,
+                background: 'var(--surface-2)',
+                fontFamily: 'var(--mono)', fontSize: 10.5,
+                letterSpacing: '0.1em', color: 'var(--ink-2)',
+              }}>
+                {tag.toUpperCase()}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Bottom nav ── */}
+      <div style={{
+        flexShrink: 0,
+        padding: '0 32px max(32px, calc(env(safe-area-inset-bottom, 0px) + 24px))',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        maxWidth: 520, margin: '0 auto', width: '100%',
+        gap: 16,
+      }}>
+        {/* Back */}
+        <button
+          onClick={back}
+          style={{
+            background: 'none', border: '1px solid var(--line)',
+            borderRadius: 999, padding: '12px 22px', cursor: 'pointer',
+            fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink-3)',
+            opacity: idx === 0 ? 0 : 1,
+            pointerEvents: idx === 0 ? 'none' : 'auto',
+            transition: 'opacity 0.2s', flexShrink: 0,
+          }}
+        >
+          Voltar
+        </button>
+
+        {/* Progress dots (clickable) */}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: 5, flexWrap: 'wrap' }}>
+          {CHAPTERS.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => go(i)}
+              aria-label={`Capítulo ${i + 1}`}
+              style={{
+                width: i === idx ? 20 : 6, height: 6, borderRadius: 999,
+                background: i <= idx ? 'var(--accent)' : 'var(--line-strong)',
+                opacity: i < idx ? 0.4 : 1,
+                border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0,
+                transition: 'width 0.25s ease, background 0.25s ease, opacity 0.25s ease',
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Next / CTA */}
+        <button
+          onClick={next}
+          style={{
+            background: isLast ? 'var(--accent)' : 'var(--surface-2)',
+            border: 'none', borderRadius: 999,
+            padding: isLast ? '14px 28px' : '12px 22px',
+            cursor: 'pointer',
+            fontFamily: 'var(--sans)', fontSize: isLast ? 15 : 14,
+            fontWeight: isLast ? 600 : 500,
+            color: isLast ? '#fff' : 'var(--ink)',
+            boxShadow: isLast ? '0 6px 20px -6px var(--accent)' : 'none',
+            transition: 'background 0.2s, box-shadow 0.2s',
+            flexShrink: 0,
+          }}
+        >
+          {isLast ? (cta ?? 'Começar a guardar') : 'Próximo'}
+        </button>
+      </div>
+    </div>,
     document.body
   )
 }

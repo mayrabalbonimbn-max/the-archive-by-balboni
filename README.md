@@ -1,136 +1,193 @@
 # The Archive by Balboni
 
-> A quiet, editorial social network — a personal archive that happens to have people inside it.
+> Um arquivo pessoal. Silencioso, editorial, permanente.
 
-A calm, reflective app where people *archive* their thoughts, projects, memories, photos, files, code, and discoveries over time — rather than posting for attention. Each user has their own Archive organized around **Today, Memories, Calendar, Collections, Library, Photography, and People**. The social layer is intimate and intentional: no algorithmic feed, no follower-count obsession, no trending topics.
+O Archive é um espaço para guardar aquilo que importa — pensamentos, projetos, memórias, fotografias, arquivos, código, reflexões — e acompanhar sua evolução ao longo do tempo. Não existe algoritmo, não existe disputa por atenção. Apenas você e aquilo que você constrói.
 
-**Production:** https://social.balbonilab.com
+**Produção:** https://social.balbonilab.com
+
+---
+
+## O que é o Archive
+
+O Archive não é uma rede social. É um diário criativo com camadas: você registra, organiza em projetos, revisita memórias, escreve para o futuro e acompanha quem você está se tornando.
+
+Com o tempo, todos esses registros formam uma narrativa — gerada automaticamente a partir do que você cria.
 
 ---
 
 ## Stack
 
-| Layer | Tech |
+| Camada | Tecnologia |
 |---|---|
 | Frontend | React 18 + Vite + Tailwind CSS v3 |
-| Routing | React Router v6 |
+| Roteamento | React Router v6 |
 | PWA | vite-plugin-pwa |
 | Backend | Express + PostgreSQL |
-| Process manager | PM2 (`mayra-social-api`) |
+| Gerenciador de processos | PM2 (`mayra-social-api`) |
+| Servidor | VPS — `root@187.77.44.178` |
 
 ---
 
-## Design language
+## Identidade visual
 
-- **Surface:** pure flat black `#000000`. Separation via hairlines (`rgba(255,255,255,0.08)`), not fills or shadows.
-- **Accent:** rose `#E86CB4` — CTAs, active states, eyebrows, links.
-- **Type:** Newsreader (serif, headlines + reading), Hanken Grotesk (sans, UI), JetBrains Mono (mono, dates + code).
-- **Ink:** warm off-whites — `#F2EDE6` / `#ABA49A` / `#6C665E`.
-- **Motion:** gentle fade-up on screen entry; slide-up sheet for Create on mobile; centered modal on desktop.
+- **Superfície:** preto puro `#000000`. Separação por hairlines (`rgba(255,255,255,0.08)`), não por preenchimentos.
+- **Destaque:** rosa `#E86CB4` — CTAs, estados ativos, links, contadores.
+- **Tipografia:** Newsreader (serif, títulos e leitura), Hanken Grotesk (sans, interface), JetBrains Mono (mono, datas e código).
+- **Tinta:** off-whites quentes — `#F2EDE6` / `#ABA49A` / `#6C665E`.
+- **Motion:** fade-up suave na entrada de telas; modal centralizado no desktop; full-screen no mobile.
 
 ---
 
 ## Layout
 
-**Mobile (< 768px)**
-- Sticky `AppBar` per screen (clears iOS safe area)
-- Fixed bottom `TabBar`: Today · Archive · Create · Explore · You
-- Full-screen slide-up sheet for the Create form
+### Mobile (< 768px)
+- `AppBar` fixo no topo por tela (respeita safe area do iOS)
+- `TabBar` fixo no rodapé: Hoje · Arquivo · + · Explorar · Você
+- Compose: sheet full-screen com slide-up
+- Seção "SEU ESPAÇO" no perfil com atalhos para todas as rotas
 
-**Desktop (≥ 768px)**
-- 264px left sidebar: rose dot + "The Archive" wordmark, "Guardar algo" button, primary nav (Hoje / Explorar / Pessoas / Avisos), "SEU ARQUIVO" archive group, user chip at bottom
-- Center reading column (flex-1, max-width ~880–1140px)
-- 300px contextual right rail: "Neste dia" memories + notices peek on Today; bio + stats + collections on Archive pages; hidden on all other routes
-- Centered modal dialog for Create (instead of full-screen sheet)
+### Desktop (≥ 768px)
+- Sidebar esquerda de 264px com duas seções de navegação:
+  - **Navegação principal:** Hoje, Explorar, Pessoas, Avisos, Mensagens, Cápsulas
+  - **SEU ARQUIVO:** Visão geral, Memórias, Calendário, Coleções, Arquivos, Fotografia, Stories
+  - **SUA TRAJETÓRIA:** Projetos, Dashboard, Graph, Minha História, Conquistas, Trajetória, Conhecimento, Mapa da Vida, Retrospectiva
+- A área de navegação rola independentemente; o chip de usuário fica sempre visível no rodapé
+- Coluna central (flex-1, max ~880–1140px)
+- Painel direito contextual de 300px
 
 ---
 
-## Screens
+## Rotas
 
-| Route | Screen |
+### Arquivo diário
+| Rota | Tela |
 |---|---|
-| `/` | Today — masthead, today prompt, memory strip, circle feed |
-| `/archive` | Archive hub — overview / memories / calendar / collections / library / photos (subnav on mobile, sidebar on desktop) |
-| `/explore` | Explore — search, theme chips, public archives, people |
-| `/profile` | Your profile — stats card, collections strip, recent entries |
-| `/profiles/:id` | Public profile — follow/unfollow, collections, entries |
-| `/friends` | People / Connections — circle, followers |
-| `/notifications` | Notices — activity grouped by time, "Mark read" |
-| `/settings` | Settings — edit profile, password, export/import, danger zone |
-| `/articles/:id` | Entry detail — reading view, reactions, comments |
-| `/collections/:id` | Collection detail |
+| `/` | Hoje — prompt diário, strip de memórias, feed do círculo |
+| `/archive` | Hub do arquivo — visão geral + subnavegação |
+| `/archive?s=memories` | Memórias — "neste dia em outros anos" |
+| `/archive?s=calendar` | Calendário — navegação por data |
+| `/archive?s=collections` | Coleções |
+| `/library` | Arquivos — PDFs, markdowns, scripts |
+| `/photos` | Fotografia — galeria com metadados EXIF |
+| `/archive/stories` | Stories arquivados |
+| `/capsules` | Cápsulas do tempo |
+
+### Trajetória pessoal
+| Rota | Tela |
+|---|---|
+| `/projects` | Projetos — cards com status, marcos e aprendizados |
+| `/projects/:slug` | Detalhe do projeto — milestones, learnings, edição |
+| `/dashboard` | Dashboard — gráficos de atividade (30 dias / 12 meses) |
+| `/graph` | Graph — visualização force-directed de posts, projetos, tags |
+| `/story` | Minha História — narrativa em prosa gerada automaticamente |
+| `/achievements` | Conquistas — 17 badges baseadas em atividade real |
+| `/growth` | Trajetória — timeline vertical dos primeiros marcos |
+| `/knowledge` | Base de Conhecimento — conteúdo pesquisável por categoria |
+| `/life-map` | Mapa da Vida — calendário anual com intensidade por período |
+| `/year-review/:year` | Retrospectiva — resumo editorial do ano |
+
+### Social e configurações
+| Rota | Tela |
+|---|---|
+| `/explore` | Explorar — busca, temas, arquivos públicos |
+| `/profile` | Perfil — stats, streak, projetos, atalhos |
+| `/profiles/:id` | Perfil público |
+| `/friends` | Pessoas — círculo, seguidores |
+| `/notifications` | Avisos — atividade agrupada |
+| `/messages` | Mensagens — lista de conversas |
+| `/messages/:id` | Conversa individual |
+| `/settings` | Ajustes — perfil, senha, export/import, onboarding |
 
 ---
 
-## Components
+## Funcionalidades principais
+
+### Registros
+Tipos suportados no compose: Nota, Ensaio (artigo longo com editor rich text), Foto, Documento (PDF), Código (com sandbox Python/JS/HTML), Arquivo (markdown, scripts), Link (preview automático).
+
+Privacidade por entrada: Privado · Círculo · Público.
+
+### Projetos
+Cada projeto tem: título, emoji, descrição, status (ideia / ativo / pausado / concluído / arquivado), URL do GitHub, URL do site, tags, cover image, datas de início e conclusão.
+
+Dentro do projeto: **MARCOS** (milestones com datas) e **APRENDIZADOS** (learnings textuais editáveis).
+
+### Cápsulas
+Mensagens seladas com data de abertura. Permanece bloqueada até a data configurada.
+
+### Streaks
+Contagem de dias consecutivos com pelo menos um registro. Calculado no backend com forward pass nas datas.
+
+### Onboarding editorial
+8 capítulos que ensinam a filosofia do Archive — não um tour de interface. Suporte a teclado (setas + Enter + Escape), swipe no mobile, progresso persistido no backend.
+
+### Evolução automática
+Dashboard, Graph, Conquistas, Story e Growth são gerados automaticamente a partir dos registros existentes. Nenhuma ação manual necessária.
+
+---
+
+## Componentes relevantes
 
 ### Shell
-- **Layout** — sidebar + main + right rail + global compose listener (`window.dispatchEvent(new CustomEvent('open-compose'))`)
-- **Sidebar** — 264px desktop sidebar with editorial nav; mobile drawer
-- **RightPanel** — contextual right rail (Today content vs Archive content, hidden on other routes)
-- **ComposeBox** — desktop: centered modal over dimmed backdrop; mobile: full-screen slide-up sheet
+- **Layout** — sidebar + main + right panel + listener global de compose
+- **Sidebar** — seções SEU ARQUIVO e SUA TRAJETÓRIA; nav rola, chip de usuário fixo
+- **ComposeBox** — modal centralizado no desktop; sheet full-screen no mobile
+- **StoriesBar** — carousel de stories com upload por câmera ou galeria
 
-### UI primitives (`src/components/ui/`)
-
-| Component | Description |
+### UI (`src/components/ui/`)
+| Componente | Descrição |
 |---|---|
-| `AppBar` | Sticky top bar, `md:hidden`, clears iOS safe area |
-| `TabBar` | Fixed bottom bar, mobile only |
-| `Avatar` | Circle with initials fallback, accent ring variant |
-| `EntryCard` | Meta row + serif title + excerpt + type media + ReactionRow |
-| `ReactionRow` | Heart / comment / bookmark with optimistic counts |
-| `PersonRow` | Avatar + serif name + follow/following button |
-| `Chip` | Pill tag — active = solid accent fill |
-| `TypeTag` | Mono UPPERCASE kind label with leading icon |
-| `PhotoTile` | CSS gradient placeholder with noise overlay |
-| `FileBadge` | 40px rounded square with kind glyph |
-| `SectionLabel` | Mono eyebrow + optional accent action |
-| `Icon` | Inline SVG line set (stroke-based, 24×24, `currentColor`) |
+| `AppBar` | Barra topo mobile com safe area |
+| `TabBar` | Barra de navegação inferior mobile |
+| `Avatar` | Círculo com fallback de iniciais |
+| `EntryCard` | Card de entrada com reações |
+| `PersonRow` | Avatar + nome + botão seguir |
+| `Icon` | SVG inline (stroke, 24×24, currentColor) |
 
 ---
 
-## Local development
+## Desenvolvimento local
 
 ```bash
 # Frontend
 npm install
 npm run dev        # http://localhost:5173
 
-# Backend (in /backend)
+# Backend
 cd backend
 npm install
 npm run dev        # http://localhost:3001
 ```
 
-Copy `.env.example` to `.env` and fill in the database URL and JWT secret.
+Copie `.env.example` para `.env` e preencha a URL do banco e o JWT secret.
 
 ---
 
 ## Deploy
 
 ```bash
-# Push code
+# Local: build e push
+npm run build
 git push origin main
 
-# On the VPS
+# VPS (automatizado via git pull)
+ssh root@187.77.44.178
 cd /var/www/mayra-social
 git pull origin main
-npm install
 npm run build
-pm2 restart mayra-social-api
+pm2 restart all
 ```
 
-See `DEPLOY.md` for the full PostgreSQL, PM2, Nginx, storage, and SSL setup.
+---
+
+## Segurança
+
+Nunca comitar:
+- `.env` ou `backend/.env`
+- `backend/storage/uploads/` (manter apenas `.gitkeep`)
+- `dist/` ou `node_modules/`
 
 ---
 
-## Security
-
-Never commit:
-- `.env` or `backend/.env`
-- `backend/storage/uploads/` (keep only `.gitkeep`)
-- `dist/` or `node_modules/`
-
----
-
-*The Archive by Balboni — kept, not broadcast.*
+*The Archive by Balboni — guardado, não transmitido.*
