@@ -224,70 +224,93 @@ export default function Sidebar({ profile, onLogout, onCompose }) {
   }
   function isProfile() { return location.pathname === '/profile' }
 
+  const isPath = (...paths) => paths.some(p =>
+    p.endsWith('*') ? location.pathname.startsWith(p.slice(0, -1)) : location.pathname === p
+  )
+
   return (
     <>
       {/* ── Desktop sidebar ──────────────────────────────────────────────── */}
       <aside
-        className="hidden md:flex flex-col h-screen sticky top-0 overflow-y-auto shrink-0"
-        style={{ width: 264, background: 'var(--bg)', borderRight: '1px solid var(--line)' }}
+        className="hidden md:flex flex-col h-screen sticky top-0 shrink-0"
+        style={{ width: 264, background: 'var(--bg)', borderRight: '1px solid var(--line)', overflow: 'hidden' }}
       >
-        {/* Brand wordmark */}
-        <div style={{ padding: '26px 22px 18px', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
-          <button
-            onClick={() => navigate('/')}
-            style={{ fontFamily: 'var(--serif)', fontSize: 19, color: 'var(--ink)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, letterSpacing: '-0.01em', lineHeight: 1 }}
-          >
-            The Archive
-          </button>
+        {/* Brand + compose — never scroll away */}
+        <div style={{ flexShrink: 0 }}>
+          <div style={{ padding: '26px 22px 18px', display: 'flex', alignItems: 'center', gap: 9 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
+            <button
+              onClick={() => navigate('/')}
+              style={{ fontFamily: 'var(--serif)', fontSize: 19, color: 'var(--ink)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, letterSpacing: '-0.01em', lineHeight: 1 }}
+            >
+              The Archive
+            </button>
+          </div>
+          <div style={{ padding: '0 16px 16px' }}>
+            <button
+              data-onboarding="compose-btn"
+              onClick={onCompose}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                gap: 9, padding: '11px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                background: 'var(--accent)', color: '#fff',
+                fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 600,
+                boxShadow: '0 6px 20px -6px var(--accent)',
+              }}
+            >
+              <Icon name="feather" size={18} stroke={1.8} />
+              Guardar algo
+            </button>
+          </div>
         </div>
 
-        {/* Keep something button */}
-        <div style={{ padding: '0 16px 16px' }}>
-          <button
-            data-onboarding="compose-btn"
-            onClick={onCompose}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              gap: 9, padding: '11px', borderRadius: 12, border: 'none', cursor: 'pointer',
-              background: 'var(--accent)', color: '#fff',
-              fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 600,
-              boxShadow: '0 6px 20px -6px var(--accent)',
-            }}
-          >
-            <Icon name="feather" size={18} stroke={1.8} />
-            Guardar algo
-          </button>
+        {/* Scrollable nav area */}
+        <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none' }}>
+          {/* Primary nav */}
+          <nav style={{ padding: '4px 12px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <DSidebarItem icon="today"   label="Hoje"      active={isToday()}    onClick={() => navigate('/')} />
+            <DSidebarItem icon="explore" label="Explorar"  active={isExplore()}  onClick={() => navigate('/explore')} />
+            <DSidebarItem icon="people"  label="Pessoas"   active={isPeople()}   onClick={() => navigate('/friends')} />
+            <DSidebarItem icon="bell"    label="Avisos"    active={isNotices()}  onClick={() => navigate('/notifications')} badge={unreadCount > 0} />
+            <DSidebarItem icon="comment" label="Mensagens" active={isMessages()} onClick={() => navigate('/messages')} />
+            <DSidebarItem icon="clock"   label="Cápsulas"  active={isCapsules()} onClick={() => navigate('/capsules')} tourId="capsules-nav" />
+          </nav>
+
+          {/* SEU ARQUIVO */}
+          <div data-onboarding="archive-section" style={{ padding: '20px 24px 8px', fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.16em', color: 'var(--ink-3)' }}>
+            SEU ARQUIVO
+          </div>
+          <nav style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <DSidebarItem icon="archive"     label="Visão geral"  active={isArchiveSection('overview')}    onClick={() => navigate('/archive')} />
+            <DSidebarItem icon="sparkle"     label="Memórias"     active={isArchiveSection('memories')}    onClick={() => navigate('/archive?s=memories')} tourId="memories-nav" />
+            <DSidebarItem icon="calendar"    label="Calendário"   active={isArchiveSection('calendar')}    onClick={() => navigate('/archive?s=calendar')} tourId="calendar-nav" />
+            <DSidebarItem icon="collections" label="Coleções"     active={isArchiveSection('collections')} onClick={() => navigate('/archive?s=collections')} />
+            <DSidebarItem icon="library"     label="Arquivos"     active={isArchiveSection('library') || location.pathname === '/library'} onClick={() => navigate('/library')} />
+            <DSidebarItem icon="photo"       label="Fotografia"   active={isArchiveSection('photography') || location.pathname === '/photos'} onClick={() => navigate('/photos')} tourId="photo-nav" />
+            <DSidebarItem icon="stories"     label="Stories"      active={location.pathname === '/archive/stories'} onClick={() => navigate('/archive/stories')} />
+          </nav>
+
+          {/* SUA TRAJETÓRIA */}
+          <div style={{ padding: '20px 24px 8px', fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.16em', color: 'var(--ink-3)' }}>
+            SUA TRAJETÓRIA
+          </div>
+          <nav style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <DSidebarItem icon="grid"    label="Projetos"           active={isPath('/projects*')}        onClick={() => navigate('/projects')} />
+            <DSidebarItem icon="list"    label="Dashboard"          active={isPath('/dashboard')}        onClick={() => navigate('/dashboard')} />
+            <DSidebarItem icon="link"    label="Graph"              active={isPath('/graph')}            onClick={() => navigate('/graph')} />
+            <DSidebarItem icon="note"    label="Minha História"     active={isPath('/story')}            onClick={() => navigate('/story')} />
+            <DSidebarItem icon="sparkle" label="Conquistas"         active={isPath('/achievements')}     onClick={() => navigate('/achievements')} />
+            <DSidebarItem icon="pin"     label="Trajetória"         active={isPath('/growth')}           onClick={() => navigate('/growth')} />
+            <DSidebarItem icon="library" label="Conhecimento"       active={isPath('/knowledge')}        onClick={() => navigate('/knowledge')} />
+            <DSidebarItem icon="calendar" label="Mapa da Vida"      active={isPath('/life-map')}         onClick={() => navigate('/life-map')} />
+            <DSidebarItem icon="feather" label={`Retrospectiva ${new Date().getFullYear()}`} active={isPath('/year-review*')} onClick={() => navigate(`/year-review/${new Date().getFullYear()}`)} />
+          </nav>
+
+          <div style={{ height: 16 }} />
         </div>
 
-        {/* Primary nav */}
-        <nav style={{ padding: '4px 12px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <DSidebarItem icon="today"   label="Hoje"     active={isToday()}   onClick={() => navigate('/')} />
-          <DSidebarItem icon="explore" label="Explorar" active={isExplore()} onClick={() => navigate('/explore')} />
-          <DSidebarItem icon="people"  label="Pessoas"  active={isPeople()}  onClick={() => navigate('/friends')} />
-          <DSidebarItem icon="bell"    label="Avisos"   active={isNotices()}   onClick={() => navigate('/notifications')} badge={unreadCount > 0} />
-          <DSidebarItem icon="comment" label="Mensagens" active={isMessages()} onClick={() => navigate('/messages')} />
-          <DSidebarItem icon="clock" label="Cápsulas" active={isCapsules()} onClick={() => navigate('/capsules')} tourId="capsules-nav" />
-        </nav>
-
-        {/* YOUR ARCHIVE group */}
-        <div data-onboarding="archive-section" style={{ padding: '20px 24px 8px', fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.16em', color: 'var(--ink-3)' }}>
-          SEU ARQUIVO
-        </div>
-        <nav style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <DSidebarItem icon="archive"     label="Visão geral" active={isArchiveSection('overview')}    onClick={() => navigate('/archive')} />
-          <DSidebarItem icon="sparkle"     label="Memórias"    active={isArchiveSection('memories')}    onClick={() => navigate('/archive?s=memories')} tourId="memories-nav" />
-          <DSidebarItem icon="calendar"    label="Calendário"  active={isArchiveSection('calendar')}    onClick={() => navigate('/archive?s=calendar')} tourId="calendar-nav" />
-          <DSidebarItem icon="collections" label="Coleções"    active={isArchiveSection('collections')} onClick={() => navigate('/archive?s=collections')} />
-          <DSidebarItem icon="library"     label="Arquivos"    active={isArchiveSection('library')}     onClick={() => navigate('/archive?s=library')} />
-          <DSidebarItem icon="photo"       label="Fotografia"  active={isArchiveSection('photography')}  onClick={() => navigate('/archive?s=photography')} tourId="photo-nav" />
-          <DSidebarItem icon="stories"     label="Stories"     active={location.pathname === '/archive/stories'} onClick={() => navigate('/archive/stories')} />
-        </nav>
-
-        <div style={{ flex: 1 }} />
-
-        {/* User chip */}
-        <div style={{ margin: 12 }}>
+        {/* User chip — always visible at bottom */}
+        <div style={{ flexShrink: 0, margin: 12, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
           <button
             data-onboarding="profile-chip"
             onClick={() => navigate('/profile')}
@@ -320,7 +343,6 @@ export default function Sidebar({ profile, onLogout, onCompose }) {
             </button>
           </button>
 
-          {/* Logout — subtle, small */}
           <button
             onClick={onLogout}
             style={{
