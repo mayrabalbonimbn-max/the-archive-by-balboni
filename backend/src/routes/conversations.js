@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
          CASE WHEN c.profile_a = $1 THEN c.profile_b ELSE c.profile_a END AS other_id,
          p.name   AS other_name,
          p.handle AS other_handle,
-         p.has_avatar,
+         p.avatar AS other_avatar,
          (SELECT dm.content    FROM direct_messages dm WHERE dm.conversation_id = c.id ORDER BY dm.created_at DESC LIMIT 1) AS last_content,
          (SELECT dm.created_at FROM direct_messages dm WHERE dm.conversation_id = c.id ORDER BY dm.created_at DESC LIMIT 1) AS last_at
        FROM conversations c
@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
     )
     res.json(rows.map(r => ({
       id: r.id,
-      participant: { id: r.other_id, name: r.other_name, handle: r.other_handle, hasAvatar: r.has_avatar },
+      participant: { id: r.other_id, name: r.other_name, handle: r.other_handle, avatar: r.other_avatar },
       lastMessage: r.last_content ? { content: r.last_content, createdAt: r.last_at } : null,
       unread: 0,
     })))
