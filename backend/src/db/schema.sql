@@ -358,22 +358,25 @@ CREATE INDEX IF NOT EXISTS idx_collections_fts ON collections USING GIN (
 );
 
 -- Direct messages
+-- conversations uses a participants table to support group chats in the future.
+-- Production schema: conversations(id, created_at) + conversation_participants(conversation_id, profile_id).
 CREATE TABLE IF NOT EXISTS conversations (
-  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  profile_a    UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  profile_b    UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  created_at   TIMESTAMPTZ DEFAULT now()
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at TIMESTAMPTZ DEFAULT now()
 );
-CREATE UNIQUE INDEX IF NOT EXISTS idx_conversations_pair
-  ON conversations (
-    LEAST(profile_a::text, profile_b::text),
-    GREATEST(profile_a::text, profile_b::text)
-  );
+
+CREATE TABLE IF NOT EXISTS conversation_participants (
+  conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  profile_id      UUID NOT NULL REFERENCES profiles(id)     ON DELETE CASCADE,
+  last_read_at    TIMESTAMPTZ,
+  PRIMARY KEY (conversation_id, profile_id)
+);
+CREATE INDEX IF NOT EXISTS idx_cp_profile ON conversation_participants(profile_id);
 
 CREATE TABLE IF NOT EXISTS direct_messages (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   conversation_id  UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-  sender_id        UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  sender_id        UUID NOT NULL REFERENCES profiles(id)     ON DELETE CASCADE,
   content          TEXT NOT NULL,
   created_at       TIMESTAMPTZ DEFAULT now()
 );
