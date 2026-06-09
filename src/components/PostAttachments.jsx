@@ -17,17 +17,33 @@ async function downloadAttachment(attachment) {
 }
 
 function ImageAttachment({ attachment, onOpen }) {
-  const url = useAttachmentUrl(attachment.id)
+  const thumb = useAttachmentUrl(attachment.id, attachment.hasThumbnail ? 'thumbnail' : 'view')
   return (
-    <button onClick={() => url && onOpen(url)} className="block w-full rounded-2xl overflow-hidden border border-dark-border/50 bg-dark-hover/40">
-      {url ? <img src={url} alt={attachment.originalName} className="w-full max-h-[440px] object-cover hover:opacity-95 transition-opacity" /> : <div className="h-48 animate-pulse bg-dark-hover" />}
+    <button onClick={() => thumb && onOpen(attachment)} className="block w-full rounded-2xl overflow-hidden border border-dark-border/50 bg-dark-hover/40">
+      {thumb ? <img src={thumb} alt={attachment.originalName} className="w-full max-h-[440px] object-cover hover:opacity-95 transition-opacity" /> : <div className="h-48 animate-pulse bg-dark-hover" />}
     </button>
+  )
+}
+
+function LightboxImage({ attachment }) {
+  const url = useAttachmentUrl(attachment.id, 'view')
+  return url
+    ? <img src={url} alt={attachment.originalName} className="max-w-full max-h-[80vh] rounded-2xl object-contain" onClick={e => e.stopPropagation()} />
+    : <div className="w-12 h-12 rounded-full border-2 border-brand-rose border-t-transparent animate-spin" />
+}
+
+function ExifTag({ label, value }) {
+  return (
+    <span className="inline-flex items-center gap-1 text-[11px] text-dark-muted bg-dark-hover rounded px-2 py-0.5">
+      <span className="text-dark-muted/60">{label}</span>
+      <span className="text-dark-text/70">{value}</span>
+    </span>
   )
 }
 
 export default function PostAttachments({ attachments = [] }) {
   const [textModal, setTextModal] = useState(null)
-  const [imageUrl, setImageUrl] = useState(null)
+  const [openImage, setOpenImage] = useState(null)
   const [error, setError] = useState('')
 
   if (attachments.length === 0) return null
@@ -56,11 +72,13 @@ export default function PostAttachments({ attachments = [] }) {
     }
   }
 
+  const exif = openImage?.exifData
+
   return (
     <>
       {images.length > 0 && (
         <div className={`grid gap-1 mt-2.5 ${images.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-          {images.map(attachment => <ImageAttachment key={attachment.id} attachment={attachment} onOpen={setImageUrl} />)}
+          {images.map(attachment => <ImageAttachment key={attachment.id} attachment={attachment} onOpen={setOpenImage} />)}
         </div>
       )}
 
@@ -84,7 +102,7 @@ export default function PostAttachments({ attachments = [] }) {
 
       {textModal && (
         <div className="fixed inset-0 z-50 bg-black/92 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setTextModal(null)}>
-          <div className="bg-dark-card border border-dark-border rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col" onClick={event => event.stopPropagation()}>
+          <div className="bg-dark-card border border-dark-border rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 px-4 py-3 border-b border-dark-border">
               <p className="text-dark-text text-sm font-medium truncate flex-1">{textModal.attachment.originalName}</p>
               <button onClick={() => navigator.clipboard.writeText(textModal.content)} className="text-brand-rose text-xs hover:underline">Copiar conteúdo</button>
@@ -95,10 +113,21 @@ export default function PostAttachments({ attachments = [] }) {
         </div>
       )}
 
-      {imageUrl && (
-        <div className="fixed inset-0 z-50 bg-black/92 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setImageUrl(null)}>
-          <button className="absolute top-4 right-4 text-white bg-black/70 rounded-full px-3 py-2" onClick={() => setImageUrl(null)}>Fechar</button>
-          <img src={imageUrl} alt="Anexo" className="max-w-full max-h-[90vh] rounded-2xl object-contain" onClick={event => event.stopPropagation()} />
+      {openImage && (
+        <div className="fixed inset-0 z-50 bg-black/92 backdrop-blur-sm flex flex-col items-center justify-center gap-3 p-4" onClick={() => setOpenImage(null)}>
+          <button className="absolute top-4 right-4 text-white bg-black/70 rounded-full px-3 py-2 text-sm" onClick={() => setOpenImage(null)}>Fechar</button>
+          <LightboxImage attachment={openImage} />
+          {exif && (
+            <div className="flex flex-wrap gap-2 justify-center max-w-lg" onClick={e => e.stopPropagation()}>
+              {exif.camera && <ExifTag label="câmera" value={exif.camera} />}
+              {exif.lens && <ExifTag label="lente" value={exif.lens} />}
+              {exif.focalLength && <ExifTag label="focal" value={exif.focalLength} />}
+              {exif.aperture && <ExifTag label="abertura" value={exif.aperture} />}
+              {exif.shutterSpeed && <ExifTag label="velocidade" value={exif.shutterSpeed} />}
+              {exif.iso && <ExifTag label="ISO" value={exif.iso} />}
+              {exif.dateTaken && <ExifTag label="data" value={exif.dateTaken} />}
+            </div>
+          )}
         </div>
       )}
     </>

@@ -71,7 +71,10 @@ const attachmentJsonSql = `
   COALESCE(jsonb_agg(jsonb_build_object(
     'id', a.id, 'postId', a.post_id, 'originalName', a.original_name, 'title', a.title, 'description', a.description,
     'mimeType', a.mime_type, 'size', a.size, 'fileType', a.file_type,
-    'visibility', a.visibility, 'createdAt', a.created_at
+    'visibility', a.visibility, 'createdAt', a.created_at,
+    'exifData', a.exif_data,
+    'hasThumbnail', (a.thumbnail_path IS NOT NULL),
+    'hasOptimized', (a.optimized_path IS NOT NULL)
   ) ORDER BY a.created_at, a.id) FILTER (WHERE a.id IS NOT NULL), '[]'::jsonb) AS attachments`
 
 // GET /api/posts

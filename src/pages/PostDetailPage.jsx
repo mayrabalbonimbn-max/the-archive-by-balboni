@@ -4,6 +4,7 @@ import { api } from '../utils/api'
 import { formatFullDate, TYPE_CONFIG } from '../utils/helpers'
 import PostAttachments from '../components/PostAttachments'
 import CodeBlock from '../components/CodeBlock'
+import MarkdownRenderer from '../components/MarkdownRenderer'
 
 function BackIcon() {
   return (
@@ -110,9 +111,9 @@ export default function PostDetailPage({ profile, onLike, onSave, onDelete }) {
         </div>
 
         {post.content && (
-          <p className="text-dark-text text-[17px] leading-[1.8] whitespace-pre-wrap break-words mb-6">
-            {post.content}
-          </p>
+          <div className="mb-6">
+            <MarkdownRenderer content={post.content} />
+          </div>
         )}
 
         {post.codeBlock && (

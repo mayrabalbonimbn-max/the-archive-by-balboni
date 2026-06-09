@@ -4,6 +4,7 @@ import { api } from '../utils/api'
 import { formatFullDate, TYPE_CONFIG } from '../utils/helpers'
 import PostAttachments from '../components/PostAttachments'
 import CodeBlock from '../components/CodeBlock'
+import MarkdownRenderer from '../components/MarkdownRenderer'
 
 export default function ArticlePage({ profile, onLike, onSave, onDelete }) {
   const { id } = useParams()
@@ -91,8 +92,8 @@ export default function ArticlePage({ profile, onLike, onSave, onDelete }) {
         </div>
 
         {/* Content */}
-        <div className="prose-like text-dark-text text-[17px] leading-[1.8] whitespace-pre-wrap break-words mb-8">
-          {post.content}
+        <div className="mb-8">
+          <MarkdownRenderer content={post.content} />
         </div>
 
         {post.codeBlock && (

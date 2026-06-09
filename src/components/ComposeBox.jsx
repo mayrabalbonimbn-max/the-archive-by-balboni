@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import MarkdownRenderer from './MarkdownRenderer'
 import Editor from 'react-simple-code-editor'
 import { CODE_LANGUAGES, highlightCode } from '../utils/codeHighlight'
 import { useCollections } from '../hooks/useCollections'
@@ -70,6 +71,7 @@ export default function ComposeBox({ profile, onPost, onClose }) {
   const [code, setCode] = useState('')
   const [fileError, setFileError] = useState('')
   const [posting, setPosting] = useState(false)
+  const [mdPreview, setMdPreview] = useState(false)
   const fileInputRef = useRef(null)
   const titleRef = useRef(null)
   const attachmentsRef = useRef([])
@@ -310,24 +312,51 @@ export default function ComposeBox({ profile, onPost, onClose }) {
             }}
           />
 
-          {/* Body textarea */}
+          {/* Body textarea / markdown preview */}
           {!isFile && (
-            <textarea
-              value={body}
-              onChange={e => setBody(e.target.value)}
-              placeholder={
-                isArticle ? 'Comece a escrever…'
-                : isCode ? '# cole ou descreva seu código…'
-                : 'Escreva o que quer lembrar…'
-              }
-              rows={isFile ? 3 : 9}
-              style={{
-                width: '100%', background: 'none', border: 'none', outline: 'none',
-                resize: 'none', color: 'var(--ink-2)',
-                fontFamily: isArticle ? 'var(--serif)' : 'var(--sans)',
-                fontSize: 15, lineHeight: 1.65,
-              }}
-            />
+            <>
+              {(isArticle || body.includes('#') || body.includes('**') || body.includes('- ') || body.includes('> ')) && (
+                <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                  {['Escrever', 'Preview'].map(tab => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setMdPreview(tab === 'Preview')}
+                      style={{
+                        fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.1em',
+                        padding: '3px 10px', borderRadius: 6,
+                        border: '1px solid var(--line)',
+                        background: (mdPreview ? tab === 'Preview' : tab === 'Escrever') ? 'var(--accent)' : 'transparent',
+                        color: (mdPreview ? tab === 'Preview' : tab === 'Escrever') ? '#fff' : 'var(--ink-3)',
+                        cursor: 'pointer',
+                      }}
+                    >{tab}</button>
+                  ))}
+                </div>
+              )}
+              {mdPreview ? (
+                <div style={{ minHeight: 160, padding: '4px 0' }}>
+                  <MarkdownRenderer content={body} />
+                </div>
+              ) : (
+                <textarea
+                  value={body}
+                  onChange={e => setBody(e.target.value)}
+                  placeholder={
+                    isArticle ? 'Comece a escrever… (suporta Markdown)'
+                    : isCode ? '# cole ou descreva seu código…'
+                    : 'Escreva o que quer lembrar…'
+                  }
+                  rows={isFile ? 3 : 9}
+                  style={{
+                    width: '100%', background: 'none', border: 'none', outline: 'none',
+                    resize: 'none', color: 'var(--ink-2)',
+                    fontFamily: isArticle ? 'var(--serif)' : 'var(--sans)',
+                    fontSize: 15, lineHeight: 1.65,
+                  }}
+                />
+              )}
+            </>
           )}
         </div>
 

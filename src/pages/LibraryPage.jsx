@@ -112,7 +112,7 @@ function FileIcon({ type }) {
 }
 
 function ImagePreview({ file, title, onOpen }) {
-  const url = useAttachmentUrl(file.id)
+  const url = useAttachmentUrl(file.id, file.hasThumbnail ? 'thumbnail' : 'view')
 
   return (
     <button

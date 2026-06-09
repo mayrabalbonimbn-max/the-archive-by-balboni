@@ -204,3 +204,9 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_push_subscriptions_profile ON push_subscriptions(profile_id);
+
+-- Image processing (thumbnails, optimized versions, EXIF)
+ALTER TABLE post_attachments ADD COLUMN IF NOT EXISTS thumbnail_path TEXT;
+ALTER TABLE post_attachments ADD COLUMN IF NOT EXISTS optimized_path TEXT;
+ALTER TABLE post_attachments ADD COLUMN IF NOT EXISTS optimized_mime TEXT;
+ALTER TABLE post_attachments ADD COLUMN IF NOT EXISTS exif_data JSONB;

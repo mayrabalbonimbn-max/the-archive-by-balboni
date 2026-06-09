@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
 import { attachmentBlob } from '../utils/api'
 
-export function useAttachmentUrl(id) {
+// disposition: 'view' (default) | 'thumbnail'
+export function useAttachmentUrl(id, disposition = 'view') {
   const [url, setUrl] = useState(null)
 
   useEffect(() => {
     let active = true
     let objectUrl = null
     setUrl(null)
-    attachmentBlob(id).then(blob => {
+    attachmentBlob(id, disposition).then(blob => {
       if (!active) return
       objectUrl = URL.createObjectURL(blob)
       setUrl(objectUrl)
@@ -18,7 +19,7 @@ export function useAttachmentUrl(id) {
       active = false
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [id])
+  }, [id, disposition])
 
   return url
 }

@@ -237,4 +237,56 @@ pre code { color: #e6edf3; }
   @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition-duration: 0.01ms !important; }
   }
+
+  /* ── Markdown rendered content ─────────────────────────── */
+  .prose-archive { color: var(--ink-2); font-size: 15px; line-height: 1.7; }
+  .prose-archive h1, .prose-archive h2, .prose-archive h3,
+  .prose-archive h4, .prose-archive h5, .prose-archive h6 {
+    font-family: 'Newsreader', Georgia, serif;
+    color: var(--ink-1);
+    font-weight: 700;
+    margin: 1.4em 0 0.5em;
+    line-height: 1.25;
+  }
+  .prose-archive h1 { font-size: 1.6em; }
+  .prose-archive h2 { font-size: 1.35em; }
+  .prose-archive h3 { font-size: 1.15em; }
+  .prose-archive p { margin: 0.75em 0; }
+  .prose-archive strong { color: var(--ink-1); font-weight: 600; }
+  .prose-archive em { font-style: italic; }
+  .prose-archive a { color: #f472b6; text-decoration: underline; text-underline-offset: 2px; }
+  .prose-archive a:hover { color: #e879f9; }
+  .prose-archive ul, .prose-archive ol { padding-left: 1.4em; margin: 0.75em 0; }
+  .prose-archive li { margin: 0.3em 0; }
+  .prose-archive li input[type="checkbox"] { accent-color: #f472b6; margin-right: 0.4em; }
+  .prose-archive blockquote {
+    border-left: 3px solid #f472b6;
+    padding-left: 1em;
+    margin: 1em 0;
+    color: var(--ink-3);
+    font-style: italic;
+  }
+  .prose-archive pre {
+    background: #0d1117;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 1em;
+    overflow-x: auto;
+    font-size: 13px;
+    margin: 1em 0;
+  }
+  .prose-archive code {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.88em;
+    background: rgba(255,255,255,0.06);
+    border-radius: 3px;
+    padding: 0.1em 0.35em;
+    color: #e6edf3;
+  }
+  .prose-archive pre code { background: none; padding: 0; font-size: inherit; }
+  .prose-archive hr { border: none; border-top: 1px solid var(--line); margin: 1.5em 0; }
+  .prose-archive img { max-width: 100%; border-radius: 6px; margin: 0.5em 0; }
+  .prose-archive table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 1em 0; }
+  .prose-archive th, .prose-archive td { border: 1px solid var(--line); padding: 0.4em 0.75em; text-align: left; }
+  .prose-archive th { background: var(--surface-2); color: var(--ink-1); }
 }
