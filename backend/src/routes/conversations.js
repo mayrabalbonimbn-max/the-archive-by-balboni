@@ -5,22 +5,31 @@ const auth = require('../middleware/auth')
 
 router.use(auth)
 
-// List conversations for the authenticated user
+// GET / — list conversations for the authenticated user
 router.get('/', async (req, res) => {
   const pid = req.user.profileId
   try {
     const { rows } = await pool.query(
       `SELECT
          c.id,
-         CASE WHEN c.profile_a = $1 THEN c.profile_b ELSE c.profile_a END AS other_id,
-         p.name   AS other_name,
-         p.handle AS other_handle,
-         p.avatar AS other_avatar,
-         (SELECT dm.content    FROM direct_messages dm WHERE dm.conversation_id = c.id ORDER BY dm.created_at DESC LIMIT 1) AS last_content,
-         (SELECT dm.created_at FROM direct_messages dm WHERE dm.conversation_id = c.id ORDER BY dm.created_at DESC LIMIT 1) AS last_at
+         cp_other.profile_id          AS other_id,
+         p.name                       AS other_name,
+         p.handle                     AS other_handle,
+         p.avatar                     AS other_avatar,
+         (SELECT dm.content
+            FROM direct_messages dm
+           WHERE dm.conversation_id = c.id
+           ORDER BY dm.created_at DESC LIMIT 1) AS last_content,
+         (SELECT dm.created_at
+            FROM direct_messages dm
+           WHERE dm.conversation_id = c.id
+           ORDER BY dm.created_at DESC LIMIT 1) AS last_at
        FROM conversations c
-       JOIN profiles p ON p.id = CASE WHEN c.profile_a = $1 THEN c.profile_b ELSE c.profile_a END
-       WHERE c.profile_a = $1 OR c.profile_b = $1
+       JOIN conversation_participants cp_me
+         ON cp_me.conversation_id = c.id AND cp_me.profile_id = $1
+       JOIN conversation_participants cp_other
+         ON cp_other.conversation_id = c.id AND cp_other.profile_id != $1
+       JOIN profiles p ON p.id = cp_other.profile_id
        ORDER BY COALESCE(last_at, c.created_at) DESC`,
       [pid]
     )
@@ -36,7 +45,7 @@ router.get('/', async (req, res) => {
   }
 })
 
-// Find or create a conversation with another user
+// POST / — find or create a direct conversation with another user
 router.post('/', async (req, res) => {
   const pid = req.user.profileId
   const { recipientId } = req.body
@@ -48,18 +57,26 @@ router.post('/', async (req, res) => {
     const { rows: [target] } = await pool.query('SELECT id FROM profiles WHERE id = $1', [recipientId])
     if (!target) return res.status(404).json({ error: 'Usuário não encontrado' })
 
-    // Return existing conversation if any
+    // Return existing conversation between these two users
     const { rows: [existing] } = await pool.query(
-      `SELECT id FROM conversations
-       WHERE (profile_a = $1 AND profile_b = $2)
-          OR (profile_a = $2 AND profile_b = $1)`,
+      `SELECT c.id
+         FROM conversations c
+         JOIN conversation_participants cp1
+           ON cp1.conversation_id = c.id AND cp1.profile_id = $1
+         JOIN conversation_participants cp2
+           ON cp2.conversation_id = c.id AND cp2.profile_id = $2`,
       [pid, recipientId]
     )
     if (existing) return res.json({ id: existing.id })
 
+    // Create new conversation + add both participants
     const { rows: [created] } = await pool.query(
-      `INSERT INTO conversations (profile_a, profile_b) VALUES ($1, $2) RETURNING id`,
-      [pid, recipientId]
+      'INSERT INTO conversations DEFAULT VALUES RETURNING id'
+    )
+    await pool.query(
+      `INSERT INTO conversation_participants (conversation_id, profile_id)
+       VALUES ($1, $2), ($1, $3)`,
+      [created.id, pid, recipientId]
     )
     res.json({ id: created.id })
   } catch (err) {
@@ -68,25 +85,32 @@ router.post('/', async (req, res) => {
   }
 })
 
-// Get messages in a conversation
+// GET /:id/messages — get messages in a conversation
 router.get('/:id/messages', async (req, res) => {
   const pid = req.user.profileId
   const { id } = req.params
   try {
+    // Verify membership
     const { rows: [conv] } = await pool.query(
-      'SELECT id FROM conversations WHERE id = $1 AND (profile_a = $2 OR profile_b = $2)',
-      [id, pid]
+      `SELECT c.id FROM conversations c
+         JOIN conversation_participants cp
+           ON cp.conversation_id = c.id AND cp.profile_id = $1
+        WHERE c.id = $2`,
+      [pid, id]
     )
     if (!conv) return res.status(404).json({ error: 'Conversa não encontrada' })
 
     const { rows } = await pool.query(
-      `SELECT dm.id, dm.content, dm.created_at AS "createdAt",
+      `SELECT dm.id,
+              dm.content,
+              dm.created_at       AS "createdAt",
               (dm.sender_id = $2) AS mine,
-              p.name, p.handle
-       FROM direct_messages dm
-       JOIN profiles p ON p.id = dm.sender_id
-       WHERE dm.conversation_id = $1
-       ORDER BY dm.created_at ASC`,
+              p.name,
+              p.handle
+         FROM direct_messages dm
+         JOIN profiles p ON p.id = dm.sender_id
+        WHERE dm.conversation_id = $1
+        ORDER BY dm.created_at ASC`,
       [id, pid]
     )
     res.json(rows.map(r => ({
@@ -100,7 +124,7 @@ router.get('/:id/messages', async (req, res) => {
   }
 })
 
-// Send a message
+// POST /:id/messages — send a message
 router.post('/:id/messages', async (req, res) => {
   const pid = req.user.profileId
   const { id } = req.params
@@ -109,9 +133,13 @@ router.post('/:id/messages', async (req, res) => {
   if (!content?.trim()) return res.status(400).json({ error: 'Mensagem não pode estar vazia' })
 
   try {
+    // Verify membership
     const { rows: [conv] } = await pool.query(
-      'SELECT id FROM conversations WHERE id = $1 AND (profile_a = $2 OR profile_b = $2)',
-      [id, pid]
+      `SELECT c.id FROM conversations c
+         JOIN conversation_participants cp
+           ON cp.conversation_id = c.id AND cp.profile_id = $1
+        WHERE c.id = $2`,
+      [pid, id]
     )
     if (!conv) return res.status(404).json({ error: 'Conversa não encontrada' })
 
