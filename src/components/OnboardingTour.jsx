@@ -3,8 +3,6 @@ import { createPortal } from 'react-dom'
 import { useNavigate, useLocation } from 'react-router-dom'
 
 // ── Step definitions ───────────────────────────────────────────────────────────
-// route: where to navigate before showing this step (null = stay put)
-// target: CSS selector for the spotlight element (null = centered card)
 
 const STEPS = [
   {
@@ -140,12 +138,9 @@ function SpotlightOverlay({ rect, transitioning }) {
           <rect x="0" y="0" width="100%" height="100%" fill="white" />
           {rect && (
             <rect
-              x={rect.x - PAD}
-              y={rect.y - PAD}
-              width={rect.w + PAD * 2}
-              height={rect.h + PAD * 2}
-              rx={RADIUS}
-              fill="black"
+              x={rect.x - PAD} y={rect.y - PAD}
+              width={rect.w + PAD * 2} height={rect.h + PAD * 2}
+              rx={RADIUS} fill="black"
             />
           )}
         </mask>
@@ -154,26 +149,16 @@ function SpotlightOverlay({ rect, transitioning }) {
       {rect && !transitioning && (
         <>
           <rect
-            x={rect.x - PAD}
-            y={rect.y - PAD}
-            width={rect.w + PAD * 2}
-            height={rect.h + PAD * 2}
-            rx={RADIUS}
-            fill="none"
-            stroke="var(--accent, #e86cb4)"
-            strokeWidth="1.5"
-            strokeOpacity="0.7"
+            x={rect.x - PAD} y={rect.y - PAD}
+            width={rect.w + PAD * 2} height={rect.h + PAD * 2}
+            rx={RADIUS} fill="none"
+            stroke="var(--accent, #e86cb4)" strokeWidth="1.5" strokeOpacity="0.7"
           />
           <rect
-            x={rect.x - PAD - 5}
-            y={rect.y - PAD - 5}
-            width={rect.w + PAD * 2 + 10}
-            height={rect.h + PAD * 2 + 10}
-            rx={RADIUS + 4}
-            fill="none"
-            stroke="var(--accent, #e86cb4)"
-            strokeWidth="1"
-            strokeOpacity="0.18"
+            x={rect.x - PAD - 5} y={rect.y - PAD - 5}
+            width={rect.w + PAD * 2 + 10} height={rect.h + PAD * 2 + 10}
+            rx={RADIUS + 4} fill="none"
+            stroke="var(--accent, #e86cb4)" strokeWidth="1" strokeOpacity="0.18"
           />
         </>
       )}
@@ -183,42 +168,32 @@ function SpotlightOverlay({ rect, transitioning }) {
 
 // ── Card positioning ────────────────────────────────────────────────────────────
 
-const CARD_W = 390
-const CARD_H_ESTIMATE = 310
+const CARD_W = 380
 
-function computeCardStyle(rect, isMobile) {
-  if (isMobile || !rect) {
-    return {
-      position: 'fixed',
-      left: '50%',
-      top: '50%',
-      transform: 'translate(-50%, -50%)',
-      width: isMobile ? 'calc(100% - 32px)' : CARD_W,
-      maxWidth: CARD_W,
-    }
-  }
+function computeCardPos(rect, isMobile) {
+  // Mobile or no target → centered
+  if (isMobile || !rect) return null
 
   const vw = window.innerWidth
   const vh = window.innerHeight
-  const gap = 22
+  const gap = 20
+  const SAFE = 40             // min distance from viewport edges
+  const MAX_H = vh - SAFE * 2 // card will be clamped to this by maxHeight
 
   const spaceRight = vw - (rect.x + rect.w)
-  const spaceLeft = rect.x
-  const targetCY = rect.y + rect.h / 2
+  const spaceLeft  = rect.x
+  const targetCY   = rect.y + rect.h / 2
 
   let x
-  if (spaceRight >= CARD_W + gap + 32) {
-    x = rect.x + rect.w + PAD + gap
-  } else if (spaceLeft >= CARD_W + gap + 32) {
-    x = rect.x - PAD - gap - CARD_W
-  } else {
-    x = (vw - CARD_W) / 2
-  }
+  if (spaceRight >= CARD_W + gap + 32)      x = rect.x + rect.w + PAD + gap
+  else if (spaceLeft >= CARD_W + gap + 32)  x = rect.x - PAD - gap - CARD_W
+  else                                       x = (vw - CARD_W) / 2
 
-  let y = targetCY - CARD_H_ESTIMATE / 2
-  y = Math.max(24, Math.min(y, vh - CARD_H_ESTIMATE - 24))
+  // Vertically: center on target, then clamp so top >= SAFE and card fits
+  let y = targetCY - MAX_H / 2
+  y = Math.max(SAFE, Math.min(y, vh - MAX_H - SAFE))
 
-  return { position: 'fixed', left: x, top: y, width: CARD_W }
+  return { left: x, top: y }
 }
 
 // ── Body part renderer ─────────────────────────────────────────────────────────
@@ -266,45 +241,78 @@ function BodyPart({ part }) {
 
 // ── Tour card ─────────────────────────────────────────────────────────────────
 
-function TourCard({ step, stepIdx, total, rect, isMobile, onBack, onNext, onSkip, isLast, transitioning }) {
-  const cardStyle = computeCardStyle(rect, isMobile)
+function TourCard({ step, stepIdx, total, cardPos, isMobile, onBack, onNext, onSkip, isLast, transitioning }) {
   const isFirst = stepIdx === 0
+
+  // Outer wrapper: positioned + sized
+  const outerStyle = cardPos
+    ? {
+        position: 'fixed',
+        left: cardPos.left,
+        top: cardPos.top,
+        width: CARD_W,
+        // maxHeight keeps card within viewport; body inside will scroll
+        maxHeight: 'calc(100dvh - 80px)',
+      }
+    : {
+        position: 'fixed',
+        left: '50%',
+        top: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: isMobile ? 'calc(100vw - 32px)' : CARD_W,
+        maxWidth: CARD_W,
+        // On mobile use dvh + safe areas so the card never exceeds the screen
+        maxHeight: isMobile
+          ? 'calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 32px)'
+          : 'calc(100dvh - 80px)',
+      }
 
   return (
     <div
       style={{
-        ...cardStyle,
+        ...outerStyle,
         zIndex: 9200,
         background: 'var(--bg)',
         border: '1px solid rgba(255,255,255,0.08)',
         borderRadius: 18,
         boxShadow: '0 32px 80px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04)',
-        overflow: 'hidden',
+        // flex column so footer is always at the bottom
+        display: 'flex',
+        flexDirection: 'column',
         transition: 'opacity 0.18s ease, transform 0.18s ease',
         opacity: transitioning ? 0 : 1,
-        transform: transitioning ? 'translateY(6px)' : 'translateY(0)',
+        transform: transitioning
+          ? (cardPos ? 'translateY(6px)' : 'translate(-50%, calc(-50% + 6px))')
+          : (cardPos ? 'translateY(0)' : 'translate(-50%, -50%)'),
         pointerEvents: transitioning ? 'none' : 'auto',
       }}
     >
-      {/* Top accent line */}
-      <div style={{ height: 2, background: 'linear-gradient(90deg, var(--accent) 0%, transparent 100%)' }} />
+      {/* ── Top accent line (fixed) ── */}
+      <div style={{ height: 2, background: 'linear-gradient(90deg, var(--accent) 0%, transparent 100%)', flexShrink: 0, borderRadius: '18px 18px 0 0' }} />
 
-      <div style={{ padding: '22px 24px 20px' }}>
-        {/* Step counter + skip */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+      {/* ── Header (fixed, never scrolls) ── */}
+      <div style={{ padding: '18px 20px 14px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', color: 'var(--ink-3)' }}>
             {stepIdx + 1} / {total}
           </span>
+          {/* X — always visible escape */}
           <button
             onClick={onSkip}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.1em', color: 'var(--ink-3)', padding: '2px 0', opacity: 0.7 }}
+            aria-label="Pular tour"
+            style={{
+              width: 28, height: 28, borderRadius: '50%',
+              border: '1px solid var(--line)', background: 'transparent',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'var(--ink-3)', fontSize: 14, lineHeight: 1,
+            }}
           >
-            PULAR TOUR
+            ✕
           </button>
         </div>
 
         {/* Progress bar */}
-        <div style={{ height: 2, background: 'var(--line)', borderRadius: 2, marginBottom: 20, overflow: 'hidden' }}>
+        <div style={{ height: 2, background: 'var(--line)', borderRadius: 2, overflow: 'hidden' }}>
           <div style={{
             height: '100%',
             width: `${((stepIdx + 1) / total) * 100}%`,
@@ -313,79 +321,81 @@ function TourCard({ step, stepIdx, total, rect, isMobile, onBack, onNext, onSkip
             transition: 'width 0.35s ease',
           }} />
         </div>
+      </div>
 
-        {/* Title */}
+      {/* ── Scrollable body ── */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 4px', minHeight: 0 }}>
         <h2 style={{
           margin: '0 0 14px',
-          fontFamily: 'var(--serif)',
-          fontStyle: 'italic',
-          fontWeight: 400,
-          fontSize: 'clamp(20px, 5vw, 26px)',
-          color: 'var(--ink)',
-          lineHeight: 1.15,
-          letterSpacing: '-0.01em',
+          fontFamily: 'var(--serif)', fontStyle: 'italic', fontWeight: 400,
+          fontSize: 'clamp(19px, 4.5vw, 25px)',
+          color: 'var(--ink)', lineHeight: 1.15, letterSpacing: '-0.01em',
         }}>
           {step.title}
         </h2>
+        {step.parts.map((part, i) => <BodyPart key={i} part={part} />)}
+      </div>
 
-        {/* Body */}
-        <div style={{ marginBottom: 20 }}>
-          {step.parts.map((part, i) => <BodyPart key={i} part={part} />)}
+      {/* ── Footer — always visible, never clipped ── */}
+      <div style={{
+        padding: '12px 20px 18px',
+        flexShrink: 0,
+        borderTop: '1px solid var(--line)',
+        display: 'flex',
+        gap: 8,
+        alignItems: 'center',
+      }}>
+        {/* Voltar */}
+        <button
+          onClick={onBack}
+          disabled={isFirst}
+          style={{
+            padding: '10px 16px', borderRadius: 10,
+            border: '1px solid var(--line)', background: 'transparent',
+            cursor: isFirst ? 'default' : 'pointer',
+            fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)',
+            opacity: isFirst ? 0 : 1,
+            transition: 'opacity 0.15s',
+            flexShrink: 0,
+          }}
+        >
+          Voltar
+        </button>
+
+        {/* Progress dots */}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: 4, flexWrap: 'wrap', minWidth: 0 }}>
+          {STEPS.map((_, i) => (
+            <div
+              key={i}
+              style={{
+                width: i === stepIdx ? 16 : 5,
+                height: 5,
+                borderRadius: 99,
+                background: i === stepIdx ? 'var(--accent)' : 'var(--line-strong)',
+                transition: 'width 0.25s ease, background 0.25s ease',
+                flexShrink: 0,
+              }}
+            />
+          ))}
         </div>
 
-        {/* Navigation */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button
-            onClick={onBack}
-            disabled={isFirst}
-            style={{
-              padding: '10px 18px', borderRadius: 10, border: '1px solid var(--line)',
-              background: 'transparent', cursor: isFirst ? 'default' : 'pointer',
-              fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)',
-              opacity: isFirst ? 0 : 1,
-              transition: 'opacity 0.15s',
-              flexShrink: 0,
-            }}
-          >
-            Voltar
-          </button>
-
-          {/* Progress dots */}
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: 5, flexWrap: 'wrap' }}>
-            {STEPS.map((_, i) => (
-              <div
-                key={i}
-                style={{
-                  width: i === stepIdx ? 18 : 5,
-                  height: 5,
-                  borderRadius: 99,
-                  background: i === stepIdx ? 'var(--accent)' : 'var(--line-strong)',
-                  transition: 'width 0.25s ease, background 0.25s ease',
-                  flexShrink: 0,
-                }}
-              />
-            ))}
-          </div>
-
-          <button
-            onClick={onNext}
-            style={{
-              padding: isLast ? '10px 22px' : '10px 18px',
-              borderRadius: 10,
-              border: 'none',
-              background: isLast ? 'var(--accent)' : 'var(--surface-2)',
-              cursor: 'pointer',
-              fontFamily: 'var(--sans)',
-              fontSize: 13,
-              fontWeight: isLast ? 600 : 500,
-              color: isLast ? '#fff' : 'var(--ink)',
-              flexShrink: 0,
-              transition: 'background 0.15s',
-            }}
-          >
-            {isLast ? 'Entrar no Archive' : 'Próximo'}
-          </button>
-        </div>
+        {/* Próximo / Finalizar */}
+        <button
+          onClick={onNext}
+          style={{
+            padding: isLast ? '10px 20px' : '10px 16px',
+            borderRadius: 10, border: 'none',
+            background: isLast ? 'var(--accent)' : 'var(--surface-2)',
+            cursor: 'pointer',
+            fontFamily: 'var(--sans)', fontSize: 13,
+            fontWeight: isLast ? 600 : 500,
+            color: isLast ? '#fff' : 'var(--ink)',
+            flexShrink: 0,
+            transition: 'background 0.15s',
+          }}
+        >
+          {isLast ? 'Entrar no Archive' : 'Próximo'}
+        </button>
       </div>
     </div>
   )
@@ -394,19 +404,19 @@ function TourCard({ step, stepIdx, total, rect, isMobile, onBack, onNext, onSkip
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function OnboardingTour({ onComplete }) {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const [stepIdx, setStepIdx] = useState(0)
-  const [rect, setRect] = useState(null)
+  const navigate   = useNavigate()
+  const location   = useLocation()
+  const [stepIdx, setStepIdx]           = useState(0)
+  const [rect, setRect]                 = useState(null)
   const [transitioning, setTransitioning] = useState(false)
-  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false)
-  const roRef = useRef(null)
+  const [isMobile, setIsMobile]         = useState(() => window.innerWidth < 768)
+  const roRef        = useRef(null)
   const findTimerRef = useRef(null)
 
-  const step = STEPS[stepIdx]
+  const step   = STEPS[stepIdx]
   const isLast = stepIdx === STEPS.length - 1
 
-  // Find element with retries (needed after navigation)
+  // Find spotlight target with retries (DOM may not be ready after navigation)
   const findAndSetRect = useCallback((selector) => {
     clearInterval(findTimerRef.current)
     if (!selector || isMobile) { setRect(null); return }
@@ -430,7 +440,7 @@ export default function OnboardingTour({ onComplete }) {
     return () => clearInterval(findTimerRef.current)
   }, [step.target, stepIdx, findAndSetRect])
 
-  // ResizeObserver on target element
+  // ResizeObserver keeps rect fresh
   useEffect(() => {
     roRef.current?.disconnect()
     if (!step.target || isMobile) return
@@ -453,14 +463,12 @@ export default function OnboardingTour({ onComplete }) {
   }, [step.target, findAndSetRect])
 
   function changeStep(newIdx) {
-    const nextStep = STEPS[newIdx]
+    const nextStep  = STEPS[newIdx]
     setTransitioning(true)
     setRect(null)
     clearInterval(findTimerRef.current)
 
     const needsNav = nextStep.route && location.pathname !== nextStep.route.split('?')[0]
-    const navDelay = needsNav ? 320 : 160
-
     if (needsNav) navigate(nextStep.route)
     else if (nextStep.route && nextStep.route !== location.pathname + location.search) {
       navigate(nextStep.route)
@@ -469,20 +477,17 @@ export default function OnboardingTour({ onComplete }) {
     setTimeout(() => {
       setStepIdx(newIdx)
       setTransitioning(false)
-    }, navDelay)
+    }, needsNav ? 320 : 160)
   }
 
   function next() {
     if (isLast) { onComplete(); return }
     changeStep(stepIdx + 1)
   }
-
-  function back() {
-    if (stepIdx > 0) changeStep(stepIdx - 1)
-  }
-
+  function back() { if (stepIdx > 0) changeStep(stepIdx - 1) }
   function skip() { onComplete() }
 
+  // Keyboard navigation
   useEffect(() => {
     function onKey(e) {
       if (e.key === 'ArrowRight' || e.key === 'Enter') next()
@@ -494,10 +499,11 @@ export default function OnboardingTour({ onComplete }) {
   }, [stepIdx, isLast])
 
   const displayRect = !transitioning && !isMobile ? rect : null
+  const cardPos     = computeCardPos(displayRect, isMobile)
 
   return createPortal(
     <>
-      {/* Click blocker */}
+      {/* Backdrop click blocker — does NOT close the tour (prevents accidental exit) */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 9099, cursor: 'default' }} />
 
       <SpotlightOverlay rect={displayRect} transitioning={transitioning} />
@@ -506,7 +512,7 @@ export default function OnboardingTour({ onComplete }) {
         step={step}
         stepIdx={stepIdx}
         total={STEPS.length}
-        rect={displayRect}
+        cardPos={cardPos}
         isMobile={isMobile}
         onBack={back}
         onNext={next}
