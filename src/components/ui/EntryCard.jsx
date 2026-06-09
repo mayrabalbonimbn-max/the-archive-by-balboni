@@ -1,153 +1,206 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Avatar from './Avatar'
-import PhotoTile from './PhotoTile'
-import FileBadge from './FileBadge'
 import TypeTag from './TypeTag'
 import ReactionRow from './ReactionRow'
-import Icon from './Icon'
+import { useAttachmentUrl } from '../../hooks/useAttachmentUrl'
+import { attachmentBlob } from '../../utils/api'
 
 function fmtDate(iso) {
   if (!iso) return ''
   return new Date(iso).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' })
 }
 
-function fmtTime(iso) {
-  if (!iso) return ''
-  return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-}
-
-function CodePreview({ post }) {
-  const file = post.attachments?.find(a => a.kind === 'code' || a.filename?.endsWith('.py'))
-  const lang = post.codeBlock?.language ?? 'code'
+// Real image from authenticated API
+function AttachmentImage({ id, hasThumbnail, alt, onClick }) {
+  const url = useAttachmentUrl(id, hasThumbnail ? 'thumbnail' : 'view')
+  if (!url) {
+    return (
+      <div style={{
+        marginTop: 12, width: '100%', aspectRatio: '16/9',
+        borderRadius: 12, background: 'var(--surface-3)',
+        animation: 'pulse 1.5s infinite',
+      }} />
+    )
+  }
   return (
-    <div style={{ marginTop: 12, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--line-strong)', background: 'rgba(255,255,255,0.02)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '9px 13px', borderBottom: '1px solid var(--line)' }}>
-        <FileBadge kind="code" tone="#E0AF68" />
-        <div>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 12.5, color: 'var(--ink)' }}>{file?.filename ?? `snippet.${lang === 'python' ? 'py' : lang}`}</div>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--ink-3)' }}>{lang}</div>
-        </div>
-      </div>
-      {post.codeBlock?.code && (
-        <pre style={{ margin: 0, padding: '13px 15px', overflow: 'auto', fontFamily: 'var(--mono)', fontSize: 11.5, lineHeight: 1.65, color: 'var(--ink-2)' }}>
-          {post.codeBlock.code.slice(0, 400)}
-        </pre>
-      )}
-    </div>
+    <img
+      src={url}
+      alt={alt}
+      onClick={onClick}
+      style={{
+        display: 'block', width: '100%', aspectRatio: '16/9',
+        objectFit: 'cover', borderRadius: 12, marginTop: 12, cursor: 'pointer',
+        border: '1px solid var(--line)',
+      }}
+    />
   )
 }
 
-function FilePreview({ attachment }) {
-  const isPdf = attachment.kind === 'pdf' || attachment.filename?.endsWith('.pdf')
-  const tone = isPdf ? '#F7768E' : '#E0AF68'
-  const kind = isPdf ? 'PDF' : attachment.filename?.split('.').pop()?.toUpperCase() ?? 'FILE'
-  return (
-    <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 13px', borderRadius: 12, border: '1px solid var(--line-strong)', background: 'rgba(255,255,255,0.02)' }}>
-      <FileBadge kind={kind} tone={tone} />
-      <div style={{ minWidth: 0, flex: 1 }}>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 12.5, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{attachment.filename}</div>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--ink-3)' }}>{kind} · {attachment.title || 'arquivo'}</div>
-      </div>
-    </div>
-  )
+// Full-res lightbox
+function LightboxImage({ id, alt }) {
+  const url = useAttachmentUrl(id, 'view')
+  return url
+    ? <img src={url} alt={alt} onClick={e => e.stopPropagation()} style={{ maxWidth: '100%', maxHeight: '85vh', borderRadius: 12, objectFit: 'contain' }} />
+    : <div style={{ color: 'var(--ink-3)', fontFamily: 'var(--sans)', fontSize: 14 }}>Carregando…</div>
+}
+
+async function openPdf(attachment) {
+  const win = window.open('', '_blank')
+  try {
+    const blob = await attachmentBlob(attachment.id, 'view')
+    const url = URL.createObjectURL(blob)
+    if (win) { win.opener = null; win.location = url }
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  } catch { win?.close() }
 }
 
 export default function EntryCard({ post, showAuthor = true, onLike, onSave, hairline = true }) {
   const navigate = useNavigate()
-  const author = post.author
+  const [lightboxId, setLightboxId] = useState(null)
+
   const isArticle = post.isArticle || post.type === 'article'
-  const imageAttachments = post.attachments?.filter(a => a.kind === 'image') ?? []
-  const pdfAttachments = post.attachments?.filter(a => a.kind === 'pdf' || a.filename?.endsWith('.pdf')) ?? []
+
+  // Use correct API field names (fileType, originalName — NOT kind/filename)
+  const images = post.attachments?.filter(a => a.fileType === 'image') ?? []
+  const pdfs   = post.attachments?.filter(a => a.fileType === 'pdf') ?? []
+  const texts  = post.attachments?.filter(a => a.fileType === 'markdown' || a.fileType === 'python') ?? []
   const hasCode = !!post.codeBlock?.code
 
-  function openDetail() {
+  function openDetail(e) {
+    if (lightboxId) return
     if (isArticle) navigate(`/articles/${post.id}`)
+    else navigate(`/posts/${post.id}`)
   }
 
-  const authorName = typeof author === 'object' ? author?.name : null
+  const author = typeof post.author === 'object' ? post.author : null
+  const authorName = author?.name || null
 
   return (
     <article
       onClick={openDetail}
       style={{
         padding: '20px 20px',
-        cursor: isArticle ? 'pointer' : 'default',
+        cursor: 'pointer',
         borderBottom: hairline ? '1px solid var(--line)' : 'none',
       }}
     >
       {/* Meta row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 11 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
         {showAuthor && authorName && (
           <Avatar name={authorName} src={author?.avatar} size={26} />
         )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flexWrap: 'wrap', flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flex: 1, flexWrap: 'wrap' }}>
           {showAuthor && authorName && (
             <span style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink)', fontWeight: 500 }}>{authorName}</span>
           )}
           <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)', letterSpacing: '0.02em' }}>
-            {fmtDate(post.createdAt)}{post.time ? ' · ' + post.time : ''}
+            {fmtDate(post.createdAt)}
           </span>
         </div>
         <TypeTag type={post.type ?? (isArticle ? 'article' : 'note')} />
       </div>
 
-      {/* Title */}
-      {(isArticle && post.articleTitle) && (
-        <h3 style={{ margin: '0 0 7px', fontFamily: 'var(--serif)', fontSize: 21, lineHeight: 1.2, color: 'var(--ink)', fontWeight: 500, letterSpacing: '-0.01em' }}>
+      {/* Article title */}
+      {isArticle && post.articleTitle && (
+        <h3 style={{ margin: '0 0 7px', fontFamily: 'var(--serif)', fontSize: 20, lineHeight: 1.2, color: 'var(--ink)', fontWeight: 500, letterSpacing: '-0.01em' }}>
           {post.articleTitle}
         </h3>
       )}
 
-      {/* Body */}
+      {/* Content */}
       {post.content && (
         <p style={{
-          margin: 0,
-          fontFamily: isArticle ? 'var(--serif)' : 'var(--sans)',
-          fontSize: isArticle ? 15.5 : 14.5,
-          lineHeight: 1.6,
-          color: 'var(--ink-2)',
-          display: '-webkit-box',
-          WebkitLineClamp: imageAttachments.length > 0 ? 2 : 3,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
+          margin: 0, fontFamily: isArticle ? 'var(--serif)' : 'var(--sans)',
+          fontSize: isArticle ? 15.5 : 14.5, lineHeight: 1.6, color: 'var(--ink-2)',
+          display: '-webkit-box', WebkitLineClamp: images.length > 0 ? 2 : 3,
+          WebkitBoxOrient: 'vertical', overflow: 'hidden',
         }}>
           {post.content}
         </p>
       )}
 
-      {/* Photo attachment (first image) */}
-      {imageAttachments[0] && (
-        <PhotoTile
-          tone1="#2a3140" tone2="#11141c"
-          style={{ marginTop: 13, aspectRatio: '4/3' }}
-        >
-          {imageAttachments[0].title && (
-            <div style={{ position: 'absolute', left: 12, bottom: 11, fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '0.06em', color: 'rgba(255,255,255,0.7)' }}>
-              {imageAttachments[0].title}
-            </div>
-          )}
-        </PhotoTile>
-      )}
+      {/* Image attachments — real images via authenticated API */}
+      {images.slice(0, 2).map(att => (
+        <AttachmentImage
+          key={att.id}
+          id={att.id}
+          hasThumbnail={att.hasThumbnail}
+          alt={att.originalName || 'Imagem'}
+          onClick={e => { e.stopPropagation(); setLightboxId(att.id) }}
+        />
+      ))}
 
-      {/* Code block */}
-      {hasCode && <CodePreview post={post} />}
-
-      {/* PDF / file */}
-      {pdfAttachments[0] && <FilePreview attachment={pdfAttachments[0]} />}
-
-      {/* Article read time */}
-      {isArticle && (
-        <div style={{ marginTop: 11, display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>
-          <Icon name="clock" size={13} /> leitura
+      {/* Code block preview */}
+      {hasCode && (
+        <div style={{
+          marginTop: 12, borderRadius: 10, overflow: 'hidden',
+          border: '1px solid var(--line-strong)', background: 'rgba(255,255,255,0.02)',
+        }}>
+          <div style={{ padding: '8px 13px', borderBottom: '1px solid var(--line)', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)', letterSpacing: '0.06em' }}>
+            {post.codeBlock.language?.toUpperCase() || 'CÓDIGO'}
+          </div>
+          <pre style={{ margin: 0, padding: '12px 14px', overflow: 'hidden', fontFamily: 'var(--mono)', fontSize: 12, lineHeight: 1.6, color: 'var(--ink-2)', maxHeight: 100 }}>
+            {post.codeBlock.code.slice(0, 300)}
+          </pre>
         </div>
       )}
 
-      <ReactionRow
-        post={post}
-        onLike={onLike}
-        onSave={onSave}
-        onOpen={openDetail}
-      />
+      {/* PDF attachments */}
+      {pdfs.map(att => (
+        <button
+          key={att.id}
+          onClick={e => { e.stopPropagation(); openPdf(att) }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left',
+            marginTop: 12, padding: '11px 13px', borderRadius: 10, cursor: 'pointer',
+            border: '1px solid var(--line-strong)', background: 'rgba(247,118,142,0.05)',
+          }}
+        >
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: '#F7768E', background: 'rgba(247,118,142,0.15)', padding: '4px 7px', borderRadius: 6 }}>PDF</div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {att.originalName || att.title || 'Documento'}
+            </div>
+          </div>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)' }}>Abrir →</span>
+        </button>
+      ))}
+
+      {/* Markdown / Python attachments */}
+      {texts.map(att => (
+        <div
+          key={att.id}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 11,
+            marginTop: 12, padding: '11px 13px', borderRadius: 10,
+            border: '1px solid var(--line-strong)', background: 'rgba(255,255,255,0.02)',
+          }}
+        >
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: att.fileType === 'python' ? '#7AA2F7' : '#73DACA', background: att.fileType === 'python' ? 'rgba(122,162,247,0.15)' : 'rgba(115,218,202,0.15)', padding: '4px 7px', borderRadius: 6 }}>
+            {att.fileType === 'python' ? 'PY' : 'MD'}
+          </div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+            {att.originalName || att.title || 'Arquivo'}
+          </div>
+        </div>
+      ))}
+
+      <ReactionRow post={post} onLike={onLike} onSave={onSave} onOpen={openDetail} />
+
+      {/* Lightbox */}
+      {lightboxId && (
+        <div
+          onClick={e => { e.stopPropagation(); setLightboxId(null) }}
+          style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.93)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+        >
+          <button
+            onClick={e => { e.stopPropagation(); setLightboxId(null) }}
+            style={{ position: 'absolute', top: 16, right: 16, color: 'white', background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >×</button>
+          <LightboxImage id={lightboxId} alt="Imagem" />
+        </div>
+      )}
     </article>
   )
 }

@@ -8,7 +8,7 @@ export default function ArchiveMiniCard({ item, label }) {
 
   return (
     <button
-      onClick={() => item.id && navigate(isArticle ? `/articles/${item.id}` : '/')}
+      onClick={() => item.id && navigate(isArticle ? `/articles/${item.id}` : `/posts/${item.id}`)}
       className="w-full text-left rounded-lg border border-dark-border bg-dark-card px-4 py-3 hover:bg-dark-hover/40 transition-colors"
     >
       <div className="flex items-center justify-between gap-3">
