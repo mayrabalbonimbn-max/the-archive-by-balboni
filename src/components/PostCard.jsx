@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { formatRelativeTime, formatFullDate, TYPE_CONFIG } from '../utils/helpers'
+import { formatRelativeTime, formatFullDate, TYPE_CONFIG, CATEGORIA_CONFIG } from '../utils/helpers'
 import PostAttachments from './PostAttachments'
 import CodeBlock from './CodeBlock'
 import LinkPreviewCard from './LinkPreviewCard'
@@ -231,7 +231,7 @@ export default function PostCard({ post, profile, onLike, onSave, onPin, onDelet
     }
   }
 
-  const typeConfig = TYPE_CONFIG[post.type] || TYPE_CONFIG.aleatório
+  const badgeConfig = CATEGORIA_CONFIG[post.categoria] || TYPE_CONFIG[post.type] || TYPE_CONFIG.aleatório
 
   // Article card variant
   if (post.isArticle) {
@@ -372,8 +372,8 @@ export default function PostCard({ post, profile, onLike, onSave, onPin, onDelet
 
           {/* Type badge + tags */}
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5 animate-badge-in">
-            <span className={`pill-badge ${typeConfig.color}`}>
-              {typeConfig.label}
+            <span className={`pill-badge ${badgeConfig.color}`}>
+              {badgeConfig.label}
             </span>
             {post.isDiary && (
               <span className="pill-badge bg-brand-rose/10 text-brand-rose border border-brand-rose/20">

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { api } from '../utils/api'
-import { formatFullDate, TYPE_CONFIG } from '../utils/helpers'
+import { formatFullDate, TYPE_CONFIG, CATEGORIA_CONFIG } from '../utils/helpers'
 import PostAttachments from '../components/PostAttachments'
 import CodeBlock from '../components/CodeBlock'
 import MarkdownRenderer from '../components/MarkdownRenderer'
@@ -142,7 +142,7 @@ export default function PostDetailPage({ profile, onLike, onSave, onDelete }) {
     return null
   }
 
-  const typeConfig = TYPE_CONFIG[post.type] || TYPE_CONFIG.aleatório
+  const badgeConfig = CATEGORIA_CONFIG[post.categoria] || TYPE_CONFIG[post.type] || TYPE_CONFIG.aleatório
   const displayProfile = post.author || profile
 
   return (
@@ -182,7 +182,7 @@ export default function PostDetailPage({ profile, onLike, onSave, onDelete }) {
         })()}
 
         <div className="flex items-center gap-2 mb-5 flex-wrap">
-          <span className={`pill-badge ${typeConfig.color}`}>{typeConfig.label}</span>
+          <span className={`pill-badge ${badgeConfig.color}`}>{badgeConfig.label}</span>
           {post.isDiary && (
             <span className="pill-badge bg-brand-rose/10 text-brand-rose border border-brand-rose/20">Diário</span>
           )}

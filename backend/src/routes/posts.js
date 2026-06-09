@@ -33,6 +33,7 @@ function toPost(row) {
     unlockAt: row.unlock_at || null,
     projectId: row.project_id || null,
     parentMemoryPostId: row.parent_memory_post_id || null,
+    categoria: row.categoria || null,
     reflectionCount: Number(row.reflection_count || 0),
     attachments: row.attachments || [],
     tags: row.tags || [],

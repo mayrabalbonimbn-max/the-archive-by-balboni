@@ -33,3 +33,15 @@ export const TYPE_CONFIG = {
 }
 
 export const POST_TYPES = Object.keys(TYPE_CONFIG)
+
+export const CATEGORIA_CONFIG = {
+  pensamento:  { label: 'Pensamento',  color: 'bg-pink-500/10 text-pink-300/90 border border-pink-500/20' },
+  reflexão:    { label: 'Reflexão',    color: 'bg-blue-500/10 text-blue-300/90 border border-blue-500/20' },
+  ideia:       { label: 'Ideia',       color: 'bg-green-500/10 text-green-300/90 border border-green-500/20' },
+  aprendizado: { label: 'Aprendizado', color: 'bg-cyan-500/10 text-cyan-300/90 border border-cyan-500/20' },
+  decisão:     { label: 'Decisão',     color: 'bg-amber-500/10 text-amber-300/90 border border-amber-500/20' },
+  observação:  { label: 'Observação',  color: 'bg-purple-500/10 text-purple-300/90 border border-purple-500/20' },
+  memória:     { label: 'Memória',     color: 'bg-yellow-500/10 text-yellow-300/90 border border-yellow-500/20' },
+  citação:     { label: 'Citação',     color: 'bg-zinc-500/10 text-zinc-300/90 border border-zinc-500/20' },
+  meta:        { label: 'Meta',        color: 'bg-emerald-500/10 text-emerald-300/90 border border-emerald-500/20' },
+}
