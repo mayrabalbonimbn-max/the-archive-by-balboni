@@ -1,7 +1,8 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, NavLink } from 'react-router-dom'
 import { useState } from 'react'
+import Icon from './ui/Icon'
 
-// ── Ícones ───────────────────────────────────────────────────────────────────
+// ── Mobile drawer icons ───────────────────────────────────────────────────────
 
 const HomeIcon = ({ filled }) => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -67,9 +68,9 @@ const LogoutIcon = () => (
   </svg>
 )
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Mobile avatar helper ───────────────────────────────────────────────────────
 
-function Avatar({ profile, size = 'md' }) {
+function MobileAvatar({ profile, size = 'md' }) {
   const sizes = { sm: 'w-8 h-8 text-sm', md: 'w-10 h-10 text-base' }
   return (
     <div className={`${sizes[size]} rounded-full overflow-hidden shrink-0`}>
@@ -84,8 +85,9 @@ function Avatar({ profile, size = 'md' }) {
   )
 }
 
-// NavLink com estado ativo automático — único componente para todos os itens de nav
-function NavItem({ to, end = false, label, Icon, onClick }) {
+// ── Mobile NavLink ────────────────────────────────────────────────────────────
+
+function MobileNavItem({ to, end = false, label, Icon, onClick }) {
   return (
     <NavLink
       to={to}
@@ -106,8 +108,7 @@ function NavItem({ to, end = false, label, Icon, onClick }) {
   )
 }
 
-// Botão sem rota (ex: Criar)
-function ActionItem({ label, Icon, onClick }) {
+function MobileActionItem({ label, Icon, onClick }) {
   return (
     <button onClick={onClick} className="nav-item">
       <span className="text-dark-muted"><Icon /></span>
@@ -116,65 +117,183 @@ function ActionItem({ label, Icon, onClick }) {
   )
 }
 
-// ── Componente principal ─────────────────────────────────────────────────────
+// ── Desktop sidebar nav item ──────────────────────────────────────────────────
+
+function DSidebarItem({ icon, label, active, onClick, badge }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+        padding: '9px 12px', borderRadius: 10, border: 'none', cursor: 'pointer',
+        textAlign: 'left',
+        background: active ? 'rgba(232,108,180,0.12)' : 'transparent',
+        color: active ? 'var(--accent)' : 'var(--ink-2)',
+        fontFamily: 'var(--sans)', fontSize: 14, fontWeight: active ? 600 : 500,
+        transition: 'background .15s',
+        position: 'relative',
+      }}
+    >
+      <Icon name={icon} size={19} stroke={active ? 1.9 : 1.6} />
+      <span style={{ flex: 1 }}>{label}</span>
+      {badge && (
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
+      )}
+    </button>
+  )
+}
+
+// ── Desktop avatar ────────────────────────────────────────────────────────────
+
+function DAvatar({ profile, size = 36 }) {
+  return (
+    <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '1px solid var(--line)' }}>
+      {profile.avatar ? (
+        <img src={profile.avatar} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      ) : (
+        <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #c084fc, #E86CB4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: size * 0.4, color: '#fff', fontWeight: 600 }}>
+            {profile.name?.[0] || 'M'}
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export default function Sidebar({ profile, onLogout, onCompose }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
+  const params = new URLSearchParams(location.search)
+  const archiveSection = params.get('s') ?? 'overview'
 
   function close() { setMobileOpen(false) }
+
+  // Active state helpers
+  function isToday() { return location.pathname === '/' }
+  function isExplore() { return location.pathname === '/explore' }
+  function isPeople() { return location.pathname === '/friends' }
+  function isNotices() { return location.pathname === '/notifications' }
+  function isArchiveSection(s) {
+    if (location.pathname !== '/archive') return false
+    if (s === 'overview') return archiveSection === 'overview'
+    return archiveSection === s
+  }
+  function isProfile() { return location.pathname === '/profile' }
 
   return (
     <>
       {/* ── Desktop sidebar ──────────────────────────────────────────────── */}
-      <aside className="hidden md:flex flex-col items-start h-screen sticky top-0 py-6 px-4 w-[220px] xl:w-[256px] shrink-0 border-r border-dark-border/50 overflow-y-auto">
-
-        {/* Logo */}
-        <button
-          onClick={() => navigate('/')}
-          className="mb-6 ml-1 flex items-center gap-3 group shrink-0"
-        >
-          <img
-            src="/icons/icon-192.png"
-            alt="The Archive by Balboni"
-            className="w-10 h-10 rounded-full object-cover shrink-0 group-hover:opacity-85 transition-opacity"
-          />
-          <span className="font-editorial text-[20px] xl:text-[22px] text-dark-text leading-none tracking-tight">
+      <aside
+        className="hidden md:flex flex-col h-screen sticky top-0 overflow-y-auto shrink-0"
+        style={{ width: 264, background: 'var(--bg)', borderRight: '1px solid var(--line)' }}
+      >
+        {/* Brand wordmark */}
+        <div style={{ padding: '26px 22px 18px', display: 'flex', alignItems: 'center', gap: 9 }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
+          <button
+            onClick={() => navigate('/')}
+            style={{ fontFamily: 'var(--serif)', fontSize: 19, color: 'var(--ink)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, letterSpacing: '-0.01em', lineHeight: 1 }}
+          >
             The Archive
-          </span>
-        </button>
+          </button>
+        </div>
 
-        {/* Nav principal — 8 itens */}
-        <nav className="flex flex-col gap-0.5 w-full">
-          <NavItem to="/" end label="Início"       Icon={HomeIcon} />
-          <NavItem to="/explore"      label="Explorar"    Icon={ExploreIcon} />
-          <ActionItem                 label="Criar"        Icon={PencilIcon} onClick={onCompose} />
-          <NavItem to="/archive"      label="Arquivo"     Icon={ArchiveIcon} />
-          <NavItem to="/profile"      label="Perfil"      Icon={UserIcon} />
-          <NavItem to="/friends"      label="Conexões"    Icon={FriendsIcon} />
-          <NavItem to="/notifications" label="Notificações" Icon={BellIcon} />
-          <NavItem to="/settings"     label="Ajustes"     Icon={SettingsIcon} />
+        {/* Keep something button */}
+        <div style={{ padding: '0 16px 16px' }}>
+          <button
+            onClick={onCompose}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: 9, padding: '11px', borderRadius: 12, border: 'none', cursor: 'pointer',
+              background: 'var(--accent)', color: '#fff',
+              fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 600,
+              boxShadow: '0 6px 20px -6px var(--accent)',
+            }}
+          >
+            <Icon name="feather" size={18} stroke={1.8} />
+            Guardar algo
+          </button>
+        </div>
+
+        {/* Primary nav */}
+        <nav style={{ padding: '4px 12px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <DSidebarItem icon="today"   label="Hoje"     active={isToday()}   onClick={() => navigate('/')} />
+          <DSidebarItem icon="explore" label="Explorar" active={isExplore()} onClick={() => navigate('/explore')} />
+          <DSidebarItem icon="people"  label="Pessoas"  active={isPeople()}  onClick={() => navigate('/friends')} />
+          <DSidebarItem icon="bell"    label="Avisos"   active={isNotices()} onClick={() => navigate('/notifications')} badge />
         </nav>
 
-        {/* Rodapé — avatar + sair */}
-        <div className="mt-auto w-full space-y-1 shrink-0">
+        {/* YOUR ARCHIVE group */}
+        <div style={{ padding: '20px 24px 8px', fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.16em', color: 'var(--ink-3)' }}>
+          SEU ARQUIVO
+        </div>
+        <nav style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <DSidebarItem icon="archive"     label="Visão geral" active={isArchiveSection('overview')}    onClick={() => navigate('/archive')} />
+          <DSidebarItem icon="sparkle"     label="Memórias"    active={isArchiveSection('memories')}    onClick={() => navigate('/archive?s=memories')} />
+          <DSidebarItem icon="calendar"    label="Calendário"  active={isArchiveSection('calendar')}    onClick={() => navigate('/archive?s=calendar')} />
+          <DSidebarItem icon="collections" label="Coleções"    active={isArchiveSection('collections')} onClick={() => navigate('/archive?s=collections')} />
+          <DSidebarItem icon="library"     label="Biblioteca"  active={isArchiveSection('library')}     onClick={() => navigate('/archive?s=library')} />
+          <DSidebarItem icon="photo"       label="Fotografia"  active={isArchiveSection('photos')}      onClick={() => navigate('/archive?s=photos')} />
+        </nav>
+
+        <div style={{ flex: 1 }} />
+
+        {/* User chip */}
+        <div style={{ margin: 12 }}>
           <button
             onClick={() => navigate('/profile')}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-dark-hover cursor-pointer transition-all duration-200 w-full"
+            style={{
+              width: '100%', padding: '10px 12px', borderRadius: 12,
+              border: `1px solid ${isProfile() ? 'var(--line-strong)' : 'var(--line)'}`,
+              cursor: 'pointer',
+              background: isProfile() ? 'var(--surface-2)' : 'transparent',
+              display: 'flex', alignItems: 'center', gap: 11,
+            }}
           >
-            <Avatar profile={profile} size="md" />
-            <div className="min-w-0 text-left">
-              <p className="font-semibold text-sm text-dark-text truncate leading-tight">{profile.name}</p>
-              <p className="text-dark-muted text-xs truncate mt-0.5">{profile.handle}</p>
+            <DAvatar profile={profile} size={36} />
+            <div style={{ textAlign: 'left', minWidth: 0, flex: 1 }}>
+              <div style={{ fontFamily: 'var(--serif)', fontSize: 14.5, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {profile.name}
+              </div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)', marginTop: 2 }}>
+                {profile.handle}
+              </div>
             </div>
+            <button
+              onClick={e => { e.stopPropagation(); navigate('/settings') }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-3)', padding: 4, display: 'flex', alignItems: 'center', borderRadius: 6, flexShrink: 0 }}
+              title="Ajustes"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+              </svg>
+            </button>
           </button>
+
+          {/* Logout — subtle, small */}
           <button
             onClick={onLogout}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-dark-hover transition-all duration-200 w-full text-dark-label hover:text-red-400"
-            title="Sair"
+            style={{
+              width: '100%', marginTop: 4, padding: '8px 12px', borderRadius: 10,
+              border: 'none', background: 'transparent', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 10,
+              fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)',
+              transition: 'color .15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--ink-3)'}
           >
-            <span className="shrink-0 flex items-center justify-center w-10 h-10"><LogoutIcon /></span>
-            <span className="text-[14px] font-medium">Sair</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Sair
           </button>
         </div>
       </aside>
@@ -185,27 +304,24 @@ export default function Sidebar({ profile, onLogout, onCompose }) {
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={close} />
           <div className="absolute left-0 top-0 h-full w-64 bg-dark-card border-r border-dark-border flex flex-col pt-16">
 
-            {/* Profile header */}
             <div className="flex items-center gap-3 px-5 py-4 border-b border-dark-border/50 shrink-0">
-              <Avatar profile={profile} size="md" />
+              <MobileAvatar profile={profile} size="md" />
               <div className="min-w-0">
                 <p className="font-semibold text-sm text-dark-text leading-tight truncate">{profile.name}</p>
                 <p className="text-dark-muted text-xs mt-0.5 truncate">{profile.handle}</p>
               </div>
             </div>
 
-            {/* 6 itens — sem rolagem */}
             <nav className="flex flex-col gap-0.5 px-3 py-3 shrink-0">
-              <NavItem to="/"               end   label="Início"        Icon={HomeIcon}    onClick={close} />
-              <NavItem to="/explore"              label="Explorar"      Icon={ExploreIcon} onClick={close} />
-              <NavItem to="/archive"              label="Arquivo"       Icon={ArchiveIcon} onClick={close} />
-              <NavItem to="/profile"              label="Perfil"        Icon={UserIcon}    onClick={close} />
-              <NavItem to="/friends"              label="Conexões"      Icon={FriendsIcon} onClick={close} />
-              <NavItem to="/notifications"        label="Notificações"  Icon={BellIcon}    onClick={close} />
-              <NavItem to="/settings"             label="Ajustes"       Icon={SettingsIcon} onClick={close} />
+              <MobileNavItem to="/"               end   label="Início"        Icon={HomeIcon}    onClick={close} />
+              <MobileNavItem to="/explore"              label="Explorar"      Icon={ExploreIcon} onClick={close} />
+              <MobileNavItem to="/archive"              label="Arquivo"       Icon={ArchiveIcon} onClick={close} />
+              <MobileNavItem to="/profile"              label="Perfil"        Icon={UserIcon}    onClick={close} />
+              <MobileNavItem to="/friends"              label="Conexões"      Icon={FriendsIcon} onClick={close} />
+              <MobileNavItem to="/notifications"        label="Notificações"  Icon={BellIcon}    onClick={close} />
+              <MobileNavItem to="/settings"             label="Ajustes"       Icon={SettingsIcon} onClick={close} />
             </nav>
 
-            {/* Sair */}
             <div className="mt-auto px-3 pb-8 pt-3 border-t border-dark-border/50 shrink-0">
               <button
                 onClick={() => { close(); onLogout() }}

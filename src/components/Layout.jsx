@@ -30,8 +30,8 @@ export default function Layout({ children, profile, posts, searchQuery, onSearch
           {children}
         </main>
 
-        {/* Desktop right panel */}
-        <RightPanel posts={posts} searchQuery={searchQuery} onSearch={onSearch} />
+        {/* Desktop right panel — contextual rail */}
+        <RightPanel profile={profile} />
       </div>
 
       {/* Mobile bottom tab bar */}

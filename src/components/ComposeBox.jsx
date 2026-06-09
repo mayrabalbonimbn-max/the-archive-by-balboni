@@ -41,8 +41,19 @@ const FILE_ACCEPT = {
   code:     'text/x-python,.py',
 }
 
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 768)
+  useEffect(() => {
+    const handler = () => setIsDesktop(window.innerWidth >= 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
+  return isDesktop
+}
+
 export default function ComposeBox({ profile, onPost, onClose }) {
   const { collections } = useCollections()
+  const isDesktop = useIsDesktop()
   const [entryType, setEntryType] = useState('note')
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
@@ -70,9 +81,7 @@ export default function ComposeBox({ profile, onPost, onClose }) {
     attachmentsRef.current.forEach(item => item.preview && URL.revokeObjectURL(item.preview))
   }, [])
 
-  useEffect(() => {
-    titleRef.current?.focus()
-  }, [])
+  useEffect(() => { titleRef.current?.focus() }, [])
 
   function openFilePicker() {
     if (fileInputRef.current) {
@@ -128,39 +137,38 @@ export default function ComposeBox({ profile, onPost, onClose }) {
     }
   }
 
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 70,
-      background: '#000',
-      display: 'flex', flexDirection: 'column',
-      animation: 'sheetUp var(--dur-sheet) var(--ease-out)',
-    }}>
+  // ── Shared inner content ───────────────────────────────────────────────────
+
+  const content = (
+    <>
       {/* Header */}
-      <div style={{ paddingTop: 'env(safe-area-inset-top, 0px)', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 18px 12px' }}>
-          <button
-            onClick={onClose}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: 14.5, color: 'var(--ink-3)', padding: 0 }}
-          >
-            Cancelar
-          </button>
+      <div style={{ flexShrink: 0, ...(!isDesktop ? { paddingTop: 'env(safe-area-inset-top, 0px)' } : {}) }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 22px' }}>
           <span style={{ fontFamily: 'var(--serif)', fontSize: 18, fontStyle: 'italic', color: 'var(--ink)' }}>
             Guardar algo
           </span>
-          <button
-            onClick={handleSave}
-            disabled={!canPost}
-            style={{
-              background: canPost ? 'var(--accent)' : 'var(--surface-3)',
-              border: 'none', cursor: canPost ? 'pointer' : 'default',
-              fontFamily: 'var(--sans)', fontSize: 13.5, fontWeight: 600,
-              color: canPost ? '#fff' : 'var(--ink-3)',
-              padding: '8px 16px', borderRadius: 999,
-              transition: 'background .15s',
-            }}
-          >
-            {posting ? 'Salvando…' : 'Salvar'}
-          </button>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <button
+              onClick={onClose}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink-3)', padding: 0 }}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={!canPost}
+              style={{
+                background: canPost ? 'var(--accent)' : 'var(--surface-3)',
+                border: 'none', cursor: canPost ? 'pointer' : 'default',
+                fontFamily: 'var(--sans)', fontSize: 13.5, fontWeight: 600,
+                color: canPost ? '#fff' : 'var(--ink-3)',
+                padding: '8px 18px', borderRadius: 999,
+                transition: 'background .15s',
+              }}
+            >
+              {posting ? 'Salvando…' : 'Salvar'}
+            </button>
+          </div>
         </div>
         <div style={{ height: 1, background: 'var(--line)' }} />
       </div>
@@ -218,7 +226,9 @@ export default function ComposeBox({ profile, onPost, onClose }) {
               <div style={{ fontFamily: 'var(--serif)', fontSize: 16, fontStyle: 'italic', color: 'var(--ink)' }}>
                 Solte seu {entryType === 'photo' ? 'arquivo de imagem' : entryType === 'pdf' ? 'PDF' : 'arquivo Markdown'} aqui
               </div>
-              <div style={{ fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink-3)' }}>ou toque para navegar</div>
+              <div style={{ fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink-3)' }}>
+                {isDesktop ? 'ou clique para navegar' : 'ou toque para navegar'}
+              </div>
             </div>
           )}
 
@@ -317,7 +327,6 @@ export default function ComposeBox({ profile, onPost, onClose }) {
 
         {/* Meta block */}
         <div style={{ borderTop: '1px solid var(--line)', padding: '16px 20px 32px' }}>
-          {/* Collection */}
           {collections.length > 0 && (
             <>
               <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '0.12em', color: 'var(--ink-3)', marginBottom: 11 }}>
@@ -334,7 +343,6 @@ export default function ComposeBox({ profile, onPost, onClose }) {
             </>
           )}
 
-          {/* Privacy */}
           <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '0.12em', color: 'var(--ink-3)', marginBottom: 11 }}>
             QUEM PODE VER
           </div>
@@ -360,6 +368,30 @@ export default function ComposeBox({ profile, onPost, onClose }) {
 
       {/* Hidden file input */}
       <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileChange} />
+    </>
+  )
+
+  // ── Desktop: centered modal over dimmed backdrop ───────────────────────────
+  if (isDesktop) {
+    return (
+      <div
+        onClick={onClose}
+        style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '7vh 32px 32px', animation: 'dFade .2s ease' }}
+      >
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{ width: '100%', maxWidth: 620, maxHeight: '86vh', background: 'var(--bg)', border: '1px solid var(--line-strong)', borderRadius: 20, display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'dPop var(--dur-sheet) var(--ease-out)' }}
+        >
+          {content}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Mobile: full-screen slide-up sheet ────────────────────────────────────
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 70, background: '#000', display: 'flex', flexDirection: 'column', animation: 'sheetUp var(--dur-sheet) var(--ease-out)' }}>
+      {content}
     </div>
   )
 }
