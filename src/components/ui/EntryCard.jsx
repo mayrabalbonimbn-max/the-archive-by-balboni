@@ -94,6 +94,14 @@ export default function EntryCard({ post, showAuthor = true, onLike, onSave, onD
   const author = typeof localPost.author === 'object' ? localPost.author : null
   const authorName = author?.name || null
 
+  function goToProfile(e) {
+    e.stopPropagation()
+    const handle = author?.handle
+    const id = author?.id
+    if (handle) navigate(`/@${handle}`)
+    else if (id) navigate(`/profiles/${id}`)
+  }
+
   return (
     <article
       onClick={openDetail}
@@ -106,11 +114,11 @@ export default function EntryCard({ post, showAuthor = true, onLike, onSave, onD
       {/* Meta row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
         {showAuthor && authorName && (
-          <Avatar name={authorName} src={author?.avatar} profileId={author?.id} size={26} />
+          <Avatar name={authorName} src={author?.avatar} profileId={author?.id} size={26} onClick={goToProfile} />
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flex: 1, flexWrap: 'wrap' }}>
           {showAuthor && authorName && (
-            <span style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink)', fontWeight: 500 }}>{authorName}</span>
+            <button onClick={goToProfile} style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink)', fontWeight: 500, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>{authorName}</button>
           )}
           <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)', letterSpacing: '0.02em' }}>
             {fmtDate(post.createdAt)}

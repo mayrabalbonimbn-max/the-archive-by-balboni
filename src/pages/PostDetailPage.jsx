@@ -194,7 +194,15 @@ export default function PostDetailPage({ profile, onLike, onSave, onDelete }) {
           </span>
         </div>
 
-        <div className="flex items-center gap-3 mb-6 pb-5 border-b border-dark-border/60">
+        <div
+          className="flex items-center gap-3 mb-6 pb-5 border-b border-dark-border/60"
+          style={{ cursor: 'pointer' }}
+          onClick={() => {
+            if (isOwner) navigate('/profile')
+            else if (post.author?.handle) navigate(`/@${post.author.handle}`)
+            else navigate(`/profiles/${post.author?.id ?? post.profileId}`)
+          }}
+        >
           <Avatar name={displayProfile?.name} src={avatarSrc} size={40} />
           <div>
             <p className="font-semibold text-dark-text text-sm">{displayProfile?.name}</p>

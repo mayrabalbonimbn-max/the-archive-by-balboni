@@ -88,7 +88,7 @@ function GuideCard({ post }) {
   const body = post.content?.split('\n').slice(2).join(' ').trim().slice(0, 100) || ''
 
   return (
-    <button
+    <div
       onClick={() => navigate(`/posts/${post.id}`)}
       style={{
         flexShrink: 0, width: 220, cursor: 'pointer', textAlign: 'left',
@@ -105,10 +105,13 @@ function GuideCard({ post }) {
           {body}…
         </div>
       )}
-      <div style={{ marginTop: 4, fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', letterSpacing: '0.06em' }}>
+      <button
+        onClick={e => { e.stopPropagation(); navigate('/@thearchive') }}
+        style={{ marginTop: 4, fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', letterSpacing: '0.06em', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+      >
         @thearchive
-      </div>
-    </button>
+      </button>
+    </div>
   )
 }
 
