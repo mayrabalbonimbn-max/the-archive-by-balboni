@@ -179,21 +179,7 @@ export default function Sidebar({ profile, onLogout, onCompose }) {
         </div>
       </aside>
 
-      {/* ── Mobile top bar ───────────────────────────────────────────────── */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-xl border-b border-dark-border/60 flex items-center justify-between px-4 py-3">
-        <button onClick={() => setMobileOpen(v => !v)} aria-label="Abrir menu">
-          <Avatar profile={profile} size="sm" />
-        </button>
-        <button
-          onClick={() => navigate('/')}
-          className="font-editorial text-[18px] text-dark-text tracking-tight hover:text-brand-rose transition-colors"
-        >
-          The Archive
-        </button>
-        <div className="w-8" />
-      </div>
-
-      {/* ── Mobile drawer — 6 itens exatos ──────────────────────────────── */}
+      {/* ── Mobile drawer ────────────────────────────────────────────────── */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-40">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={close} />
