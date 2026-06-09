@@ -5,7 +5,7 @@ import { formatFullDate, TYPE_CONFIG } from '../utils/helpers'
 import PostAttachments from '../components/PostAttachments'
 import CodeBlock from '../components/CodeBlock'
 import MarkdownRenderer from '../components/MarkdownRenderer'
-import LinkPreviewCard from '../components/LinkPreviewCard'
+import LinkPreviewCard, { useLinkPreview, extractFirstUrl } from '../components/LinkPreviewCard'
 
 function BackIcon() {
   return (
@@ -39,11 +39,19 @@ export default function PostDetailPage({ profile, onLike, onSave, onDelete }) {
   const [notFound, setNotFound] = useState(false)
 
   useEffect(() => {
+    setLoading(true)
+    setNotFound(false)
     api.get(`/posts/${id}`)
       .then(setPost)
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
   }, [id])
+
+  // Hooks must be called before any conditional return
+  // Fetch live preview for posts that have a URL in content but no stored linkPreview
+  const fallbackUrl = (post && !post.linkPreview) ? extractFirstUrl(post.content || '') : null
+  const { preview: livePreview } = useLinkPreview(fallbackUrl)
+  const effectivePreview = post?.linkPreview || livePreview
 
   if (loading) {
     return (
@@ -117,9 +125,9 @@ export default function PostDetailPage({ profile, onLike, onSave, onDelete }) {
           </div>
         )}
 
-        {post.linkPreview && (
+        {effectivePreview && (
           <div className="mb-6">
-            <LinkPreviewCard preview={post.linkPreview} />
+            <LinkPreviewCard preview={effectivePreview} />
           </div>
         )}
 

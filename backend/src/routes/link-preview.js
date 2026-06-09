@@ -61,8 +61,10 @@ function extractPreview(html, url) {
 
 // GET /api/link-preview?url=...
 router.get('/', async (req, res) => {
-  const rawUrl = (req.query.url || '').trim()
+  let rawUrl = (req.query.url || '').trim()
   if (!rawUrl) return res.status(400).json({ error: 'URL obrigatória.' })
+  // Normalize bare www. URLs (no protocol)
+  if (/^www\./i.test(rawUrl)) rawUrl = `https://${rawUrl}`
   if (!isSafeUrl(rawUrl)) return res.status(400).json({ error: 'URL inválida ou não permitida.' })
 
   try {
