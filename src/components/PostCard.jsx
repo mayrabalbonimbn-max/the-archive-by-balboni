@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { formatRelativeTime, formatFullDate, TYPE_CONFIG, CATEGORIA_CONFIG } from '../utils/helpers'
+import { formatRelativeTime, formatFullDate, TYPE_CONFIG, CATEGORIA_CONFIG, profileUrl } from '../utils/helpers'
 import PostAttachments from './PostAttachments'
 import CodeBlock from './CodeBlock'
 import LinkPreviewCard from './LinkPreviewCard'
@@ -76,7 +76,7 @@ export default function PostCard({ post, profile, onLike, onSave, onPin, onDelet
   const visibilityLabel = post.visibility === 'public' ? 'Público' : post.visibility === 'followers' ? 'Seguidores' : post.visibility === 'friends' ? 'Amigos' : 'Privado'
   const reactionCounts = post.reactionCounts || {}
   const viewerReactions = post.viewerReactions || []
-  const profilePath = isOwner ? '/profile' : (post.author?.handle ? `/@${post.author.handle}` : `/profiles/${post.profileId}`)
+  const profilePath = isOwner ? '/profile' : profileUrl(post.author?.handle, post.profileId)
 
   function handleLike() {
     setLikeAnimating(true)

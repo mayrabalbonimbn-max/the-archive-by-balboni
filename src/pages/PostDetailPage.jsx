@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { api } from '../utils/api'
-import { formatFullDate, TYPE_CONFIG, CATEGORIA_CONFIG } from '../utils/helpers'
+import { formatFullDate, TYPE_CONFIG, CATEGORIA_CONFIG, profileUrl } from '../utils/helpers'
 import PostAttachments from '../components/PostAttachments'
 import CodeBlock from '../components/CodeBlock'
 import MarkdownRenderer from '../components/MarkdownRenderer'
@@ -199,8 +199,7 @@ export default function PostDetailPage({ profile, onLike, onSave, onDelete }) {
           style={{ cursor: 'pointer' }}
           onClick={() => {
             if (isOwner) navigate('/profile')
-            else if (post.author?.handle) navigate(`/@${post.author.handle}`)
-            else navigate(`/profiles/${post.author?.id ?? post.profileId}`)
+            else navigate(profileUrl(post.author?.handle, post.author?.id ?? post.profileId))
           }}
         >
           <Avatar name={displayProfile?.name} src={avatarSrc} size={40} />

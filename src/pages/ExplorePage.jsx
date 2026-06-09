@@ -9,6 +9,7 @@ import Avatar from '../components/ui/Avatar'
 import PersonRow from '../components/ui/PersonRow'
 import EntryCard from '../components/ui/EntryCard'
 import { api } from '../utils/api'
+import { profileUrl } from '../utils/helpers'
 
 const THEMES = [
   'Fotografia', 'Ensaios', 'Notas de campo', 'Código', 'Leitura', 'Memória', 'Arquitetura',
@@ -56,7 +57,7 @@ function PublicArchiveCard({ user, idx }) {
 
   return (
     <div
-      onClick={() => navigate(user.handle ? `/@${user.handle}` : `/profiles/${user.id}`)}
+      onClick={() => navigate(profileUrl(user.handle, user.id))}
       style={{ flexShrink: 0, width: 256, cursor: 'pointer' }}
     >
       <PhotoTile tone1={tone1} tone2={tone2} radius={16} style={{ height: 150 }}>
@@ -106,7 +107,7 @@ function GuideCard({ post }) {
         </div>
       )}
       <button
-        onClick={e => { e.stopPropagation(); navigate('/@thearchive') }}
+        onClick={e => { e.stopPropagation(); navigate(profileUrl('@thearchive')) }}
         style={{ marginTop: 4, fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', letterSpacing: '0.06em', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
       >
         @thearchive

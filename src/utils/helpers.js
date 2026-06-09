@@ -1,3 +1,14 @@
+// Returns /@handle (stripping any leading @) or /profiles/:id as fallback
+export function profileUrl(handleOrProfile, id) {
+  const handle = typeof handleOrProfile === 'object'
+    ? (handleOrProfile?.handle ?? handleOrProfile?.username)
+    : handleOrProfile
+  const fallbackId = typeof handleOrProfile === 'object' ? (id ?? handleOrProfile?.id) : id
+  if (handle) return `/@${handle.replace(/^@+/, '')}`
+  if (fallbackId) return `/profiles/${fallbackId}`
+  return '/explore'
+}
+
 export function formatRelativeTime(isoString) {
   const now = new Date()
   const date = new Date(isoString)

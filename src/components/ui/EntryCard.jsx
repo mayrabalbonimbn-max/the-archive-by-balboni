@@ -7,6 +7,7 @@ import { useAttachmentUrl } from '../../hooks/useAttachmentUrl'
 import { api, attachmentBlob } from '../../utils/api'
 import CommentsBox from '../CommentsBox'
 import EditPostModal from '../EditPostModal'
+import { profileUrl } from '../../utils/helpers'
 
 function fmtDate(iso) {
   if (!iso) return ''
@@ -96,10 +97,7 @@ export default function EntryCard({ post, showAuthor = true, onLike, onSave, onD
 
   function goToProfile(e) {
     e.stopPropagation()
-    const handle = author?.handle
-    const id = author?.id
-    if (handle) navigate(`/@${handle}`)
-    else if (id) navigate(`/profiles/${id}`)
+    navigate(profileUrl(author?.handle, author?.id))
   }
 
   return (

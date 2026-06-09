@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../utils/api'
-import { formatRelativeTime } from '../utils/helpers'
+import { formatRelativeTime, profileUrl } from '../utils/helpers'
 
 export default function CommentsBox({ postId, initialCount = 0, autoOpen = false, highlightId = null }) {
   const navigate = useNavigate()
@@ -157,7 +157,7 @@ export default function CommentsBox({ postId, initialCount = 0, autoOpen = false
                 }}
               >
                 <p style={S.meta}>
-                  <button onClick={() => navigate(comment.author.handle ? `/@${comment.author.handle}` : `/profiles/${comment.author.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 600 }}>{comment.author.name}</button>
+                  <button onClick={() => navigate(profileUrl(comment.author.handle, comment.author.id))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 600 }}>{comment.author.name}</button>
                   {' · '}{formatRelativeTime(comment.createdAt)}
                 </p>
 
@@ -187,7 +187,7 @@ export default function CommentsBox({ postId, initialCount = 0, autoOpen = false
                     {comment.replies.map(reply => (
                       <div key={reply.id} style={S.reply}>
                         <p style={S.meta}>
-                          <button onClick={() => navigate(reply.author.handle ? `/@${reply.author.handle}` : `/profiles/${reply.author.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 600 }}>{reply.author.name}</button>
+                          <button onClick={() => navigate(profileUrl(reply.author.handle, reply.author.id))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 600 }}>{reply.author.name}</button>
                           {' · '}{formatRelativeTime(reply.createdAt)}
                         </p>
                         {editing?.kind === 'reply' && editing.id === reply.id ? (

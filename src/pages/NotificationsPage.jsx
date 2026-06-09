@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../utils/api'
+import { profileUrl } from '../utils/helpers'
 import AppBar from '../components/ui/AppBar'
 import Icon from '../components/ui/Icon'
 import Avatar from '../components/ui/Avatar'
@@ -58,7 +59,7 @@ function NoticeRow({ item, onFollowBack }) {
     else if (item.type === 'comment' && item.postId) navigate(`/posts/${item.postId}?comment=${item.commentId ?? ''}`)
     else if (item.type === 'reply' && item.postId) navigate(`/posts/${item.postId}?comment=${item.commentId ?? ''}`)
     else if (item.postId) navigate(`/posts/${item.postId}`)
-    else if (item.actor?.id) navigate(item.actor.handle ? `/@${item.actor.handle}` : `/profiles/${item.actor.id}`)
+    else if (item.actor?.id) navigate(profileUrl(item.actor.handle, item.actor.id))
   }
 
   if (isMemory) {

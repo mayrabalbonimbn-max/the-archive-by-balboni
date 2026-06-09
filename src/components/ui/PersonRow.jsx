@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Avatar from './Avatar'
 import { api } from '../../utils/api'
+import { profileUrl } from '../../utils/helpers'
 
 export default function PersonRow({ person, hairline = true, storyProfiles }) {
   const navigate = useNavigate()
@@ -23,7 +24,7 @@ export default function PersonRow({ person, hairline = true, storyProfiles }) {
 
   return (
     <div
-      onClick={() => navigate(person.handle ? `/@${person.handle}` : `/profiles/${person.id}`)}
+      onClick={() => navigate(profileUrl(person.handle, person.id))}
       style={{
         display: 'flex', alignItems: 'center', gap: 13, padding: '14px 20px',
         borderBottom: hairline ? '1px solid var(--line)' : 'none',
