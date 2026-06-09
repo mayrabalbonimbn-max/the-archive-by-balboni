@@ -255,7 +255,7 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
   }
 
   return (
-    <div style={{ animation: 'fadeUp var(--dur-screen) var(--ease-out)' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--bg)' }}>
       <AppBar
         left={
           <button
