@@ -37,19 +37,26 @@ router.get('/search', async (req, res) => {
     const q = (req.query.q || '').trim()
     if (q.length < 2) return res.json([])
     const handle = q.startsWith('@') ? normalizeHandle(q) : `%${q}%`
+    const like = `%${q}%`
     const result = await pool.query(
-      `SELECT p.id, p.name, p.handle, p.avatar,
+      `SELECT p.id, p.name, p.handle, p.avatar, p.bio, p.title, p.location,
         EXISTS (SELECT 1 FROM follows fl WHERE fl.follower_id = $1 AND fl.following_id = p.id) AS is_following,
         (SELECT COUNT(*)::int FROM follows fl WHERE fl.following_id = p.id) AS follower_count,
         (SELECT COUNT(*)::int FROM follows fl WHERE fl.follower_id = p.id) AS following_count
        FROM profiles p
        WHERE p.id != $1
-         AND (lower(p.handle) LIKE lower($2) OR lower(p.name) LIKE lower($3))
+         AND (
+           lower(p.handle) LIKE lower($2)
+           OR lower(p.name) LIKE lower($3)
+           OR lower(coalesce(p.bio,'')) LIKE lower($3)
+           OR lower(coalesce(p.title,'')) LIKE lower($3)
+           OR lower(coalesce(p.location,'')) LIKE lower($3)
+         )
        ORDER BY lower(p.handle)
        LIMIT 12`,
-      [req.user.profileId, handle, `%${q}%`]
+      [req.user.profileId, handle, like]
     )
-    res.json(result.rows.map(toPerson))
+    res.json(result.rows.map(r => ({ ...toPerson(r), bio: r.bio || null, title: r.title || null, location: r.location || null })))
   } catch (err) {
     console.error('GET /follows/search error:', err)
     res.status(500).json({ error: 'Erro interno do servidor.' })

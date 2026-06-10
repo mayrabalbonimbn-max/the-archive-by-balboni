@@ -94,6 +94,9 @@ function AuthenticatedApp({ onLogout }) {
   const { posts, loading: postsLoading, addPost, toggleLike, toggleSave, togglePin, deletePost, importPosts } = usePosts()
   const [searchQuery, setSearchQuery] = useState('')
 
+  // Expose handle globally so CirculoSection empty state can build the profile link
+  if (profile?.handle) window.__archiveHandle = profile.handle.replace(/^@/, '')
+
   console.log('[AuthenticatedApp] profileLoading:', profileLoading, 'profile:', profile?.handle ?? null)
 
   if (profileLoading) {

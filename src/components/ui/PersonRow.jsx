@@ -5,7 +5,7 @@ import VerifiedBadge from './VerifiedBadge'
 import { api } from '../../utils/api'
 import { profileUrl } from '../../utils/helpers'
 
-export default function PersonRow({ person, hairline = true, storyProfiles }) {
+export default function PersonRow({ person, hairline = true }) {
   const navigate = useNavigate()
   const [following, setFollowing] = useState(person.isFollowing ?? person.following ?? false)
   const [busy, setBusy] = useState(false)
@@ -32,7 +32,7 @@ export default function PersonRow({ person, hairline = true, storyProfiles }) {
         cursor: 'pointer',
       }}
     >
-      <Avatar name={person.name} src={person.avatar} profileId={person.id} size={44} story={storyProfiles?.has(person.id)} />
+      <Avatar name={person.name} src={person.avatar} profileId={person.id} size={44} />
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <span style={{ fontFamily: 'var(--serif)', fontSize: 16.5, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

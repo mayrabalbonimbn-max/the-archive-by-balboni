@@ -1,6 +1,15 @@
 const express = require('express')
 const pool = require('../db')
 const requireAuth = require('../middleware/auth')
+const { sendPushToUser } = require('../utils/push')
+
+async function notify(profileId, actorId, type, message) {
+  if (!profileId || profileId === actorId) return
+  await pool.query(
+    `INSERT INTO notifications (profile_id, actor_id, type, message) VALUES ($1, $2, $3, $4)`,
+    [profileId, actorId, type, message]
+  )
+}
 
 const router = express.Router()
 router.use(requireAuth)
@@ -136,6 +145,10 @@ router.post('/requests', async (req, res) => {
        VALUES ($1, $2, 'pending') RETURNING *`,
       [req.user.profileId, targetId]
     )
+    const actor = await pool.query('SELECT name FROM profiles WHERE id = $1', [req.user.profileId])
+    const reqMsg = `${actor.rows[0]?.name || 'Alguém'} quer ser seu amigo.`
+    await notify(targetId, req.user.profileId, 'friend_request', reqMsg)
+    sendPushToUser(targetId, { title: 'The Archive', body: reqMsg, url: '/notifications', tag: `friend-req-${req.user.profileId}` }).catch(() => {})
     res.status(201).json(created.rows[0])
   } catch (err) {
     console.error('POST /friends/requests error:', err)
@@ -155,6 +168,13 @@ router.patch('/requests/:id', async (req, res) => {
       [status, req.params.id, req.user.profileId]
     )
     if (result.rowCount === 0) return res.status(404).json({ error: 'Convite não encontrado.' })
+    if (action === 'accept') {
+      const friendship = result.rows[0]
+      const actor = await pool.query('SELECT name FROM profiles WHERE id = $1', [req.user.profileId])
+      const acceptMsg = `${actor.rows[0]?.name || 'Alguém'} aceitou seu pedido de amizade.`
+      await notify(friendship.requester_id, req.user.profileId, 'friend_accepted', acceptMsg)
+      sendPushToUser(friendship.requester_id, { title: 'The Archive', body: acceptMsg, url: '/notifications', tag: `friend-acc-${req.user.profileId}` }).catch(() => {})
+    }
     res.json(result.rows[0])
   } catch (err) {
     console.error('PATCH /friends/requests/:id error:', err)

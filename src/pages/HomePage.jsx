@@ -779,19 +779,33 @@ function CirculoSection({ circlePosts, circleLoading, updatePost }) {
             <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
           </div>
         ) : circlePosts.length === 0 ? (
-          <div style={{ padding: '28px 20px' }}>
-            <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-3)', margin: '0 0 8px' }}>
-              Nenhuma atividade do círculo ainda.
+          <div style={{ padding: '32px 20px 28px' }}>
+            <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 17, color: 'var(--ink-2)', margin: '0 0 8px', lineHeight: 1.4 }}>
+              Seu círculo ainda está começando.
             </p>
-            <p style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)', margin: '0 0 12px' }}>
-              Quando alguém do seu círculo guardar algo, vai aparecer aqui.
+            <p style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', margin: '0 0 20px', lineHeight: 1.6 }}>
+              Convide ou encontre pessoas para acompanhar trajetórias próximas da sua.
             </p>
-            <button
-              onClick={() => navigate('/friends')}
-              style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-            >
-              Encontrar pessoas →
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button
+                onClick={() => navigate('/explore')}
+                style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: '#fff', background: 'var(--accent)', border: 'none', borderRadius: 10, padding: '11px 18px', cursor: 'pointer', textAlign: 'left', fontWeight: 600 }}
+              >
+                Buscar pessoas
+              </button>
+              <button
+                onClick={() => navigate('/@thearchive')}
+                style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-2)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--line)', borderRadius: 10, padding: '11px 18px', cursor: 'pointer', textAlign: 'left' }}
+              >
+                Ver @thearchive
+              </button>
+              <button
+                onClick={() => { navigator.clipboard?.writeText(window.location.origin + '/@' + window.__archiveHandle).catch(() => {}) }}
+                style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--ink-3)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0, marginTop: 4 }}
+              >
+                Copiar link do meu perfil →
+              </button>
+            </div>
           </div>
         ) : (
           circlePosts.map(p => (

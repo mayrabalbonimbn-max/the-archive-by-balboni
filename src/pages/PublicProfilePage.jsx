@@ -131,6 +131,7 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
     ? Math.max(1, Math.floor((Date.now() - new Date(profile.createdAt)) / 86400000))
     : 0
   const collections = summary?.collections ?? []
+  const publicProjects = (summary?.projects ?? []).filter(p => p.status !== 'arquivado')
 
   return (
     <div style={{ animation: 'fadeUp var(--dur-screen) var(--ease-out)' }}>
@@ -256,9 +257,41 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
         </div>
       )}
 
+      {/* Projects strip */}
+      {publicProjects.length > 0 && (
+        <div style={{ marginTop: 26 }}>
+          <SectionLabel>Construindo</SectionLabel>
+          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', padding: '10px 20px 6px', scrollbarWidth: 'none' }}>
+            {publicProjects.map(proj => {
+              const statusColor = proj.status === 'ativo' || proj.status === 'construindo' ? 'var(--accent)' : 'var(--ink-3)'
+              return (
+                <div
+                  key={proj.id}
+                  onClick={() => navigate(`/projects/${proj.slug}`)}
+                  style={{ flexShrink: 0, width: 150, cursor: 'pointer', border: '1px solid var(--line)', borderRadius: 12, padding: '13px 14px', background: 'rgba(255,255,255,0.02)' }}
+                >
+                  <div style={{ fontSize: 22, marginBottom: 8 }}>{proj.emoji || '🌱'}</div>
+                  <div style={{ fontFamily: 'var(--serif)', fontSize: 14, color: 'var(--ink)', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {proj.name}
+                  </div>
+                  {proj.description && (
+                    <div style={{ fontFamily: 'var(--sans)', fontSize: 11.5, color: 'var(--ink-3)', marginTop: 4, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {proj.description}
+                    </div>
+                  )}
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: statusColor, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 8 }}>
+                    {proj.status || 'ativo'}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Recent entries */}
       <div style={{ marginTop: 26 }}>
-        <SectionLabel>Recentes</SectionLabel>
+        <SectionLabel>Entradas recentes</SectionLabel>
         <div style={{ borderTop: '1px solid var(--line)' }}>
           {posts.length === 0 ? (
             <p style={{ padding: '32px 20px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-3)' }}>

@@ -155,7 +155,7 @@ router.get('/:id/posts', async (req, res) => {
 router.get('/:id/summary', async (req, res) => {
   try {
     const profileId = req.params.id
-    const [collections, recent, articles, photos, tagRows] = await Promise.all([
+    const [collections, recent, articles, photos, tagRows, projects] = await Promise.all([
       pool.query(
         `SELECT c.id, c.name, COUNT(p.id)::int AS count
          FROM collections c
@@ -201,6 +201,14 @@ router.get('/:id/summary', async (req, res) => {
          LIMIT 300`,
         [req.user.profileId, profileId]
       ),
+      pool.query(
+        `SELECT id, name, description, status, emoji, slug
+         FROM projects
+         WHERE profile_id = $1 AND visibility != 'private'
+         ORDER BY created_at DESC
+         LIMIT 6`,
+        [profileId]
+      ),
     ])
 
     const tagCounts = new Map()
@@ -215,6 +223,7 @@ router.get('/:id/summary', async (req, res) => {
 
     res.json({
       collections: collections.rows,
+      projects: projects.rows,
       tags: [...tagCounts.entries()]
         .sort((a, b) => b[1] - a[1])
         .slice(0, 8)

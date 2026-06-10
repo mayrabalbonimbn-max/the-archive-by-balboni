@@ -29,6 +29,7 @@ router.get('/', async (req, res) => {
         message: row.message,
         postId: row.post_id,
         commentId: row.comment_id,
+        conversationId: row.conversation_id || null,
         readAt: row.read_at,
         createdAt: row.created_at,
         postTitle,

@@ -29,20 +29,28 @@ function groupItems(items) {
 }
 
 const TYPE_VERB = {
-  react:   'apreciou sua entrada',
-  like:    'apreciou sua entrada',
-  comment: 'deixou uma nota em',
-  collect: 'guardou sua entrada em',
-  follow:  'adicionou você ao círculo',
-  mention: 'mencionou você em',
+  react:          'apreciou sua entrada',
+  like:           'apreciou sua entrada',
+  comment:        'deixou uma nota em',
+  reply:          'respondeu seu comentário',
+  collect:        'guardou sua entrada em',
+  follow:         'adicionou você ao círculo',
+  mention:        'mencionou você em',
+  friend_request: 'quer ser seu amigo',
+  friend_accepted:'aceitou seu pedido de amizade',
+  message:        'enviou uma mensagem',
 }
 
 const TYPE_ICON = {
   react: 'heart', like: 'heart',
   comment: 'comment',
+  reply: 'comment',
   collect: 'collections',
   follow: 'people',
   mention: 'tag',
+  friend_request: 'people',
+  friend_accepted: 'people',
+  message: 'comment',
 }
 
 function NoticeRow({ item, onFollowBack, onRead }) {
@@ -57,8 +65,11 @@ function NoticeRow({ item, onFollowBack, onRead }) {
   function open() {
     if (unread) onRead?.(item.id)
     if (isMemory) navigate('/memories')
-    else if (item.type === 'comment' && item.postId) navigate(`/posts/${item.postId}?comment=${item.commentId ?? ''}`)
-    else if (item.type === 'reply' && item.postId) navigate(`/posts/${item.postId}?comment=${item.commentId ?? ''}`)
+    else if (item.type === 'message' && item.conversationId) navigate(`/messages/${item.conversationId}`)
+    else if (item.type === 'friend_request' && item.actor?.id) navigate(profileUrl(item.actor.handle, item.actor.id))
+    else if (item.type === 'friend_accepted' && item.actor?.id) navigate(profileUrl(item.actor.handle, item.actor.id))
+    else if ((item.type === 'comment' || item.type === 'reply') && item.postId) navigate(`/posts/${item.postId}?comment=${item.commentId ?? ''}`)
+    else if (item.type === 'mention' && item.postId) navigate(`/posts/${item.postId}`)
     else if (item.postId) navigate(`/posts/${item.postId}`)
     else if (item.actor?.id) navigate(profileUrl(item.actor.handle, item.actor.id))
   }

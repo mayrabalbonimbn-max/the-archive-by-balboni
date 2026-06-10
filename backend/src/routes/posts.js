@@ -5,6 +5,7 @@ const pool = require('../db')
 const requireAuth = require('../middleware/auth')
 const { REACTIONS, PRIMARY_REACTIONS, attachmentVisibleSql, normalizeVisibility, reactionCountsSql, viewerReactionsSql, visibleSql } = require('../utils/social')
 const { sendPushToUser } = require('../utils/push')
+const { notifyMentions } = require('../utils/mentions')
 
 const router = express.Router()
 const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, '..', '..', 'storage', 'uploads')
@@ -407,6 +408,9 @@ router.post('/', async (req, res) => {
     }
 
     await client.query('COMMIT')
+    // Notify @mentions after transaction commits (non-blocking)
+    const postContent = cleanContent + (cleanTitle ? ` ${cleanTitle}` : '')
+    notifyMentions(postContent, req.user.profileId, postId).catch(() => {})
     res.status(201).json({ ...toPost(result.rows[0]), tags: tagSlugs })
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {})

@@ -2,6 +2,10 @@ const express = require('express')
 const router = express.Router()
 const pool = require('../db')
 const auth = require('../middleware/auth')
+const { sendPushToUser } = require('../utils/push')
+
+// Startup migration: add conversation_id column to notifications if missing
+pool.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS conversation_id UUID`).catch(() => {})
 
 router.use(auth)
 
@@ -149,6 +153,27 @@ router.post('/:id/messages', async (req, res) => {
        RETURNING id, content, created_at AS "createdAt"`,
       [id, pid, content.trim()]
     )
+
+    // Notify the other participant
+    const { rows: others } = await pool.query(
+      `SELECT cp.profile_id, p.name AS sender_name
+       FROM conversation_participants cp
+       JOIN profiles p ON p.id = $2
+       WHERE cp.conversation_id = $1 AND cp.profile_id != $2`,
+      [id, pid]
+    )
+    if (others.length > 0) {
+      const recipientId = others[0].profile_id
+      const senderName = others[0].sender_name || 'Alguém'
+      const dmMsg = `${senderName} enviou uma mensagem.`
+      await pool.query(
+        `INSERT INTO notifications (profile_id, actor_id, conversation_id, type, message)
+         VALUES ($1, $2, $3, 'message', $4)`,
+        [recipientId, pid, id, dmMsg]
+      ).catch(() => {})
+      sendPushToUser(recipientId, { title: senderName, body: content.trim().slice(0, 80), url: `/messages/${id}`, tag: `dm-${id}` }).catch(() => {})
+    }
+
     res.json({ ...msg, mine: true })
   } catch (err) {
     console.error('[conversations POST /:id/messages]', err)

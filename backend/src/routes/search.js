@@ -52,6 +52,8 @@ function toUser(row) {
     name: row.name,
     handle: row.handle,
     bio: row.bio || '',
+    title: row.title || '',
+    location: row.location || '',
     hasAvatar: Boolean(row.avatar) && isStoredFile(row.avatar),
     isFollowing: row.is_following === true,
     verified: row.is_system || false,
@@ -87,16 +89,22 @@ router.get('/', async (req, res) => {
   try {
     const [usersResult, postsResult, projectsResult, collectionsResult] = await Promise.all([
 
-      // Users: ILIKE (names/handles are short, no stemming needed)
+      // Users: ILIKE on name, handle, bio, title, location
       pool.query(
-        `SELECT p.id, p.name, p.handle, p.avatar, p.bio, p.is_system,
+        `SELECT p.id, p.name, p.handle, p.avatar, p.bio, p.title, p.location, p.is_system,
            EXISTS (
              SELECT 1 FROM follows fl
              WHERE fl.follower_id = $1 AND fl.following_id = p.id
            ) AS is_following
          FROM profiles p
          WHERE p.id != $1
-           AND (p.name ILIKE $2 OR p.handle ILIKE $2)
+           AND (
+             p.name ILIKE $2
+             OR p.handle ILIKE $2
+             OR coalesce(p.bio,'') ILIKE $2
+             OR coalesce(p.title,'') ILIKE $2
+             OR coalesce(p.location,'') ILIKE $2
+           )
          ORDER BY p.name
          LIMIT 10`,
         [profileId, like]
