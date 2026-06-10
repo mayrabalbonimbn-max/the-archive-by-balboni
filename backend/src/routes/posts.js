@@ -323,19 +323,30 @@ router.post('/', async (req, res) => {
       }
     }
 
-    // Duplicate check — same content + code for this user in the last 30 days
-    const dupCheck = await pool.query(
-      `SELECT id FROM posts
-       WHERE profile_id = $1
-         AND LOWER(TRIM(content)) = LOWER(TRIM($2))
-         AND COALESCE(LOWER(TRIM(code_content)), '') = COALESCE(LOWER(TRIM($3)), '')
-         AND created_at > NOW() - INTERVAL '30 days'
-       LIMIT 1`,
-      [req.user.profileId, cleanContent, cleanCode || '']
-    )
-    if (dupCheck.rows.length > 0) {
-      client.release()
-      return res.status(409).json({ error: 'Você já tem uma entrada idêntica a essa. Verifique seu arquivo antes de publicar.' })
+    // Duplicate check — text-only posts only; never block when files are attached
+    const isTextOnly = hasAttachments !== true
+    const hasRealText = cleanContent.length >= 4
+    const hasRealCode = Boolean(cleanCode)
+    console.log('[dupcheck] type:', type, 'hasAttachments:', hasAttachments, 'contentLen:', cleanContent.length, 'hasCode:', hasRealCode)
+
+    if (isTextOnly && (hasRealText || hasRealCode)) {
+      const dupCheck = await pool.query(
+        `SELECT id FROM posts
+         WHERE profile_id = $1
+           AND LOWER(TRIM(content)) = LOWER(TRIM($2))
+           AND COALESCE(LOWER(TRIM(code_content)), '') = COALESCE(LOWER(TRIM($3)), '')
+           AND NOT EXISTS (SELECT 1 FROM post_attachments WHERE post_id = posts.id)
+           AND created_at > NOW() - INTERVAL '30 days'
+         LIMIT 1`,
+        [req.user.profileId, cleanContent, cleanCode || '']
+      )
+      if (dupCheck.rows.length > 0) {
+        console.log('[dupcheck] blocked — matched post id:', dupCheck.rows[0].id)
+        client.release()
+        return res.status(409).json({ error: 'Você já guardou um texto muito parecido.' })
+      }
+    } else {
+      console.log('[dupcheck] skipped —', hasAttachments ? 'tem anexo' : 'texto muito curto')
     }
 
     await client.query('BEGIN')
