@@ -495,7 +495,7 @@ describe('Cápsulas do tempo', () => {
     assert.ok(found, 'cápsula deve aparecer na rota /capsules do dono')
   })
 
-  it('cápsula com unlockAt no passado não é salva como cápsula', async () => {
+  it('cápsula com unlockAt no passado retorna 400', async () => {
     const pastDate = new Date(Date.now() - 1000).toISOString()
     const res = await request(app)
       .post('/api/posts')
@@ -507,10 +507,8 @@ describe('Cápsulas do tempo', () => {
         isTimeCapsule: true,
         unlockAt: pastDate,
       })
-    assert.equal(res.status, 201)
-    // The backend only accepts unlockAt in the future
-    assert.ok(!res.body.isTimeCapsule || !res.body.unlockAt,
-      'cápsula com data no passado não deve ser tratada como cápsula')
+    assert.equal(res.status, 400)
+    assert.equal(res.body.error, 'A data de abertura da cápsula deve ser no futuro.')
   })
 })
 
