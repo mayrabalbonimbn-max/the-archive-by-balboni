@@ -45,6 +45,14 @@ function SectionHead({ label }) {
   )
 }
 
+function SectionNote({ children }) {
+  return (
+    <p style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', marginTop: -8, marginBottom: 16, lineHeight: 1.6 }}>
+      {children}
+    </p>
+  )
+}
+
 const PUBLIC_SECTION_OPTIONS = [
   { id: 'projects', label: 'Projetos' },
   { id: 'collections', label: 'Coleções' },
@@ -263,10 +271,13 @@ function InviteSettingsSection() {
 
   return (
     <div style={{ marginBottom: 40 }}>
-      <SectionHead label="Convites" />
-      <p style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', marginTop: 0, marginBottom: 18, lineHeight: 1.6 }}>
-        Gere códigos para liberar a criação de novos perfis.
-      </p>
+      <SectionHead label="Área administrativa" />
+      <SectionNote>
+        Gere códigos para liberar a criação de novos perfis. Esta área só aparece para admins.
+      </SectionNote>
+      <div style={{ marginBottom: 16, fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '0.12em', color: 'var(--accent)', textTransform: 'uppercase' }}>
+        Convites
+      </div>
 
       <form onSubmit={createInvite} style={{ marginBottom: 16 }}>
         <Field label="Nome ou observação">
@@ -524,6 +535,12 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
     setPublicSections(cur => cur.includes(section) ? cur.filter(s => s !== section) : [...cur, section])
   }
 
+  const publicPreview = [
+    publicIntro?.trim() ? publicIntro.trim() : 'Escreva uma apresentação curta para a sua vitrine.',
+    `${publicSections.length} seção(ões) visível(is)`,
+    profile?.publicSections?.includes('trajectory') ? 'Trajetória pública ativa' : 'Trajetória oculta',
+  ]
+
   // Diagnostic guard (should never happen if App.jsx is working correctly)
   if (!profile) {
     return (
@@ -579,6 +596,9 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
         {/* ── Perfil ── */}
         {settingsGroup === 'account' && <><div style={{ marginBottom: 40 }}>
           <SectionHead label="Perfil" />
+          <SectionNote>
+            Ajuste o que aparece para quem visita seu perfil e o jeito como você quer ser apresentada.
+          </SectionNote>
 
           {/* Avatar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
@@ -641,9 +661,26 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
         {/* ── Perfil público ── */}
         <div style={{ marginBottom: 40 }}>
           <SectionHead label="Perfil público" />
-          <p style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', marginTop: 0, marginBottom: 18, lineHeight: 1.6 }}>
-            Escolha como seu arquivo aparece para outras pessoas. Conteúdo privado continua privado.
-          </p>
+          <SectionNote>
+            A vitrine pública é sua apresentação. Conteúdo privado continua privado.
+          </SectionNote>
+          <div style={{ marginBottom: 18, padding: '14px 16px', borderRadius: 12, border: '1px solid var(--line-strong)', background: 'rgba(255,255,255,0.03)' }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.12em', color: 'var(--ink-3)', marginBottom: 10, textTransform: 'uppercase' }}>
+              Preview rápido
+            </div>
+            <div style={{ display: 'grid', gap: 8 }}>
+              {publicPreview.map((item, idx) => (
+                <div key={idx} style={{ fontFamily: idx === 0 ? 'var(--serif)' : 'var(--mono)', fontSize: idx === 0 ? 14.5 : 10.5, color: idx === 0 ? 'var(--ink)' : 'var(--ink-3)', lineHeight: 1.5 }}>
+                  {item}
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
+              <OutlineBtn onClick={() => navigate(`/profiles/${profile.id}`)}>
+                Ver perfil público
+              </OutlineBtn>
+            </div>
+          </div>
           <Field label="Apresentação pública">
             <textarea
               value={publicIntro}
