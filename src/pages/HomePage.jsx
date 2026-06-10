@@ -424,183 +424,211 @@ function MemoriaSection({ memories }) {
 
 function GraphPreviewSection({ graphData }) {
   const navigate = useNavigate()
-
   if (!graphData) return null
 
   const { nodes, links } = graphData
-
   const postCount = nodes.filter(n => n.type === 'post' || n.type === 'article').length
   const hasEnough = postCount >= 3 && links.length >= 2
 
-  // Count connections per node
+  // Connection count per node
   const connCount = new Map()
   links.forEach(l => {
     connCount.set(l.source, (connCount.get(l.source) || 0) + 1)
     connCount.set(l.target, (connCount.get(l.target) || 0) + 1)
   })
 
-  // Top tags by connections
-  const topTags = nodes
-    .filter(n => n.type === 'tag')
-    .sort((a, b) => (connCount.get(b.id) || 0) - (connCount.get(a.id) || 0))
-    .slice(0, 7)
+  // Select top nodes to display
+  const topTags  = [...nodes].filter(n => n.type === 'tag')
+    .sort((a, b) => (connCount.get(b.id) || 0) - (connCount.get(a.id) || 0)).slice(0, 14)
+  const topPosts = [...nodes].filter(n => n.type === 'post' || n.type === 'article')
+    .sort((a, b) => (connCount.get(b.id) || 0) - (connCount.get(a.id) || 0)).slice(0, 22)
+  const topProjs = [...nodes].filter(n => n.type === 'project').slice(0, 5)
 
-  // Top posts/articles by connections
-  const topPosts = nodes
-    .filter(n => n.type === 'post' || n.type === 'article')
-    .sort((a, b) => (connCount.get(b.id) || 0) - (connCount.get(a.id) || 0))
-    .slice(0, 5)
+  const displayNodes = [...topTags, ...topProjs, ...topPosts]
+  const displayIds   = new Set(displayNodes.map(n => n.id))
 
-  // SVG layout
-  const cx = 120, cy = 84
-  const rInner = 52, rOuter = 76
+  // Only links between displayed nodes
+  const displayLinks = links
+    .filter(l => displayIds.has(l.source) && displayIds.has(l.target))
+    .slice(0, 80)
 
-  const tagPositions = topTags.map((n, i) => {
-    const angle = (i / topTags.length) * Math.PI * 2 - Math.PI / 2
-    const count = connCount.get(n.id) || 1
-    return { ...n, x: cx + Math.cos(angle) * rInner, y: cy + Math.sin(angle) * rInner, count }
+  // Golden angle placement (sunflower pattern — organic, not concentric rings)
+  const GOLDEN = 2.399963 // 137.5° in radians
+  const W = 360, H = 230, cx = W / 2, cy = H / 2
+
+  const positioned = displayNodes.map((n, i) => {
+    const count = connCount.get(n.id) || 0
+    // Tags and projects closer to center (more connected = closer)
+    const baseR = n.type === 'tag'     ? 62
+                : n.type === 'project' ? 55
+                : 95
+    const r = Math.max(16, baseR - count * 2)
+    // Deterministic angle offset by type
+    const offset = n.type === 'tag' ? 0 : n.type === 'project' ? 1.2 : 0.6
+    const angle = i * GOLDEN + offset
+    return {
+      ...n, count,
+      x: Math.max(10, Math.min(W - 10, cx + Math.cos(angle) * r)),
+      y: Math.max(10, Math.min(H - 10, cy + Math.sin(angle) * r)),
+    }
   })
 
-  const postPositions = topPosts.map((n, i) => {
-    const angle = ((i + 0.5) / topPosts.length) * Math.PI * 2 - Math.PI / 2
-    return { ...n, x: cx + Math.cos(angle) * rOuter, y: cy + Math.sin(angle) * rOuter }
-  })
+  const posMap = new Map(positioned.map(n => [n.id, n]))
 
-  // Top 3 tags as pills for the stats line
-  const tagPills = topTags.slice(0, 4)
+  function nodeR(n) {
+    if (n.type === 'tag')     return Math.min(7, 3 + n.count * 0.55)
+    if (n.type === 'project') return 5
+    return 1.8
+  }
 
-  return (
-    <div style={{ padding: '0 20px 26px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <p style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-3)', margin: 0 }}>
-          Conexões do seu arquivo
+  const topTagLabels = topTags.slice(0, 5).map(n => n.label)
+
+  if (!hasEnough) {
+    return (
+      <div style={{ padding: '0 20px 26px' }}>
+        <p style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-3)', margin: '0 0 10px' }}>
+          Mapa do arquivo
         </p>
-        <button
-          onClick={() => navigate('/graph')}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)', padding: 0 }}
-        >
-          Explorar →
-        </button>
-      </div>
-
-      {!hasEnough ? (
-        <p style={{ fontFamily: 'var(--serif)', fontSize: 14, fontStyle: 'italic', color: 'var(--ink-3)', lineHeight: 1.6, margin: 0 }}>
+        <p style={{ fontFamily: 'var(--serif)', fontSize: 15, fontStyle: 'italic', color: 'var(--ink-3)', lineHeight: 1.65, margin: 0 }}>
           Suas conexões começam a aparecer conforme você usa tags, projetos e links internos.
         </p>
-      ) : (
-        <button
-          onClick={() => navigate('/graph')}
-          style={{
-            display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
-            background: 'none', border: '1px solid var(--line)', borderRadius: 16,
-            padding: '16px 18px', transition: 'border-color .15s',
-          }}
-          onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--ink-3)'}
-          onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--line)'}
-        >
-          {/* Stats row */}
-          <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
-            <div>
-              <p style={{ fontFamily: 'var(--serif)', fontSize: 20, color: '#F2EDE6', margin: '0 0 2px', lineHeight: 1 }}>
-                {postCount}
-              </p>
-              <p style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#6b6560', margin: 0 }}>
-                registros
-              </p>
-            </div>
-            <div style={{ width: 1, background: '#222', alignSelf: 'stretch' }} />
-            <div>
-              <p style={{ fontFamily: 'var(--serif)', fontSize: 20, color: '#F2EDE6', margin: '0 0 2px', lineHeight: 1 }}>
-                {links.length}
-              </p>
-              <p style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#6b6560', margin: 0 }}>
-                conexões
-              </p>
-            </div>
-            {tagPills.length > 0 && (
-              <>
-                <div style={{ width: 1, background: '#222', alignSelf: 'stretch' }} />
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center' }}>
-                  {tagPills.map(t => (
-                    <span key={t.id} style={{
-                      fontFamily: 'var(--mono)', fontSize: 10, color: '#E86CB4',
-                      background: 'rgba(232,108,180,0.1)', borderRadius: 6,
-                      padding: '2px 7px', letterSpacing: '0.04em',
-                    }}>
-                      {t.label}
-                    </span>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+      </div>
+    )
+  }
 
-          {/* Mini SVG graph */}
-          <div style={{ borderRadius: 10, overflow: 'hidden', background: '#080808', lineHeight: 0 }}>
-            <svg
-              width="100%"
-              viewBox="0 0 240 168"
-              xmlns="http://www.w3.org/2000/svg"
-              style={{ display: 'block' }}
-            >
-              {/* Lines: posts → center */}
-              {postPositions.map((n, i) => (
-                <line key={`pl-${i}`}
-                  x1={cx} y1={cy} x2={n.x} y2={n.y}
-                  stroke="#2a2a2a" strokeWidth="0.8"
+  return (
+    <div style={{ padding: '0 0 32px' }}>
+      {/* Header */}
+      <div style={{ padding: '0 20px', marginBottom: 14 }}>
+        <p style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-3)', margin: '0 0 6px' }}>
+          Mapa do arquivo
+        </p>
+        <p style={{ fontFamily: 'var(--serif)', fontSize: 22, color: '#F2EDE6', fontWeight: 400, letterSpacing: '-0.02em', margin: '0 0 8px', lineHeight: 1.1 }}>
+          Suas ideias,<br /><span style={{ fontStyle: 'italic' }}>conectadas.</span>
+        </p>
+        <p style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#6b6560', margin: 0, letterSpacing: '0.04em' }}>
+          {postCount} registros · {links.length} conexões
+          {topTagLabels.length > 0 && (
+            <> · <span style={{ color: '#E86CB4' }}>{topTagLabels.join('  ')}</span></>
+          )}
+        </p>
+      </div>
+
+      {/* Galaxy visual — clickable, full width */}
+      <button
+        onClick={() => navigate('/graph')}
+        style={{ display: 'block', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '0 20px' }}
+      >
+        <div style={{ borderRadius: 20, overflow: 'hidden', lineHeight: 0, position: 'relative' }}>
+          <svg
+            width="100%" viewBox={`0 0 ${W} ${H}`}
+            xmlns="http://www.w3.org/2000/svg"
+            style={{ display: 'block' }}
+          >
+            <defs>
+              <radialGradient id="gpBg" cx="50%" cy="50%" r="65%">
+                <stop offset="0%"   stopColor="#160d12" />
+                <stop offset="100%" stopColor="#030303" />
+              </radialGradient>
+              <radialGradient id="gpCenter" cx="50%" cy="50%" r="50%">
+                <stop offset="0%"   stopColor="#E86CB4" stopOpacity="0.18" />
+                <stop offset="100%" stopColor="#E86CB4" stopOpacity="0" />
+              </radialGradient>
+              <filter id="gpGlow" x="-60%" y="-60%" width="220%" height="220%">
+                <feGaussianBlur stdDeviation="2.5" result="blur" />
+                <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+              </filter>
+              <filter id="gpCenterGlow" x="-150%" y="-150%" width="400%" height="400%">
+                <feGaussianBlur stdDeviation="10" result="blur" />
+                <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+              </filter>
+            </defs>
+
+            {/* Background */}
+            <rect width={W} height={H} fill="url(#gpBg)" />
+
+            {/* Ambient glow at center */}
+            <ellipse cx={cx} cy={cy} rx={90} ry={70} fill="url(#gpCenter)" />
+
+            {/* Connection lines */}
+            {displayLinks.map((l, i) => {
+              const s = posMap.get(l.source)
+              const t = posMap.get(l.target)
+              if (!s || !t) return null
+              const isTag = s.type === 'tag' || t.type === 'tag'
+              return (
+                <line key={i}
+                  x1={s.x} y1={s.y} x2={t.x} y2={t.y}
+                  stroke={isTag ? '#E86CB4' : '#4a3f3a'}
+                  strokeWidth={isTag ? '0.5' : '0.35'}
+                  strokeOpacity={isTag ? '0.22' : '0.12'}
                 />
-              ))}
-              {/* Lines: center → tags */}
-              {tagPositions.map((n, i) => (
-                <line key={`tl-${i}`}
-                  x1={cx} y1={cy} x2={n.x} y2={n.y}
-                  stroke="#E86CB4" strokeWidth="0.6" strokeOpacity="0.35"
-                />
-              ))}
-              {/* Post dots (outer ring) */}
-              {postPositions.map((n, i) => (
-                <circle key={`pd-${i}`} cx={n.x} cy={n.y} r={2.5} fill="#3a3530" />
-              ))}
-              {/* Tag nodes (inner ring) */}
-              {tagPositions.map((n, i) => {
-                const r = Math.min(5, 3 + n.count * 0.4)
-                const label = n.label.length > 9 ? n.label.slice(0, 9) : n.label
-                const labelY = n.y > cy ? n.y + r + 9 : n.y - r - 3
-                return (
-                  <g key={`tn-${i}`}>
-                    <circle cx={n.x} cy={n.y} r={r} fill="#E86CB4" fillOpacity="0.75" />
+              )
+            })}
+
+            {/* Post nodes — tiny light points */}
+            {positioned.filter(n => n.type === 'post' || n.type === 'article').map(n => (
+              <circle key={n.id} cx={n.x} cy={n.y} r={n.count >= 2 ? 2.5 : 1.8}
+                fill={n.type === 'article' ? '#c084fc' : '#4a4540'}
+                fillOpacity={n.count >= 2 ? 0.7 : 0.45}
+              />
+            ))}
+
+            {/* Project nodes */}
+            {positioned.filter(n => n.type === 'project').map(n => (
+              <circle key={n.id} cx={n.x} cy={n.y} r={5}
+                fill="#c084fc" fillOpacity="0.55"
+                filter="url(#gpGlow)"
+              />
+            ))}
+
+            {/* Tag nodes — the stars of the graph */}
+            {positioned.filter(n => n.type === 'tag').map(n => {
+              const r = nodeR(n)
+              const opacity = Math.min(0.95, 0.5 + n.count * 0.06)
+              const label = n.label.slice(0, 11)
+              const labelBelow = n.y < cy
+              return (
+                <g key={n.id} filter="url(#gpGlow)">
+                  {/* Halo */}
+                  <circle cx={n.x} cy={n.y} r={r + 3} fill="#E86CB4" fillOpacity="0.08" />
+                  {/* Node */}
+                  <circle cx={n.x} cy={n.y} r={r} fill="#E86CB4" fillOpacity={opacity} />
+                  {/* Label for bigger nodes */}
+                  {n.count >= 2 && (
                     <text
-                      x={n.x} y={labelY}
-                      textAnchor="middle"
-                      fill="#6b6560"
-                      fontSize="7"
-                      fontFamily="monospace"
+                      x={n.x} y={labelBelow ? n.y + r + 10 : n.y - r - 4}
+                      textAnchor="middle" fill="#9b8f89" fontSize="7" fontFamily="monospace"
                     >
                       {label}
                     </text>
-                  </g>
-                )
-              })}
-              {/* Center node — "você" */}
-              <circle cx={cx} cy={cy} r={9} fill="#E86CB4" />
-              <text
-                x={cx} y={cy + 3.5}
-                textAnchor="middle"
-                fill="white"
-                fontSize="7.5"
-                fontFamily="Georgia, serif"
-                fontStyle="italic"
-              >
-                eu
-              </text>
-            </svg>
-          </div>
+                  )}
+                </g>
+              )
+            })}
 
-          <p style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#6b6560', margin: '12px 0 0', letterSpacing: '0.06em' }}>
-            Explorar conexões →
-          </p>
-        </button>
-      )}
+            {/* Center pulse rings */}
+            <circle cx={cx} cy={cy} r={22} fill="none" stroke="#E86CB4" strokeWidth="0.5" strokeOpacity="0.12" />
+            <circle cx={cx} cy={cy} r={14} fill="none" stroke="#E86CB4" strokeWidth="0.5" strokeOpacity="0.2" />
+
+            {/* Center node */}
+            <circle cx={cx} cy={cy} r={11} fill="#E86CB4" filter="url(#gpCenterGlow)" />
+            <circle cx={cx} cy={cy} r={11} fill="#E86CB4" />
+            <text x={cx} y={cy + 4} textAnchor="middle"
+              fill="white" fontSize="8.5" fontFamily="Georgia,serif" fontStyle="italic"
+            >
+              eu
+            </text>
+
+            {/* CTA overlay at bottom */}
+            <text x={W - 16} y={H - 12} textAnchor="end"
+              fill="#6b6560" fontSize="9.5" fontFamily="monospace" letterSpacing="0.06em"
+            >
+              Ver o mapa completo →
+            </text>
+          </svg>
+        </div>
+      </button>
     </div>
   )
 }
