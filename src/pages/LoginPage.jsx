@@ -351,7 +351,10 @@ function RegisterView({ onLogin, onSwitchToLogin }) {
 
 // ─── Root ─────────────────────────────────────────────────────────────────────
 export default function LoginPage({ onLogin }) {
-  const [view, setView] = useState('login')
+  const [view, setView] = useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    return params.get('view') === 'register' ? 'register' : 'login'
+  })
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-4">

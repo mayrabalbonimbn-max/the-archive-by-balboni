@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
 const pool = require('../db')
+const requireAuth = require('../middleware/auth')
 const { sendPushToUser } = require('../utils/push')
 
 const router = express.Router()
@@ -88,6 +89,13 @@ function requireAdminSecret(req, res, next) {
   next()
 }
 
+function requireInviteManager(req, res, next) {
+  if ((req.user?.handle || '').toLowerCase() !== '@mayrabalboni') {
+    return res.status(403).json({ error: 'Acesso negado.' })
+  }
+  next()
+}
+
 function databaseErrorResponse(err, res) {
   if (err.code === '42P01' || err.code === '42703') {
     return res.status(503).json({
@@ -123,6 +131,57 @@ async function notifyNetworkJoin(newProfile) {
 
 router.get('/signup-mode', (req, res) => {
   res.json({ mode: getSignupMode() })
+})
+
+// ─── Authenticated invite management for @mayrabalboni ───────────────────────
+
+router.get('/invites', requireAuth, requireInviteManager, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM invite_codes ORDER BY created_at DESC LIMIT 50`
+    )
+    res.json(rows.map(toInvite))
+  } catch (err) {
+    console.error('list invites error:', err)
+    databaseErrorResponse(err, res)
+  }
+})
+
+router.post('/invites', requireAuth, requireInviteManager, async (req, res) => {
+  try {
+    const { maxUses = 1, expiresDays = 30, note } = req.body || {}
+    const maxUsesNumber = Math.min(20, Math.max(1, Number(maxUses) || 1))
+    const daysNumber = Number(expiresDays)
+    const expiresAt = Number.isFinite(daysNumber) && daysNumber > 0
+      ? new Date(Date.now() + Math.min(365, daysNumber) * 86400000).toISOString()
+      : null
+    const code = crypto.randomBytes(8).toString('hex')
+
+    const { rows } = await pool.query(
+      `INSERT INTO invite_codes (code, created_by_profile_id, max_uses, expires_at, note)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [code, req.user.profileId, maxUsesNumber, expiresAt, note?.trim() || null]
+    )
+    res.status(201).json(toInvite(rows[0]))
+  } catch (err) {
+    console.error('create invite error:', err)
+    databaseErrorResponse(err, res)
+  }
+})
+
+router.delete('/invites/:code', requireAuth, requireInviteManager, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `UPDATE invite_codes SET revoked_at = NOW()
+       WHERE code = $1 AND revoked_at IS NULL RETURNING id`,
+      [req.params.code]
+    )
+    if (!rows.length) return res.status(404).json({ error: 'Código não encontrado ou já revogado.' })
+    res.json({ ok: true })
+  } catch (err) {
+    console.error('revoke invite error:', err)
+    databaseErrorResponse(err, res)
+  }
 })
 
 // ─── POST /api/auth/register ──────────────────────────────────────────────────
