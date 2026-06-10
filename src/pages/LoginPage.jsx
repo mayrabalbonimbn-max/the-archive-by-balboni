@@ -233,12 +233,31 @@ function RegisterView({ onLogin, onSwitchToLogin }) {
 
   return (
     <div className="animate-fade-in">
-      <h2 className="text-dark-text font-editorial text-2xl mb-1">Criar perfil</h2>
-      <p className="text-dark-muted text-sm mb-6">
-        {inviteFromLink
-          ? 'Mayra te convidou para criar seu arquivo.'
-          : signupMode === 'invite_only' ? 'Acesso por convite.' : 'Seu espaço, só seu.'}
-      </p>
+      {inviteFromLink ? (
+        <div className="mb-5 overflow-hidden rounded-2xl border border-brand-rose/25 bg-brand-rose/10">
+          <div className="border-b border-brand-rose/15 px-5 py-4">
+            <div className="mb-1 text-[11px] font-mono uppercase tracking-[0.18em] text-brand-rose/80">Convite recebido</div>
+            <h2 className="font-editorial text-2xl text-dark-text">Mayra te convidou para criar seu arquivo</h2>
+            <p className="mt-2 text-sm leading-relaxed text-dark-muted">
+              Um espaço seu para guardar registros, fotos, projetos, estudos e memórias com controle de privacidade.
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-px bg-brand-rose/10 text-center">
+            {['Diário', 'Vitrine', 'Memórias'].map(item => (
+              <div key={item} className="bg-black/20 px-2 py-3 text-[11px] font-mono uppercase tracking-wide text-dark-muted">
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <>
+          <h2 className="text-dark-text font-editorial text-2xl mb-1">Criar perfil</h2>
+          <p className="text-dark-muted text-sm mb-6">
+            {signupMode === 'invite_only' ? 'Acesso por convite.' : 'Seu espaço, só seu.'}
+          </p>
+        </>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Invite code — only when invite_only */}

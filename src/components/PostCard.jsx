@@ -50,6 +50,23 @@ const LockIcon = () => (
   </svg>
 )
 
+const VISIBILITY = {
+  private: { label: 'Só você', className: 'bg-amber-400/10 text-amber-300 border-amber-400/20' },
+  followers: { label: 'Círculo', className: 'bg-blue-400/10 text-blue-300 border-blue-400/20' },
+  friends: { label: 'Amigos', className: 'bg-emerald-400/10 text-emerald-300 border-emerald-400/20' },
+  public: { label: 'Público', className: 'bg-cyan-400/10 text-cyan-300 border-cyan-400/20' },
+}
+
+function VisibilityPill({ visibility }) {
+  const cfg = VISIBILITY[visibility] || VISIBILITY.private
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wide ${cfg.className}`}>
+      {visibility === 'private' && <LockIcon />}
+      {cfg.label}
+    </span>
+  )
+}
+
 function ContentLinks({ text = '' }) {
   const navigate = useNavigate()
   const tags = [...new Set((text.match(/#[\p{L}\p{N}_-]+/gu) || []).map(tag => tag.slice(1)))]
@@ -73,7 +90,6 @@ export default function PostCard({ post, profile, onLike, onSave, onPin, onDelet
   const [likeAnimating, setLikeAnimating] = useState(false)
   const displayProfile = post.author || profile
   const isOwner = post.profileId === profile.id
-  const visibilityLabel = post.visibility === 'public' ? 'Público' : post.visibility === 'followers' ? 'Seguidores' : post.visibility === 'friends' ? 'Amigos' : 'Privado'
   const reactionCounts = post.reactionCounts || {}
   const viewerReactions = post.viewerReactions || []
   const profilePath = isOwner ? '/profile' : profileUrl(post.author?.handle, post.profileId)
@@ -120,7 +136,7 @@ export default function PostCard({ post, profile, onLike, onSave, onPin, onDelet
               <button onClick={() => navigate(profilePath)} className="font-semibold text-dark-text text-[14px] hover:text-brand-rose transition-colors">{displayProfile.name}</button>
               <span className="text-dark-muted text-[13px]">{displayProfile.handle}</span>
               <span className="text-dark-border">·</span>
-              <span className="text-dark-muted text-[12px]">{visibilityLabel}</span>
+              <VisibilityPill visibility={post.visibility} />
               <span className="text-dark-border">·</span>
               <span className="text-dark-muted text-[13px] tabular-nums" title={formatFullDate(post.createdAt)}>
                 {formatRelativeTime(post.createdAt)}
@@ -208,11 +224,8 @@ export default function PostCard({ post, profile, onLike, onSave, onPin, onDelet
           <div className="flex items-baseline gap-1.5 flex-wrap">
             <button onClick={() => navigate(profilePath)} className="font-semibold text-dark-text text-[14px] leading-tight hover:text-brand-rose transition-colors">{displayProfile.name}</button>
             <span className="text-dark-muted text-[13px]">{displayProfile.handle}</span>
-            {post.visibility === 'private' && (
-              <span className="text-dark-muted/60 ml-0.5"><LockIcon /></span>
-            )}
             <span className="text-dark-border">·</span>
-            <span className="text-dark-muted text-[12px]">{visibilityLabel}</span>
+            <VisibilityPill visibility={post.visibility} />
             <span className="text-dark-border">·</span>
             <span
               className="text-dark-muted text-[13px] hover:text-dark-text/70 transition-colors cursor-default tabular-nums"

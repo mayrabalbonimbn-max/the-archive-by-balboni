@@ -16,6 +16,29 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' })
 }
 
+const PRIVACY_BADGES = {
+  private: { label: 'Só você', color: '#E0AF68', bg: 'rgba(224,175,104,0.12)' },
+  followers: { label: 'Círculo', color: '#7AA2F7', bg: 'rgba(122,162,247,0.12)' },
+  friends: { label: 'Amigos', color: '#9ECE6A', bg: 'rgba(158,206,106,0.12)' },
+  public: { label: 'Público', color: '#6CE8C8', bg: 'rgba(108,232,200,0.12)' },
+}
+
+function PrivacyPill({ visibility }) {
+  const cfg = PRIVACY_BADGES[visibility] || PRIVACY_BADGES.private
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      padding: '3px 7px', borderRadius: 999,
+      background: cfg.bg, color: cfg.color,
+      fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.06em',
+      textTransform: 'uppercase', whiteSpace: 'nowrap',
+    }}>
+      {visibility === 'private' && <span style={{ fontSize: 10, lineHeight: 1 }}>●</span>}
+      {cfg.label}
+    </span>
+  )
+}
+
 // Real image from authenticated API
 function AttachmentImage({ id, hasThumbnail, alt, onClick }) {
   const url = useAttachmentUrl(id, hasThumbnail ? 'thumbnail' : 'view')
@@ -126,6 +149,7 @@ export default function EntryCard({ post, showAuthor = true, onLike, onSave, onD
           <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)', letterSpacing: '0.02em' }}>
             {fmtDate(post.createdAt)}
           </span>
+          <PrivacyPill visibility={localPost.visibility} />
         </div>
         <TypeTag type={localPost.type ?? (isArticle ? 'article' : 'note')} />
 

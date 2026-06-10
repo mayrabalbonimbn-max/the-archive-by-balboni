@@ -98,6 +98,22 @@ const FILE_ACCEPT = {
   code:     '.py,.js,.jsx,.ts,.tsx,.html,.css,.json,.sql,.sh,.bash,.txt',
 }
 
+const DRAFT_KEY = 'the_archive.compose_draft.v1'
+const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000
+
+function draftHasContent(draft) {
+  return Boolean(
+    draft?.title?.trim() ||
+    draft?.body?.trim() ||
+    draft?.code?.trim() ||
+    draft?.tags?.length ||
+    draft?.collectionId ||
+    draft?.projectId ||
+    (draft?.entryType && draft.entryType !== 'note') ||
+    (draft?.privacy && draft.privacy !== 'private')
+  )
+}
+
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 768)
   useEffect(() => {
@@ -143,6 +159,8 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
   const [categoria, setCategoria] = useState(null)
   const [categoriaManual, setCategoriaManual] = useState(false)
   const [categoriaPicker, setCategoriaPicker] = useState(false)
+  const [draftRestored, setDraftRestored] = useState(false)
+  const [draftSavedAt, setDraftSavedAt] = useState(null)
   const categoriaTimerRef = useRef(null)
   // Code editor loaded on demand (avoids prismjs in initial bundle)
   const [CodeEditorCmp, setCodeEditorCmp] = useState(null)
@@ -151,7 +169,46 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
   const titleRef = useRef(null)
   const bodyRef = useRef(null)
   const attachmentsRef = useRef([])
+  const draftReadyRef = useRef(false)
+  const skipDraftRef = useRef(Boolean(initialContent || parentMemoryPostId))
   const mention = useMention(body, setBody, bodyRef)
+
+  useEffect(() => {
+    if (skipDraftRef.current) {
+      draftReadyRef.current = true
+      return
+    }
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY)
+      if (!raw) return
+      const saved = JSON.parse(raw)
+      if (!saved?.savedAt || Date.now() - saved.savedAt > DRAFT_TTL_MS) {
+        localStorage.removeItem(DRAFT_KEY)
+        return
+      }
+      setEntryType(saved.entryType || 'note')
+      setShowAllTypes(Boolean(saved.showAllTypes || !BASIC_CREATE_TYPES.has(saved.entryType)))
+      setTitle(saved.title || '')
+      setBody(saved.body || '')
+      setCollectionId(saved.collectionId || '')
+      setPrivacy(saved.privacy || 'private')
+      setCodeLanguage(saved.codeLanguage || 'javascript')
+      setCode(saved.code || '')
+      setProjectId(saved.projectId || '')
+      setTags(Array.isArray(saved.tags) ? saved.tags : [])
+      setCategoria(saved.categoria || null)
+      setCategoriaManual(Boolean(saved.categoriaManual))
+      setCapsuleOption(saved.capsuleOption || 'now')
+      setCapsuleCustomDate(saved.capsuleCustomDate || '')
+      setCapsuleMediaType(saved.capsuleMediaType || 'text')
+      setDraftRestored(true)
+      setDraftSavedAt(saved.savedAt)
+    } catch {
+      localStorage.removeItem(DRAFT_KEY)
+    } finally {
+      draftReadyRef.current = true
+    }
+  }, [])
 
   useEffect(() => {
     getTags().then(list => setTagSuggestions(list)).catch(() => {})
@@ -184,6 +241,42 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
 
   useEffect(() => { titleRef.current?.focus() }, [])
 
+  useEffect(() => {
+    if (!draftReadyRef.current || skipDraftRef.current) return
+    const draft = {
+      savedAt: Date.now(),
+      entryType,
+      showAllTypes,
+      title,
+      body,
+      collectionId,
+      privacy,
+      codeLanguage,
+      code,
+      tags,
+      projectId,
+      categoria,
+      categoriaManual,
+      capsuleOption,
+      capsuleCustomDate,
+      capsuleMediaType,
+    }
+    const timer = setTimeout(() => {
+      if (!draftHasContent(draft)) {
+        localStorage.removeItem(DRAFT_KEY)
+        setDraftSavedAt(null)
+        setDraftRestored(false)
+        return
+      }
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+      setDraftSavedAt(draft.savedAt)
+    }, 550)
+    return () => clearTimeout(timer)
+  }, [
+    entryType, showAllTypes, title, body, collectionId, privacy, codeLanguage, code,
+    tags, projectId, categoria, categoriaManual, capsuleOption, capsuleCustomDate, capsuleMediaType,
+  ])
+
   // Load code editor lazily when user picks "Código" type
   useEffect(() => {
     if (!isCode || CodeEditorCmp) return
@@ -211,6 +304,30 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
       fileInputRef.current.accept = FILE_ACCEPT[entryType] || ''
       fileInputRef.current.click()
     }
+  }
+
+  function clearDraft() {
+    localStorage.removeItem(DRAFT_KEY)
+    setDraftRestored(false)
+    setDraftSavedAt(null)
+    setEntryType('note')
+    setShowAllTypes(false)
+    setTitle('')
+    setBody('')
+    setCollectionId('')
+    setPrivacy('private')
+    setCodeLanguage('javascript')
+    setCode('')
+    setTags([])
+    setProjectId('')
+    setCategoria(null)
+    setCategoriaManual(false)
+    setCapsuleOption('now')
+    setCapsuleCustomDate('')
+    setCapsuleMediaType('text')
+    setAttachments([])
+    resetRecording()
+    setVideoFile(null)
   }
 
   function handleFileChange(e) {
@@ -332,6 +449,9 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
         parentMemoryPostId: parentMemoryPostId || undefined,
         categoria: categoria || undefined,
       })
+      localStorage.removeItem(DRAFT_KEY)
+      setDraftRestored(false)
+      setDraftSavedAt(null)
       onClose?.()
     } catch (err) {
       setFileError(err.message)
@@ -374,6 +494,20 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
           </div>
         </div>
         <div style={{ height: 1, background: 'var(--line)' }} />
+        {(draftRestored || draftSavedAt) && (
+          <div style={{ padding: '9px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderBottom: '1px solid var(--line)', background: 'rgba(232,108,180,0.04)' }}>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '0.08em', color: 'var(--ink-3)', textTransform: 'uppercase' }}>
+              {draftRestored ? 'Rascunho recuperado' : 'Rascunho salvo'}
+            </span>
+            <button
+              type="button"
+              onClick={clearDraft}
+              style={{ border: 'none', background: 'transparent', color: 'var(--accent)', fontFamily: 'var(--sans)', fontSize: 12.5, cursor: 'pointer', padding: 0 }}
+            >
+              Limpar
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Scrollable body */}

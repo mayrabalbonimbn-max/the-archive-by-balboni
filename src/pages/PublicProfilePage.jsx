@@ -141,9 +141,12 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
     : 0
   const collections = summary?.collections ?? []
   const publicProjects = (summary?.projects ?? []).filter(p => p.status !== 'arquivado')
+  const featuredProjects = publicProjects.filter(p => p.is_featured || p.isFeatured).slice(0, 3)
+  const featuredPosts = posts.filter(p => p.pinned).slice(0, 3)
   const recentArticles = summary?.recentArticles ?? []
   const recentPhotos = summary?.recentPhotos ?? []
   const tags = summary?.tags ?? []
+  const hasHighlights = featuredProjects.length > 0 || featuredPosts.length > 0
 
   return (
     <div style={{ animation: 'fadeUp var(--dur-screen) var(--ease-out)' }}>
@@ -268,6 +271,43 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
         <Stat n={profile.followerCount ?? 0} label="Círculo" onClick={() => navigate(`/friends?view=${profile.id}`)} />
         <Stat n={daysKept.toLocaleString('pt-BR')} label="Dias" />
       </div>
+
+      {hasHighlights && (
+        <div style={{ marginTop: 28 }}>
+          <SectionLabel>Destaques</SectionLabel>
+          <div style={{ padding: '12px 20px 0', display: 'grid', gap: 10 }}>
+            {featuredProjects.map(proj => (
+              <button
+                key={`project-${proj.id}`}
+                onClick={() => navigate(`/projects/${proj.slug}`)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+                  border: '1px solid rgba(232,108,180,0.22)', borderRadius: 14,
+                  background: 'linear-gradient(135deg, rgba(232,108,180,0.10), rgba(255,255,255,0.02))',
+                  padding: 13, cursor: 'pointer', textAlign: 'left',
+                }}
+              >
+                <span style={{ width: 38, height: 38, borderRadius: 12, display: 'grid', placeItems: 'center', background: 'rgba(255,255,255,0.05)', fontSize: 20 }}>
+                  {proj.emoji || '✦'}
+                </span>
+                <span style={{ minWidth: 0, flex: 1 }}>
+                  <span style={{ display: 'block', fontFamily: 'var(--serif)', fontSize: 16, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {proj.name}
+                  </span>
+                  <span style={{ display: 'block', marginTop: 2, fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--accent)' }}>
+                    Projeto destacado
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+          {featuredPosts.length > 0 && (
+            <div style={{ marginTop: 10, borderTop: '1px solid var(--line)' }}>
+              {featuredPosts.map(p => <EntryCard key={`post-${p.id}`} post={p} showAuthor={false} />)}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Collections strip */}
       {hasSection(profile, 'collections') && collections.length > 0 && (

@@ -34,6 +34,7 @@ before(async () => {
     )
     process.exit(0)
   }
+  await pool.initialize()
 }, { timeout: 5000 })
 
 // Unique run ID so parallel runs don't collide
