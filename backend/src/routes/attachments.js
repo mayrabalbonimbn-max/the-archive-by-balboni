@@ -9,10 +9,16 @@ const requireAuth = require('../middleware/auth')
 const { attachmentVisibleSql } = require('../utils/social')
 
 let sharp
-try { sharp = require('sharp') } catch { sharp = null }
+try { sharp = require('sharp') } catch (err) {
+  sharp = null
+  console.warn('sharp not available — image optimization disabled:', err.message)
+}
 
 let exifr
-try { exifr = require('exifr') } catch { exifr = null }
+try { exifr = require('exifr') } catch (err) {
+  exifr = null
+  console.warn('exifr not available — EXIF extraction disabled:', err.message)
+}
 
 const router = express.Router()
 const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, '..', '..', 'storage', 'uploads')

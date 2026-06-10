@@ -289,8 +289,21 @@ router.get('/export',
           try {
             await fs.access(filePath)
             archive.file(filePath, { name: `midias/${att.post_id}/${att.original_name}` })
-          } catch {
-            // file missing on disk — skip silently
+          } catch (err) {
+            if (err?.code !== 'ENOENT') {
+              console.warn('export attachment access error:', {
+                postId: att.post_id,
+                attachmentId: att.id,
+                storagePath: att.storage_path,
+                error: err.message,
+              })
+            } else {
+              console.warn('export skipped missing attachment file:', {
+                postId: att.post_id,
+                attachmentId: att.id,
+                storagePath: att.storage_path,
+              })
+            }
           }
         }
 

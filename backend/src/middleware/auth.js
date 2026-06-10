@@ -16,7 +16,10 @@ module.exports = function requireAuth(req, res, next) {
   try {
     req.user = jwt.verify(token, process.env.JWT_SECRET)
     next()
-  } catch {
+  } catch (err) {
+    if (err?.name !== 'JsonWebTokenError' && err?.name !== 'TokenExpiredError' && err?.name !== 'NotBeforeError') {
+      console.error('auth verify error:', err)
+    }
     res.status(401).json({ error: 'Token inválido ou expirado' })
   }
 }
