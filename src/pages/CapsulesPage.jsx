@@ -4,33 +4,181 @@ import { api } from '../utils/api'
 import AppBar from '../components/ui/AppBar'
 import Icon from '../components/ui/Icon'
 
-function countdown(unlockAt) {
-  const ms = new Date(unlockAt) - Date.now()
-  if (ms <= 0) return 'Abrindo…'
-  const days = Math.floor(ms / 86400000)
-  const hours = Math.floor((ms % 86400000) / 3600000)
-  if (days >= 365) {
-    const y = Math.floor(days / 365)
-    return `${y} ${y === 1 ? 'ano' : 'anos'}`
-  }
-  if (days >= 30) {
-    const m = Math.floor(days / 30)
-    return `${m} ${m === 1 ? 'mês' : 'meses'}`
-  }
-  if (days > 0) return `${days} ${days === 1 ? 'dia' : 'dias'}`
-  return `${hours} ${hours === 1 ? 'hora' : 'horas'}`
-}
-
-function formatDate(iso) {
+function formatDatePT(iso) {
+  if (!iso) return ''
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
 }
+
+function countdownShort(unlockAt) {
+  const ms = new Date(unlockAt) - Date.now()
+  if (ms <= 0) return 'agora'
+  const days = Math.floor(ms / 86400000)
+  if (days >= 365) { const y = Math.floor(days / 365); return `${y} ${y === 1 ? 'ano' : 'anos'}` }
+  if (days >= 30)  { const m = Math.floor(days / 30);  return `${m} ${m === 1 ? 'mês' : 'meses'}` }
+  if (days > 0)    return `${days} ${days === 1 ? 'dia' : 'dias'}`
+  const h = Math.floor((ms % 86400000) / 3600000)
+  return `${h}h`
+}
+
+function durationShort(from, to) {
+  const ms = new Date(to) - new Date(from)
+  const days = Math.floor(ms / 86400000)
+  if (days >= 365) { const y = Math.floor(days / 365); return `${y} ${y === 1 ? 'ano' : 'anos'}` }
+  if (days >= 30)  { const m = Math.floor(days / 30);  return `${m} ${m === 1 ? 'mês' : 'meses'}` }
+  return `${days} ${days === 1 ? 'dia' : 'dias'}`
+}
+
+// ── Cards ─────────────────────────────────────────────────────────────────────
+
+function LockedCard({ capsule, onDelete, deleting }) {
+  const navigate = useNavigate()
+  return (
+    <div
+      onClick={() => navigate(`/capsules/${capsule.id}`)}
+      style={{
+        padding: '20px 24px', borderBottom: '1px solid var(--line)',
+        cursor: 'pointer', position: 'relative', opacity: 0.65,
+        transition: 'opacity 0.15s',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.opacity = '1' }}
+      onMouseLeave={e => { e.currentTarget.style.opacity = '0.65' }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, opacity: 0.5 }}>⧗</span>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>
+          Abre em {countdownShort(capsule.unlockAt)}
+        </span>
+      </div>
+
+      <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-2)', lineHeight: 1.4, marginBottom: 6 }}>
+        Esta mensagem está selada.
+      </div>
+
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)' }}>
+        Guardada em {formatDatePT(capsule.createdAt)} · abre em {formatDatePT(capsule.unlockAt)}
+      </div>
+
+      <button
+        onClick={e => { e.stopPropagation(); onDelete(capsule.id) }}
+        disabled={deleting}
+        style={{
+          position: 'absolute', right: 20, top: '50%', transform: 'translateY(-50%)',
+          background: 'none', border: 'none', cursor: 'pointer',
+          fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)',
+          opacity: deleting ? 0.2 : 0.4, padding: 8,
+        }}
+        title="Apagar"
+      >✕</button>
+    </div>
+  )
+}
+
+function ReadyCard({ capsule, onDelete, deleting }) {
+  const navigate = useNavigate()
+  const kept = durationShort(capsule.createdAt, new Date().toISOString())
+  return (
+    <div
+      onClick={() => navigate(`/capsules/${capsule.id}`)}
+      style={{
+        padding: '22px 24px', borderBottom: '1px solid var(--line)',
+        cursor: 'pointer', position: 'relative',
+        borderLeft: '3px solid var(--accent)',
+        background: 'rgba(232,108,180,0.04)',
+        transition: 'background 0.15s',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(232,108,180,0.08)' }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(232,108,180,0.04)' }}
+    >
+      <div style={{ marginBottom: 12 }}>
+        <div style={{
+          background: 'var(--accent)', borderRadius: 999, display: 'inline-flex',
+          alignItems: 'center', gap: 5, padding: '3px 10px',
+        }}>
+          <span style={{ fontSize: 9 }}>✦</span>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#fff', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            Pronta para abrir
+          </span>
+        </div>
+      </div>
+
+      <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 17, color: 'var(--ink)', lineHeight: 1.4, marginBottom: 8 }}>
+        Uma mensagem sua está esperando.
+      </div>
+
+      <div style={{ fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink-2)', marginBottom: 10, lineHeight: 1.5 }}>
+        Guardada por {kept} · toque para iniciar a abertura
+      </div>
+
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)' }}>
+        Escrita em {formatDatePT(capsule.createdAt)}
+      </div>
+
+      <button
+        onClick={e => { e.stopPropagation(); onDelete(capsule.id) }}
+        disabled={deleting}
+        style={{
+          position: 'absolute', right: 20, top: 20,
+          background: 'none', border: 'none', cursor: 'pointer',
+          fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)',
+          opacity: deleting ? 0.2 : 0.5, padding: 8,
+        }}
+        title="Apagar"
+      >✕</button>
+    </div>
+  )
+}
+
+function OpenedCard({ capsule, onDelete, deleting }) {
+  const navigate = useNavigate()
+  const kept = durationShort(capsule.createdAt, capsule.openedAt)
+  return (
+    <div
+      onClick={() => navigate(`/capsules/${capsule.id}`)}
+      style={{
+        padding: '20px 24px', borderBottom: '1px solid var(--line)',
+        cursor: 'pointer', position: 'relative',
+        transition: 'opacity 0.15s', opacity: 0.75,
+      }}
+      onMouseEnter={e => { e.currentTarget.style.opacity = '1' }}
+      onMouseLeave={e => { e.currentTarget.style.opacity = '0.75' }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>
+          ✓ Aberta · {formatDatePT(capsule.openedAt)}
+        </span>
+      </div>
+
+      <div style={{ fontFamily: 'var(--serif)', fontSize: 16, color: 'var(--ink-2)', lineHeight: 1.4, marginBottom: 6 }}>
+        {capsule.articleTitle || capsule.preview || 'Sem título'}
+        {!capsule.articleTitle && capsule.preview?.length >= 60 && '…'}
+      </div>
+
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)' }}>
+        Escrita em {formatDatePT(capsule.createdAt)} · guardada por {kept}
+      </div>
+
+      <button
+        onClick={e => { e.stopPropagation(); onDelete(capsule.id) }}
+        disabled={deleting}
+        style={{
+          position: 'absolute', right: 20, top: '50%', transform: 'translateY(-50%)',
+          background: 'none', border: 'none', cursor: 'pointer',
+          fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)',
+          opacity: deleting ? 0.2 : 0.35, padding: 8,
+        }}
+        title="Apagar"
+      >✕</button>
+    </div>
+  )
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function CapsulesPage() {
   const navigate = useNavigate()
   const [capsules, setCapsules] = useState([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(null)
-  const [locked, setLocked] = useState(null) // capsule being previewed in locked modal
 
   useEffect(() => {
     api.get('/capsules')
@@ -49,6 +197,10 @@ export default function CapsulesPage() {
     setDeleting(null)
   }
 
+  const ready  = capsules.filter(c => c.status === 'ready')
+  const locked = capsules.filter(c => c.status === 'locked')
+  const opened = capsules.filter(c => c.status === 'opened')
+
   return (
     <div style={{ animation: 'fadeUp var(--dur-screen) var(--ease-out)', minHeight: '100vh' }}>
       <AppBar
@@ -63,127 +215,90 @@ export default function CapsulesPage() {
         title="Cápsulas do Tempo"
       />
 
-      {/* Header editorial */}
       <div data-onboarding="capsules-page" style={{ padding: '28px 24px 0' }}>
         <h2 style={{ margin: '0 0 8px', fontFamily: 'var(--serif)', fontSize: 26, fontWeight: 400, color: 'var(--ink)', fontStyle: 'italic' }}>
-          Guardado em segurança
+          Mensagens seladas
         </h2>
         <p style={{ margin: 0, fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.6 }}>
           {capsules.length > 0
-            ? `${capsules.length} ${capsules.length === 1 ? 'mensagem aguarda' : 'mensagens aguardam'} o momento certo para chegar até você.`
-            : 'Nenhuma cápsula esperando. Escreva algo para o seu futuro.'
+            ? `${capsules.length} ${capsules.length === 1 ? 'cápsula no' : 'cápsulas no'} seu arquivo.`
+            : 'Nenhuma cápsula ainda. Escreva algo para o futuro.'
           }
         </p>
       </div>
 
-      {/* Divider */}
       <div style={{ margin: '20px 24px', height: 1, background: 'var(--line)' }} />
 
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
-          <div className="w-5 h-5 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+          <div style={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid var(--accent)', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>
       ) : capsules.length === 0 ? (
         <div style={{ padding: '48px 24px', textAlign: 'center' }}>
-          <div style={{ fontFamily: 'var(--serif)', fontSize: 32, marginBottom: 16, opacity: 0.3 }}>⧗</div>
+          <div style={{ fontFamily: 'var(--serif)', fontSize: 40, marginBottom: 16, opacity: 0.2 }}>⧗</div>
           <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-3)', lineHeight: 1.7, maxWidth: 280, margin: '0 auto' }}>
             Quando você guardar uma entrada para o futuro, ela aparecerá aqui.
           </p>
         </div>
       ) : (
         <div>
-          {capsules.map(capsule => (
-            <div
-              key={capsule.id}
-              style={{
-                padding: '20px 24px',
-                borderBottom: '1px solid var(--line)',
-                cursor: 'pointer',
-                position: 'relative',
-              }}
-              onClick={() => setLocked(capsule)}
-            >
-              {/* Countdown badge */}
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                background: 'rgba(232,108,180,0.08)', border: '1px solid rgba(232,108,180,0.2)',
-                borderRadius: 999, padding: '3px 10px', marginBottom: 10,
-              }}>
-                <span style={{ fontSize: 10, color: 'var(--accent)' }}>⧗</span>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)', letterSpacing: '0.03em' }}>
-                  Abre em {countdown(capsule.unlockAt)}
+          {/* READY — priority */}
+          {ready.length > 0 && (
+            <div>
+              <div style={{ padding: '10px 24px 0' }}>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--accent)' }}>
+                  Prontas para abrir
                 </span>
               </div>
-
-              {/* Title or preview */}
-              <div style={{ fontFamily: 'var(--serif)', fontSize: 17, color: 'var(--ink)', lineHeight: 1.35, marginBottom: 6 }}>
-                {capsule.articleTitle || capsule.content?.slice(0, 80) || 'Sem conteúdo'}
-                {!capsule.articleTitle && capsule.content?.length > 80 && '…'}
-              </div>
-
-              {/* Meta */}
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>
-                Guardado em {formatDate(capsule.createdAt)} · abre em {formatDate(capsule.unlockAt)}
-              </div>
-
-              {/* Delete */}
-              <button
-                onClick={e => { e.stopPropagation(); handleDelete(capsule.id) }}
-                disabled={deleting === capsule.id}
-                style={{
-                  position: 'absolute', right: 24, top: '50%', transform: 'translateY(-50%)',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)',
-                  opacity: deleting === capsule.id ? 0.3 : 0.6,
-                  padding: '6px',
-                }}
-                title="Apagar cápsula"
-              >
-                ✕
-              </button>
+              {ready.map(c => (
+                <ReadyCard key={c.id} capsule={c} onDelete={handleDelete} deleting={deleting === c.id} />
+              ))}
+              {(locked.length > 0 || opened.length > 0) && (
+                <div style={{ margin: '20px 24px', height: 1, background: 'var(--line)' }} />
+              )}
             </div>
-          ))}
+          )}
+
+          {/* LOCKED */}
+          {locked.length > 0 && (
+            <div>
+              {ready.length > 0 && (
+                <div style={{ padding: '10px 24px 0' }}>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>
+                    Guardadas
+                  </span>
+                </div>
+              )}
+              {locked.map(c => (
+                <LockedCard key={c.id} capsule={c} onDelete={handleDelete} deleting={deleting === c.id} />
+              ))}
+            </div>
+          )}
+
+          {/* OPENED */}
+          {opened.length > 0 && (
+            <div>
+              {(ready.length > 0 || locked.length > 0) && (
+                <div style={{ margin: '20px 24px', height: 1, background: 'var(--line)' }} />
+              )}
+              <div style={{ padding: '10px 24px 0' }}>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>
+                  Abertas
+                </span>
+              </div>
+              {opened.map(c => (
+                <OpenedCard key={c.id} capsule={c} onDelete={handleDelete} deleting={deleting === c.id} />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Footer */}
       {capsules.length > 0 && (
         <div style={{ padding: '32px 24px', textAlign: 'center', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.7 }}>
-          Escrito por você em outra fase da vida.<br />
-          Chegará no momento certo.
-        </div>
-      )}
-
-      {/* Locked modal */}
-      {locked && (
-        <div
-          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
-          onClick={() => setLocked(null)}
-        >
-          <div
-            style={{ background: 'var(--bg)', border: '1px solid var(--line-strong)', borderRadius: 20, padding: '36px 28px', maxWidth: 380, width: '100%', textAlign: 'center', boxShadow: '0 32px 80px rgba(0,0,0,0.5)' }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div style={{ fontFamily: 'var(--sans)', fontSize: 40, marginBottom: 20, opacity: 0.2 }}>⧗</div>
-            <h3 style={{ margin: '0 0 10px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontWeight: 400, fontSize: 22, color: 'var(--ink)' }}>
-              Esta cápsula ainda está guardada.
-            </h3>
-            <p style={{ margin: '0 0 6px', fontFamily: 'var(--sans)', fontSize: 15, color: 'var(--ink-2)' }}>
-              Ela abre <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{countdown(locked.unlockAt)}</span>.
-            </p>
-            <p style={{ margin: '0 0 24px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>
-              {formatDate(locked.unlockAt)}
-            </p>
-            <p style={{ margin: '0 0 24px', fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.6 }}>
-              O conteúdo completo será revelado na data escolhida. Até lá, permanece selado.
-            </p>
-            <button
-              onClick={() => setLocked(null)}
-              style={{ width: '100%', padding: '12px 0', borderRadius: 10, border: '1px solid var(--line)', background: 'none', cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink-3)' }}
-            >
-              Fechar
-            </button>
-          </div>
+          Guardado por você em outro momento.<br />
+          Chegou na hora certa.
         </div>
       )}
     </div>

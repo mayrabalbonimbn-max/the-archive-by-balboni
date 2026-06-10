@@ -73,10 +73,10 @@ function TodayRail({ profile }) {
   const now = Date.now()
 
   const nextCapsule = capsules
-    ? [...capsules].filter(c => new Date(c.unlockAt) > now).sort((a, b) => new Date(a.unlockAt) - new Date(b.unlockAt))[0]
+    ? [...capsules].filter(c => c.status === 'locked').sort((a, b) => new Date(a.unlockAt) - new Date(b.unlockAt))[0]
     : null
   const unlockedCapsule = capsules
-    ? [...capsules].filter(c => new Date(c.unlockAt) <= now).sort((a, b) => new Date(b.unlockAt) - new Date(a.unlockAt))[0]
+    ? [...capsules].find(c => c.status === 'ready')
     : null
 
   const current    = streak?.current ?? 0
@@ -105,12 +105,12 @@ function TodayRail({ profile }) {
         {/* Cápsula aberta */}
         {unlockedCapsule && (
           <Row
-            icon="🔓"
-            label="Cápsula aberta"
-            value="Uma cápsula está esperando"
-            sub={`"${(unlockedCapsule.articleTitle || unlockedCapsule.content || '').slice(0, 50)}"`}
+            icon="✦"
+            label="Cápsula pronta"
+            value="Uma mensagem aguarda você"
+            sub="Toque para iniciar a abertura"
             accent
-            onClick={() => navigate(`/posts/${unlockedCapsule.id}`)}
+            onClick={() => navigate(`/capsules/${unlockedCapsule.id}`)}
           />
         )}
 

@@ -269,7 +269,16 @@ router.get('/:id', async (req, res) => {
       [req.params.id, req.user.profileId]
     )
     if (result.rows.length === 0) return res.status(404).json({ error: 'Post não encontrado.' })
-    res.json(toPost(result.rows[0]))
+    const row = result.rows[0]
+    if (row.is_time_capsule && row.unlock_at && new Date(row.unlock_at) > new Date() && !row.opened_at) {
+      return res.status(423).json({
+        error: 'capsule_locked',
+        id: row.id,
+        unlockAt: row.unlock_at,
+        createdAt: row.created_at,
+      })
+    }
+    res.json(toPost(row))
   } catch (err) {
     console.error('GET /posts/:id error:', err)
     res.status(500).json({ error: 'Erro interno do servidor.' })

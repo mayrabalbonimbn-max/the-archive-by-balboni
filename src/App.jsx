@@ -58,6 +58,7 @@ const PostDetailPage       = lazy(() => import('./pages/PostDetailPage'))
 const MessagesPage         = lazy(() => import('./pages/MessagesPage'))
 const ConversationPage     = lazy(() => import('./pages/ConversationPage'))
 const CapsulesPage         = lazy(() => import('./pages/CapsulesPage'))
+const CapsulePage          = lazy(() => import('./pages/CapsulePage'))
 const StoriesArchivePage   = lazy(() => import('./pages/StoriesArchivePage'))
 const ProjectsPage         = lazy(() => import('./pages/ProjectsPage'))
 const ProjectDetailPage    = lazy(() => import('./pages/ProjectDetailPage'))
@@ -150,6 +151,7 @@ function AuthenticatedApp({ onLogout }) {
             <Route path="/messages"         element={<MessagesPage />} />
             <Route path="/messages/:id"     element={<ConversationPage profile={profile} />} />
             <Route path="/capsules"         element={<CapsulesPage />} />
+            <Route path="/capsules/:id"     element={<CapsulePage />} />
             <Route path="/archive/stories"  element={<StoriesArchivePage />} />
             <Route path="/projects"         element={<ProjectsPage />} />
             <Route path="/projects/:slug"   element={<ProjectDetailPage />} />

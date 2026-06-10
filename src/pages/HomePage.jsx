@@ -111,7 +111,7 @@ function Hero({ profile, posts, projects, capsules, streak }) {
 
   const entryCount     = posts?.length ?? 0
   const activeProjects = (projects ?? []).filter(isActive).length
-  const capsuleCount   = (capsules ?? []).filter(c => new Date(c.unlockAt) > Date.now()).length
+  const capsuleCount   = (capsules ?? []).filter(c => c.status === 'locked').length
   const currentStreak  = streak?.current ?? 0
 
   const phrase = PHRASES[dayOfYear() % PHRASES.length]
@@ -194,13 +194,10 @@ function CapsulaSection({ capsules }) {
   const navigate = useNavigate()
   if (capsules === null) return null
 
-  const now = Date.now()
-  const unlocked = [...capsules]
-    .filter(c => new Date(c.unlockAt) <= now)
-    .sort((a, b) => new Date(b.unlockAt) - new Date(a.unlockAt))[0]
+  const unlocked = [...capsules].find(c => c.status === 'ready')
 
   const upcoming = [...capsules]
-    .filter(c => new Date(c.unlockAt) > now)
+    .filter(c => c.status === 'locked')
     .sort((a, b) => new Date(a.unlockAt) - new Date(b.unlockAt))[0]
 
   function Wrapper({ children }) {
@@ -215,11 +212,10 @@ function CapsulaSection({ capsules }) {
   }
 
   if (unlocked) {
-    const preview = truncate(unlocked.articleTitle || unlocked.content, 80)
     return (
       <Wrapper>
         <button
-          onClick={() => navigate(`/posts/${unlocked.id}`)}
+          onClick={() => navigate(`/capsules/${unlocked.id}`)}
           style={{
             display: 'flex', alignItems: 'flex-start', gap: 14,
             width: '100%', textAlign: 'left', cursor: 'pointer',
@@ -228,18 +224,16 @@ function CapsulaSection({ capsules }) {
             borderRadius: 16, padding: '18px 20px',
           }}
         >
-          <span style={{ fontSize: 24, lineHeight: 1, marginTop: 2, flexShrink: 0 }}>🔓</span>
+          <span style={{ fontSize: 24, lineHeight: 1, marginTop: 2, flexShrink: 0 }}>✦</span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 700, color: 'var(--accent)', margin: '0 0 6px' }}>
-              Uma cápsula está esperando por você
+              Uma mensagem sua está esperando
             </p>
-            {preview && (
-              <p style={{ fontFamily: 'var(--serif)', fontSize: 14, fontStyle: 'italic', color: 'var(--ink-2)', margin: '0 0 10px', lineHeight: 1.55 }}>
-                "{preview}"
-              </p>
-            )}
+            <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 14, color: 'var(--ink-2)', margin: '0 0 10px', lineHeight: 1.55 }}>
+              Você a escreveu para este momento.
+            </p>
             <p style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)', margin: 0, letterSpacing: '0.06em' }}>
-              Abrir cápsula →
+              Iniciar a abertura →
             </p>
           </div>
         </button>

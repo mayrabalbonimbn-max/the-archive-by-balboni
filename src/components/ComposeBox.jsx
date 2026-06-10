@@ -247,7 +247,12 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
 
   function capsuleUnlockDate() {
     if (capsuleOption === 'now') return null
-    if (capsuleOption === 'custom') return capsuleCustomDate ? new Date(capsuleCustomDate).toISOString() : null
+    if (capsuleOption === 'custom') {
+      if (!capsuleCustomDate) return null
+      // Parse as end of chosen day in local timezone to avoid UTC midnight causing off-by-one
+      const [y, m, d] = capsuleCustomDate.split('-').map(Number)
+      return new Date(y, m - 1, d, 23, 59, 59).toISOString()
+    }
     const d = new Date()
     if (capsuleOption === '1m') d.setMonth(d.getMonth() + 1)
     else if (capsuleOption === '6m') d.setMonth(d.getMonth() + 6)

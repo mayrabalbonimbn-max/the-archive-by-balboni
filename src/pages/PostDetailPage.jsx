@@ -77,8 +77,8 @@ export default function PostDetailPage({ profile, onLike, onSave, onDelete }) {
     api.get(`/posts/${id}`)
       .then(setPost)
       .catch(err => {
-        if (err.message === 'capsule_locked') {
-          setLockedCapsule({ unlockAt: err.data?.unlockAt })
+        if (err.status === 423 || err.message === 'capsule_locked') {
+          navigate(`/capsules/${id}`, { replace: true })
         } else {
           setNotFound(true)
         }
