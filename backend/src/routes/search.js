@@ -87,7 +87,7 @@ router.get('/', async (req, res) => {
   const like = `%${q}%`
 
   try {
-    const [usersResult, postsResult, projectsResult, collectionsResult] = await Promise.all([
+    const [usersResult, postsResult, projectsResult, collectionsResult, capsulesResult] = await Promise.all([
 
       // Users: ILIKE on name, handle, bio, title, location
       pool.query(
@@ -186,6 +186,25 @@ router.get('/', async (req, res) => {
          LIMIT 8`,
         [profileId, q, HL_OPTS]
       ),
+
+      // Capsules: FTS on title + content (locked capsules excluded from preview)
+      pool.query(
+        `SELECT
+           p.id, p.article_title, p.content, p.unlock_at, p.is_time_capsule,
+           ts_rank(
+             to_tsvector('portuguese', coalesce(p.article_title,'') || ' ' || coalesce(p.content,'')),
+             websearch_to_tsquery('portuguese', $2)
+           ) AS rank
+         FROM posts p
+         WHERE p.profile_id = $1
+           AND p.is_time_capsule = true
+           AND (p.unlock_at IS NULL OR p.unlock_at <= now())
+           AND to_tsvector('portuguese', coalesce(p.article_title,'') || ' ' || coalesce(p.content,''))
+               @@ websearch_to_tsquery('portuguese', $2)
+         ORDER BY rank DESC
+         LIMIT 6`,
+        [profileId, q]
+      ),
     ])
 
     const allPosts = postsResult.rows.map(toPost)
@@ -210,6 +229,12 @@ router.get('/', async (req, res) => {
         emoji: r.emoji,
         rank: parseFloat(r.rank) || 0,
         headline: sanitizeHeadline(r.headline),
+      })),
+      capsules: capsulesResult.rows.map(r => ({
+        id: r.id,
+        title: r.article_title || r.content?.slice(0, 60) || 'Cápsula do tempo',
+        unlockAt: r.unlock_at,
+        rank: parseFloat(r.rank) || 0,
       })),
     })
   } catch (err) {

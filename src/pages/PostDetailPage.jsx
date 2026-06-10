@@ -9,6 +9,7 @@ import LinkPreviewCard, { useLinkPreview, extractFirstUrl } from '../components/
 import Avatar from '../components/ui/Avatar'
 import VerifiedBadge from '../components/ui/VerifiedBadge'
 import CommentsBox from '../components/CommentsBox'
+import EditPostModal from '../components/EditPostModal'
 import { publicProfileMediaBlob } from '../utils/api'
 
 function useAuthorAvatar(authorId, hasAvatar) {
@@ -67,7 +68,8 @@ export default function PostDetailPage({ profile, onLike, onSave, onDelete }) {
   const [post, setPost] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
-  const [lockedCapsule, setLockedCapsule] = useState(null) // { unlockAt }
+  const [lockedCapsule, setLockedCapsule] = useState(null)
+  const [editing, setEditing] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -277,23 +279,38 @@ export default function PostDetailPage({ profile, onLike, onSave, onDelete }) {
             {post.saved ? 'Salvo' : 'Salvar'}
           </button>
           {isOwner && (
-            <button
-              onClick={() => {
-                if (window.confirm('Excluir esta entrada?')) {
-                  onDelete?.(post.id)
-                  navigate(-1)
-                }
-              }}
-              style={{ touchAction: 'manipulation' }}
-              className="ml-auto text-dark-muted hover:text-red-400 transition-colors text-sm"
-            >
-              Excluir
-            </button>
+            <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
+              <button
+                onClick={() => setEditing(true)}
+                style={{ touchAction: 'manipulation', padding: '6px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)' }}
+              >
+                Editar
+              </button>
+              <button
+                onClick={() => {
+                  if (window.confirm('Excluir esta entrada?')) {
+                    onDelete?.(post.id)
+                    navigate(-1)
+                  }
+                }}
+                style={{ touchAction: 'manipulation', padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(248,113,113,0.25)', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: 13, color: '#f87171' }}
+              >
+                Excluir
+              </button>
+            </div>
           )}
         </div>
 
         <CommentsBox postId={post.id} initialCount={post.commentCount} autoOpen={Boolean(highlightCommentId)} highlightId={highlightCommentId} />
       </article>
+
+      {editing && (
+        <EditPostModal
+          post={post}
+          onClose={() => setEditing(false)}
+          onSaved={updated => setPost(p => ({ ...p, ...updated }))}
+        />
+      )}
     </div>
   )
 }

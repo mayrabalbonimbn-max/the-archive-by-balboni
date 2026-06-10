@@ -106,7 +106,15 @@ export default function PhotosPage() {
           <div className="w-6 h-6 rounded-full border-2 border-brand-rose border-t-transparent animate-spin" />
         </div>
       ) : photos.length === 0 ? (
-        <div className="py-16 text-center text-dark-muted text-sm">Nenhuma fotografia ainda.</div>
+        <div style={{ padding: '64px 24px', textAlign: 'center' }}>
+          <div style={{ fontSize: 36, marginBottom: 16, opacity: 0.25 }}>📷</div>
+          <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 17, color: 'var(--ink)', marginBottom: 8 }}>
+            Nenhuma fotografia ainda.
+          </p>
+          <p style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.6, maxWidth: 280, margin: '0 auto' }}>
+            Ao criar uma entrada, anexe imagens para que apareçam aqui. Fotos, screenshots, capturas — tudo conta.
+          </p>
+        </div>
       ) : (
         <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
           {photos.map(photo => (

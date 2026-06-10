@@ -384,6 +384,25 @@ function CollectionResult({ collection, navigate }) {
   )
 }
 
+function CapsuleResult({ capsule, navigate }) {
+  return (
+    <div
+      onClick={() => navigate(`/capsules/${capsule.id}`)}
+      style={{ padding: '13px 20px', cursor: 'pointer', borderBottom: '1px solid var(--line)', display: 'flex', gap: 12, alignItems: 'flex-start' }}
+    >
+      <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0, marginTop: 1, opacity: 0.7 }}>⧗</span>
+      <div>
+        <div style={{ fontFamily: 'var(--serif)', fontSize: 14.5, color: 'var(--ink)', marginBottom: 3, fontStyle: 'italic' }}>{capsule.title}</div>
+        {capsule.unlockAt && (
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--ink-3)' }}>
+            Aberta em {new Date(capsule.unlockAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── SearchResults ─────────────────────────────────────────────────────────────
 function SearchResults({ q, results, loading }) {
   const navigate = useNavigate()
@@ -392,8 +411,9 @@ function SearchResults({ q, results, loading }) {
   const articles = results?.articles ?? []
   const projects = results?.projects ?? []
   const collections = results?.collections ?? []
+  const capsules = results?.capsules ?? []
   const totalEntries = posts.length + articles.length
-  const hasAny = people.length || totalEntries || projects.length || collections.length
+  const hasAny = people.length || totalEntries || projects.length || collections.length || capsules.length
 
   if (loading) {
     return (
@@ -460,6 +480,15 @@ function SearchResults({ q, results, loading }) {
           </div>
         </div>
       )}
+
+      {capsules.length > 0 && (
+        <div style={{ marginBottom: 8 }}>
+          <SectionLabel>Cápsulas ({capsules.length})</SectionLabel>
+          <div style={{ borderTop: '1px solid var(--line)' }}>
+            {capsules.map(c => <CapsuleResult key={c.id} capsule={c} navigate={navigate} />)}
+          </div>
+        </div>
+      )}
     </>
   )
 }
@@ -496,7 +525,7 @@ export default function ExplorePage() {
         const data = await api.get(`/search?q=${encodeURIComponent(q.trim())}`)
         setResults(data)
       } catch {
-        setResults({ users: [], posts: [], articles: [] })
+        setResults({ users: [], posts: [], articles: [], projects: [], collections: [], capsules: [] })
       } finally {
         setSearchLoading(false)
       }

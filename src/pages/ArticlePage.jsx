@@ -5,6 +5,8 @@ import { formatFullDate, TYPE_CONFIG } from '../utils/helpers'
 import PostAttachments from '../components/PostAttachments'
 import CodeBlock from '../components/CodeBlock'
 import MarkdownRenderer from '../components/MarkdownRenderer'
+import CommentsBox from '../components/CommentsBox'
+import EditPostModal from '../components/EditPostModal'
 import Avatar from '../components/ui/Avatar'
 
 function useAuthorAvatar(authorId, hasAvatar) {
@@ -26,6 +28,7 @@ export default function ArticlePage({ profile, onLike, onSave, onDelete }) {
   const [post, setPost] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [editing, setEditing] = useState(false)
 
   useEffect(() => {
     api.get(`/posts/${id}`)
@@ -34,7 +37,6 @@ export default function ArticlePage({ profile, onLike, onSave, onDelete }) {
       .finally(() => setLoading(false))
   }, [id])
 
-  // All hooks before any conditional return
   const isOwner = post?.profileId === profile?.id
   const authorHasAvatar = !isOwner && Boolean(post?.author?.avatar) && !post?.author?.avatar.startsWith('blob:')
   const authorAvatarBlob = useAuthorAvatar(post?.author?.id ?? null, authorHasAvatar)
@@ -50,9 +52,18 @@ export default function ArticlePage({ profile, onLike, onSave, onDelete }) {
 
   if (notFound || !post) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-        <p className="text-dark-text/60">Artigo não encontrado.</p>
-        <button onClick={() => navigate(-1)} className="mt-3 text-brand-rose text-sm hover:underline">
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 20px', textAlign: 'center' }}>
+        <div style={{ fontSize: 32, marginBottom: 16, opacity: 0.3 }}>📄</div>
+        <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 17, color: 'var(--ink-2)', marginBottom: 8 }}>
+          Artigo não encontrado.
+        </p>
+        <p style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', marginBottom: 24 }}>
+          Pode ter sido excluído ou o link está incorreto.
+        </p>
+        <button
+          onClick={() => navigate(-1)}
+          style={{ padding: '9px 20px', borderRadius: 10, border: '1px solid var(--line)', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink-2)' }}
+        >
           Voltar
         </button>
       </div>
@@ -64,19 +75,38 @@ export default function ArticlePage({ profile, onLike, onSave, onDelete }) {
 
   return (
     <div>
-      <div className="sticky top-0 z-10 bg-black/80 backdrop-blur-md border-b border-dark-border px-4 py-3 flex items-center gap-3">
+      {/* Sticky top bar */}
+      <div
+        style={{
+          position: 'sticky', top: 0, zIndex: 10,
+          background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)',
+          borderBottom: '1px solid var(--line)', padding: '12px 20px',
+          display: 'flex', alignItems: 'center', gap: 12,
+        }}
+      >
         <button
           onClick={() => navigate(-1)}
-          className="text-dark-muted hover:text-dark-text transition-colors p-1 -ml-1 rounded-full hover:bg-dark-hover"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-3)', display: 'flex', alignItems: 'center', padding: 4, borderRadius: 6, touchAction: 'manipulation' }}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
           </svg>
         </button>
-        <span className="text-dark-muted text-sm">Artigo</span>
+        <span style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {post.articleTitle || 'Artigo'}
+        </span>
+        {isOwner && (
+          <button
+            onClick={() => setEditing(true)}
+            style={{ background: 'none', border: '1px solid var(--line)', borderRadius: 7, cursor: 'pointer', padding: '5px 12px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)', touchAction: 'manipulation' }}
+          >
+            Editar
+          </button>
+        )}
       </div>
 
-      <article className="max-w-2xl mx-auto px-5 py-8 animate-fade-in">
+      <article style={{ maxWidth: 680, margin: '0 auto', padding: '40px 24px 60px' }}>
+        {/* Capsule banner */}
         {post.openedAt && (() => {
           const diff = Date.now() - new Date(post.createdAt).getTime()
           const days = Math.round(diff / 86400000)
@@ -88,7 +118,7 @@ export default function ArticlePage({ profile, onLike, onSave, onDelete }) {
               ? `${months} ${months === 1 ? 'mês' : 'meses'}`
               : `${days} ${days === 1 ? 'dia' : 'dias'}`
           return (
-            <div style={{ margin: '0 0 28px', textAlign: 'center' }}>
+            <div style={{ margin: '0 0 32px', textAlign: 'center' }}>
               <div style={{ height: 1, background: 'linear-gradient(90deg, transparent, var(--accent), transparent)', marginBottom: 14 }} />
               <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-2)', lineHeight: 1.6, margin: 0 }}>
                 Uma mensagem atravessou o tempo para chegar até você.<br />
@@ -99,48 +129,66 @@ export default function ArticlePage({ profile, onLike, onSave, onDelete }) {
           )
         })()}
 
-        {/* Metadata */}
-        <div className="flex items-center gap-2 mb-5 flex-wrap">
+        {/* Meta row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
           <span className={`pill-badge ${typeConfig.color}`}>{typeConfig.label}</span>
           {post.isDiary && (
             <span className="pill-badge bg-brand-rose/10 text-brand-rose border border-brand-rose/20">Diário</span>
           )}
-          <span className="text-dark-muted text-sm">{formatFullDate(post.createdAt)}</span>
+          <span style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)' }}>{formatFullDate(post.createdAt)}</span>
+          {post.updatedAt && post.updatedAt !== post.createdAt && (
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--ink-3)' }}>· editado</span>
+          )}
         </div>
 
         {/* Title */}
         {post.articleTitle && (
-          <h1 className="font-editorial text-3xl md:text-4xl text-dark-text leading-tight mb-6 tracking-tight">
+          <h1 style={{ margin: '0 0 28px', fontFamily: 'var(--serif)', fontSize: 'clamp(26px, 5vw, 38px)', fontWeight: 400, color: 'var(--ink)', lineHeight: 1.15, letterSpacing: '-0.02em' }}>
             {post.articleTitle}
           </h1>
         )}
 
         {/* Author */}
-        <div className="flex items-center gap-3 mb-8 pb-6 border-b border-dark-border/60">
-          <Avatar name={displayProfile?.name} src={avatarSrc} size={40} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 36, paddingBottom: 24, borderBottom: '1px solid var(--line)' }}>
+          <Avatar name={displayProfile?.name} src={avatarSrc} size={38} />
           <div>
-            <p className="font-semibold text-dark-text text-sm">{displayProfile.name}</p>
-            <p className="text-dark-muted text-xs">{displayProfile.handle}</p>
+            <div style={{ fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{displayProfile?.name}</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>{displayProfile?.handle}</div>
           </div>
         </div>
 
         {/* Content */}
-        <div className="mb-8">
+        <div style={{ marginBottom: 32 }}>
           <MarkdownRenderer content={post.content} />
         </div>
 
         {post.codeBlock && (
-          <div className="mb-8">
+          <div style={{ marginBottom: 32 }}>
             <CodeBlock language={post.codeBlock.language} code={post.codeBlock.code} />
           </div>
         )}
 
         <PostAttachments attachments={post.attachments} />
 
+        {/* Tags */}
+        {post.tags?.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, margin: '24px 0' }}>
+            {post.tags.map(tag => (
+              <span
+                key={tag}
+                style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--accent)', background: 'rgba(232,108,180,0.08)', border: '1px solid rgba(232,108,180,0.2)', borderRadius: 6, padding: '3px 9px' }}
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* Actions */}
-        <div className="flex items-center gap-4 pt-6 mt-6 border-t border-dark-border/60">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '20px 0', borderTop: '1px solid var(--line)', marginTop: 8 }}>
           <button
-            onClick={() => { onLike(post.id); setPost(p => ({ ...p, liked: !p.liked, likeCount: p.liked ? p.likeCount - 1 : p.likeCount + 1 })) }}
+            onClick={() => { onLike?.(post.id); setPost(p => ({ ...p, liked: !p.liked, likeCount: p.liked ? p.likeCount - 1 : p.likeCount + 1 })) }}
+            style={{ touchAction: 'manipulation' }}
             className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all duration-200 text-sm font-medium ${post.liked ? 'border-brand-rose bg-brand-rose/10 text-brand-rose' : 'border-dark-border text-dark-muted hover:border-brand-rose hover:text-brand-rose'}`}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill={post.liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -149,7 +197,8 @@ export default function ArticlePage({ profile, onLike, onSave, onDelete }) {
             {post.likeCount > 0 ? post.likeCount : 'Curtir'}
           </button>
           <button
-            onClick={() => { onSave(post.id); setPost(p => ({ ...p, saved: !p.saved })) }}
+            onClick={() => { onSave?.(post.id); setPost(p => ({ ...p, saved: !p.saved })) }}
+            style={{ touchAction: 'manipulation' }}
             className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all duration-200 text-sm font-medium ${post.saved ? 'border-brand-rose bg-brand-rose/10 text-brand-rose' : 'border-dark-border text-dark-muted hover:border-brand-rose hover:text-brand-rose'}`}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill={post.saved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -158,15 +207,34 @@ export default function ArticlePage({ profile, onLike, onSave, onDelete }) {
             {post.saved ? 'Salvo' : 'Salvar'}
           </button>
           {isOwner && (
-            <button
-              onClick={() => { if (window.confirm('Excluir este artigo?')) { onDelete(post.id); navigate(-1) } }}
-              className="ml-auto text-dark-muted hover:text-red-400 transition-colors text-sm"
-            >
-              Excluir
-            </button>
+            <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
+              <button
+                onClick={() => setEditing(true)}
+                style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)', touchAction: 'manipulation' }}
+              >
+                Editar
+              </button>
+              <button
+                onClick={() => { if (window.confirm('Excluir este artigo?')) { onDelete?.(post.id); navigate(-1) } }}
+                style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(248,113,113,0.25)', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: 13, color: '#f87171', touchAction: 'manipulation' }}
+              >
+                Excluir
+              </button>
+            </div>
           )}
         </div>
+
+        {/* Comments */}
+        <CommentsBox postId={post.id} initialCount={post.commentCount} autoOpen={false} />
       </article>
+
+      {editing && (
+        <EditPostModal
+          post={post}
+          onClose={() => setEditing(false)}
+          onSaved={updated => setPost(p => ({ ...p, ...updated }))}
+        />
+      )}
     </div>
   )
 }

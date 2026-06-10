@@ -552,6 +552,49 @@ router.patch('/:id', async (req, res) => {
           [id]
         )
       }
+    } else if (action === 'edit') {
+      const newContent = req.body.content
+      const newTitle = req.body.articleTitle
+      const newVis = req.body.visibility
+      const newTags = req.body.tags
+      if (!newContent?.trim()) return res.status(400).json({ error: 'Conteúdo não pode ser vazio.' })
+      const vis = ['public', 'followers', 'friends', 'private'].includes(newVis) ? newVis : post.visibility
+      const client3 = await pool.connect()
+      try {
+        await client3.query('BEGIN')
+        const updated = await client3.query(
+          `UPDATE posts SET content = $1, article_title = $2, visibility = $3, updated_at = now()
+           WHERE id = $4 RETURNING *`,
+          [newContent.trim(), post.is_article ? (newTitle?.trim() || null) : post.article_title, vis, id]
+        )
+        let finalTags = []
+        if (Array.isArray(newTags)) {
+          const slugs = newTags.map(s => String(s).replace(/^#/, '').toLowerCase().trim()).filter(Boolean).slice(0, 10)
+          await client3.query('DELETE FROM post_tags WHERE post_id = $1', [id])
+          for (const slug of slugs) {
+            const tag = await client3.query(
+              `INSERT INTO tags (profile_id, name, slug) VALUES ($1, $2, $3)
+               ON CONFLICT (profile_id, slug) DO UPDATE SET name = EXCLUDED.name RETURNING id`,
+              [req.user.profileId, slug, slug]
+            )
+            await client3.query('INSERT INTO post_tags (post_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [id, tag.rows[0].id])
+          }
+          finalTags = slugs
+        } else {
+          const existing = await client3.query(
+            `SELECT t.slug FROM post_tags pt JOIN tags t ON t.id = pt.tag_id WHERE pt.post_id = $1`,
+            [id]
+          )
+          finalTags = existing.rows.map(r => r.slug)
+        }
+        await client3.query('COMMIT')
+        return res.json({ ...toPost(updated.rows[0]), tags: finalTags })
+      } catch (e) {
+        await client3.query('ROLLBACK').catch(() => {})
+        throw e
+      } finally {
+        client3.release()
+      }
     } else if (action === 'set-tags') {
       const tagSlugs = Array.isArray(req.body.tags) ? req.body.tags.map(s => String(s).replace(/^#/, '').toLowerCase().trim()).filter(Boolean).slice(0, 10) : []
       const client2 = await pool.connect()

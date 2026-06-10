@@ -84,7 +84,6 @@ function PageLoader() {
 // ── App root ───────────────────────────────────────────────────────────────────
 export default function App() {
   const { session, login, logout } = useSession()
-  console.log('[App] session:', !!session, 'token:', !!localStorage.getItem('ms_token'))
   if (!session) return <LoginPage onLogin={login} />
   return <AuthenticatedApp onLogout={logout} />
 }
@@ -97,8 +96,6 @@ function AuthenticatedApp({ onLogout }) {
   // Expose handle globally so CirculoSection empty state can build the profile link
   if (profile?.handle) window.__archiveHandle = profile.handle.replace(/^@/, '')
 
-  console.log('[AuthenticatedApp] profileLoading:', profileLoading, 'profile:', profile?.handle ?? null)
-
   if (profileLoading) {
     return (
       <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -109,7 +106,7 @@ function AuthenticatedApp({ onLogout }) {
   }
 
   if (!profile) {
-    console.warn('[AuthenticatedApp] profile is null after loading — forcing logout')
+    // Profile fetch succeeded but returned null — session is stale
     onLogout()
     return null
   }
