@@ -158,15 +158,15 @@ CREATE TABLE IF NOT EXISTS notifications (
   actor_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
   comment_id UUID REFERENCES comments(id) ON DELETE CASCADE,
+  conversation_id UUID,
   type VARCHAR(40) NOT NULL,
   message TEXT NOT NULL,
   read_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  CONSTRAINT notifications_type_check CHECK (type IN ('join', 'follow', 'like', 'comment', 'reply'))
+  created_at TIMESTAMPTZ DEFAULT now()
 );
 
 ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
-ALTER TABLE notifications ADD CONSTRAINT notifications_type_check CHECK (type IN ('join', 'follow', 'like', 'comment', 'reply'));
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS conversation_id UUID;
 
 CREATE INDEX IF NOT EXISTS idx_notifications_profile_created ON notifications(profile_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(profile_id, read_at);

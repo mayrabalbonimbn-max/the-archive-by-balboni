@@ -26,6 +26,8 @@ function toPublicProfile(row) {
     name: row.name,
     handle: row.handle,
     bio: row.bio,
+    title: row.title || null,
+    location: row.location || null,
     avatar: isStoredFile(row.avatar) ? null : row.avatar,
     hasAvatar: Boolean(row.avatar),
     headerColor: row.header_color,

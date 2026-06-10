@@ -4,9 +4,6 @@ const pool = require('../db')
 const auth = require('../middleware/auth')
 const { sendPushToUser } = require('../utils/push')
 
-// Startup migration: add conversation_id column to notifications if missing
-pool.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS conversation_id UUID`).catch(() => {})
-
 router.use(auth)
 
 // GET / — list conversations for the authenticated user

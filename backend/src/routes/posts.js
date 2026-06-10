@@ -410,7 +410,7 @@ router.post('/', async (req, res) => {
     await client.query('COMMIT')
     // Notify @mentions after transaction commits (non-blocking)
     const postContent = cleanContent + (cleanTitle ? ` ${cleanTitle}` : '')
-    notifyMentions(postContent, req.user.profileId, postId).catch(() => {})
+    notifyMentions(postContent, req.user.profileId, postId).catch(err => console.error('[mentions] post error:', err.message))
     res.status(201).json({ ...toPost(result.rows[0]), tags: tagSlugs })
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {})
