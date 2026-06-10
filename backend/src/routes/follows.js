@@ -35,7 +35,23 @@ async function notify(profileId, actorId, type, message) {
 router.get('/search', async (req, res) => {
   try {
     const q = (req.query.q || '').trim()
-    if (q.length < 2) return res.json([])
+    const pid = req.user.profileId
+
+    // Empty query: return circle members (for @mention autocomplete)
+    if (q.length === 0) {
+      const result = await pool.query(
+        `SELECT p.id, p.name, p.handle, p.avatar, p.bio, p.title, p.location,
+           true AS is_following, 0 AS follower_count, 0 AS following_count
+         FROM follows fl
+         JOIN profiles p ON p.id = fl.following_id
+         WHERE fl.follower_id = $1
+         ORDER BY p.name LIMIT 8`,
+        [pid]
+      )
+      return res.json(result.rows.map(r => ({ ...toPerson(r), bio: r.bio || null, title: r.title || null, location: r.location || null })))
+    }
+
+    if (q.length < 1) return res.json([])
     const handle = q.startsWith('@') ? normalizeHandle(q) : `%${q}%`
     const like = `%${q}%`
     const result = await pool.query(
@@ -52,9 +68,11 @@ router.get('/search', async (req, res) => {
            OR lower(coalesce(p.title,'')) LIKE lower($3)
            OR lower(coalesce(p.location,'')) LIKE lower($3)
          )
-       ORDER BY lower(p.handle)
-       LIMIT 12`,
-      [req.user.profileId, handle, like]
+       ORDER BY
+         (EXISTS (SELECT 1 FROM follows fl WHERE fl.follower_id = $1 AND fl.following_id = p.id)) DESC,
+         lower(p.name)
+       LIMIT 8`,
+      [pid, handle, like]
     )
     res.json(result.rows.map(r => ({ ...toPerson(r), bio: r.bio || null, title: r.title || null, location: r.location || null })))
   } catch (err) {

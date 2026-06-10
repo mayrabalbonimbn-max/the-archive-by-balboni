@@ -3,6 +3,41 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../utils/api'
 import { formatRelativeTime, profileUrl } from '../utils/helpers'
 import RichText from '../utils/richText'
+import MentionList from './MentionList'
+import { useMention } from '../hooks/useMention'
+
+// Textarea or input with @mention autocomplete
+function MentionInput({ value, onChange, onSubmit, placeholder, multiline, autoFocus, style }) {
+  const inputRef = useRef(null)
+  const mention = useMention(value, onChange, inputRef)
+
+  function handleChange(e) {
+    onChange(e.target.value)
+    mention.check(e.target.value, e.target.selectionStart)
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Escape') { mention.close(); return }
+    if (!mention.isOpen && e.key === 'Enter' && !e.shiftKey && onSubmit) onSubmit()
+  }
+
+  const El = multiline ? 'textarea' : 'input'
+  return (
+    <div style={{ position: 'relative', flex: 1 }}>
+      <MentionList isOpen={mention.isOpen} results={mention.results} onSelect={mention.select} />
+      <El
+        ref={inputRef}
+        value={value}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        onBlur={() => setTimeout(mention.close, 150)}
+        placeholder={placeholder}
+        autoFocus={autoFocus}
+        style={style}
+      />
+    </div>
+  )
+}
 
 export default function CommentsBox({ postId, initialCount = 0, autoOpen = false, highlightId = null }) {
   const navigate = useNavigate()
@@ -125,12 +160,11 @@ export default function CommentsBox({ postId, initialCount = 0, autoOpen = false
         <div style={S.box} onClick={e => e.stopPropagation()}>
           {/* Compose */}
           <form style={S.row} onSubmit={addComment}>
-            <textarea
+            <MentionInput
               value={content}
-              onChange={e => setContent(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addComment() }}
+              onChange={setContent}
               placeholder="Escreva um comentário…"
-              rows={1}
+              multiline
               style={S.input}
             />
             <button type="submit" style={S.sendBtn} disabled={!content.trim()}>Enviar</button>
@@ -212,10 +246,10 @@ export default function CommentsBox({ postId, initialCount = 0, autoOpen = false
 
                 {replyingTo === comment.id && (
                   <div style={S.replyRow}>
-                    <input
+                    <MentionInput
                       value={replyContent}
-                      onChange={e => setReplyContent(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') addReply(comment.id) }}
+                      onChange={setReplyContent}
+                      onSubmit={() => addReply(comment.id)}
                       placeholder={`Responder ${comment.author.name}…`}
                       style={{ ...S.input, flex: 1 }}
                       autoFocus

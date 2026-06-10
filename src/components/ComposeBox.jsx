@@ -6,6 +6,8 @@ import { getTags, api } from '../utils/api'
 import { useCollections } from '../hooks/useCollections'
 import Icon from './ui/Icon'
 import Chip from './ui/Chip'
+import MentionList from './MentionList'
+import { useMention } from '../hooks/useMention'
 
 // ── Categoria detection ────────────────────────────────────────────────────────
 
@@ -127,8 +129,6 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
   const [projects, setProjects] = useState([])
   const [tags, setTags] = useState([])
   const [tagSuggestions, setTagSuggestions] = useState([])
-  const [mentionUsers, setMentionUsers] = useState([])
-  const [mentionQuery, setMentionQuery] = useState(null)
   const [categoria, setCategoria] = useState(null)
   const [categoriaManual, setCategoriaManual] = useState(false)
   const [categoriaPicker, setCategoriaPicker] = useState(false)
@@ -140,7 +140,7 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
   const titleRef = useRef(null)
   const bodyRef = useRef(null)
   const attachmentsRef = useRef([])
-  const mentionTimerRef = useRef(null)
+  const mention = useMention(body, setBody, bodyRef)
 
   useEffect(() => {
     getTags().then(list => setTagSuggestions(list)).catch(() => {})
@@ -156,37 +156,7 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
   function handleBodyChange(e) {
     const val = e.target.value
     setBody(val)
-    const pos = e.target.selectionStart
-    const before = val.slice(0, pos)
-    const match = before.match(/@([\w-]*)$/)
-    if (match) {
-      const q = match[1]
-      setMentionQuery(match[0])
-      clearTimeout(mentionTimerRef.current)
-      if (q.length >= 1) {
-        mentionTimerRef.current = setTimeout(() => {
-          import('../utils/api').then(({ api }) =>
-            api.get(`/search?q=${encodeURIComponent(q)}`).then(data => setMentionUsers(data.users ?? [])).catch(() => {})
-          )
-        }, 200)
-      } else {
-        setMentionUsers([])
-      }
-    } else {
-      setMentionQuery(null)
-      setMentionUsers([])
-    }
-  }
-
-  function applyMention(user) {
-    const pos = bodyRef.current?.selectionStart ?? body.length
-    const before = body.slice(0, pos)
-    const after = body.slice(pos)
-    const replaced = before.replace(/@[\w-]*$/, `@${user.handle} `)
-    setBody(replaced + after)
-    setMentionQuery(null)
-    setMentionUsers([])
-    setTimeout(() => bodyRef.current?.focus(), 0)
+    mention.check(val, e.target.selectionStart)
   }
 
   const detectedUrl = extractFirstUrl(body)
@@ -576,6 +546,8 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
                     ref={bodyRef}
                     value={body}
                     onChange={handleBodyChange}
+                    onKeyDown={e => { if (e.key === 'Escape') mention.close() }}
+                    onBlur={() => setTimeout(mention.close, 150)}
                     placeholder={
                       isArticle ? 'Comece a escrever… (suporta Markdown)'
                       : isCode ? '# cole ou descreva seu código…'
@@ -589,30 +561,11 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
                       fontSize: 15, lineHeight: 1.65,
                     }}
                   />
-                  {mentionQuery !== null && mentionUsers.length > 0 && (
-                    <div style={{
-                      position: 'absolute', top: '100%', left: 0, zIndex: 50,
-                      background: 'var(--surface-2)', border: '1px solid var(--line)',
-                      borderRadius: 10, overflow: 'hidden', minWidth: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-                    }}>
-                      {mentionUsers.slice(0, 5).map(u => (
-                        <button
-                          key={u.id}
-                          onMouseDown={e => { e.preventDefault(); applyMention(u) }}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 10,
-                            width: '100%', padding: '10px 14px', background: 'none', border: 'none',
-                            cursor: 'pointer', textAlign: 'left',
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-3)'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                        >
-                          <span style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink)', fontWeight: 500 }}>{u.name}</span>
-                          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>@{u.handle}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <MentionList
+                    isOpen={mention.isOpen}
+                    results={mention.results}
+                    onSelect={mention.select}
+                  />
                 </div>
               )}
             </>
