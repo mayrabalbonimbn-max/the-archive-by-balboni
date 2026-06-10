@@ -17,6 +17,48 @@
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- Catch stale-asset / MIME errors before React mounts -->
+    <script>
+      window.__archiveClearAndReload = async function() {
+        try {
+          if ('serviceWorker' in navigator) {
+            var regs = await navigator.serviceWorker.getRegistrations()
+            await Promise.all(regs.map(function(r) { return r.unregister() }))
+          }
+          if ('caches' in window) {
+            var keys = await caches.keys()
+            await Promise.all(keys.map(function(k) { return caches.delete(k) }))
+          }
+        } catch(e) {}
+        window.location.reload(true)
+      }
+
+      window.addEventListener('error', function(e) {
+        var msg = e.message || ''
+        var isStale = msg.indexOf('MIME type') !== -1
+          || msg.indexOf('Failed to fetch dynamically') !== -1
+          || msg.indexOf('Importing a module script failed') !== -1
+        if (!isStale) return
+        // Only show recovery UI if React hasn't mounted yet
+        var root = document.getElementById('root')
+        if (root && root.childElementCount > 0) return
+        root.innerHTML = [
+          '<div style="min-height:100dvh;background:#000;color:#f2ede6;display:flex;flex-direction:column;',
+          'align-items:center;justify-content:center;padding:32px 24px;text-align:center;font-family:system-ui,sans-serif">',
+          '<div style="font-size:32px;margin-bottom:20px;opacity:.4">⟳</div>',
+          '<h2 style="margin:0 0 10px;font-family:Georgia,serif;font-style:italic;font-weight:400;font-size:22px;color:#f2ede6">',
+          'Nova versão disponível</h2>',
+          '<p style="margin:0 0 28px;font-size:14px;color:#aba49a;line-height:1.6;max-width:300px">',
+          'O app foi atualizado. Clique abaixo para carregar a versão mais recente.</p>',
+          '<button onclick="window.__archiveClearAndReload()" ',
+          'style="padding:13px 28px;border-radius:12px;border:none;background:#e86cb4;',
+          'color:#fff;cursor:pointer;font-size:15px;font-weight:600">Atualizar app</button>',
+          '</div>'
+        ].join('')
+      })
+    </script>
+
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
