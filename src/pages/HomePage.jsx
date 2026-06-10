@@ -7,18 +7,62 @@ import EntryCard from '../components/ui/EntryCard'
 import { api } from '../utils/api'
 import StoriesBar from '../components/StoriesBar'
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Conteúdo curado ───────────────────────────────────────────────────────────
 
-function relativeTime(dateStr) {
-  if (!dateStr) return ''
-  const d = Math.floor((Date.now() - new Date(dateStr)) / 86400000)
-  if (d === 0) return 'hoje'
-  if (d === 1) return '1d'
-  if (d < 30) return `${d}d`
-  const m = Math.floor(d / 30)
-  if (m < 12) return `${m}mo`
-  return `${Math.floor(m / 12)}a`
+const PHRASES = [
+  'Os dias passam. O arquivo permanece.',
+  'Você está construindo algo que sua versão futura vai encontrar.',
+  'O que você guardar hoje pode virar uma memória amanhã.',
+  'Cada entrada é uma prova de que você esteve aqui.',
+  'O tempo não apaga o que foi registrado com intenção.',
+  'Um dia, você vai agradecer por ter guardado isso.',
+  'Guardar é um ato de cuidado com o futuro.',
+  'O passado não some — ele espera para ser revisitado.',
+  'Cada nota pequena é parte de uma história maior.',
+  'Daqui a alguns anos, este momento vai parecer muito distante.',
+  'Você está aqui. Isso já é suficiente para registrar.',
+  'O Archive não é sobre o que você fez. É sobre quem você está se tornando.',
+]
+
+const QUESTIONS = [
+  'O que você está tentando não esquecer?',
+  'O que mudou desde ontem?',
+  'O que você aprendeu esta semana?',
+  'O que merece ser registrado hoje?',
+  'O que sua versão futura deveria saber?',
+  'O que te surpreendeu recentemente?',
+  'O que você decidiu e ainda não registrou?',
+  'Qual pensamento fica voltando para a sua cabeça?',
+  'O que você construiu nos últimos dias?',
+  'Sobre o que você quer lembrar daqui a um ano?',
+  'O que te fez sentir algo hoje?',
+  'Qual foi o momento mais importante desta semana?',
+  'O que você tem evitado pensar?',
+  'Que ideia você teve hoje que vale guardar?',
+  'O que está funcionando bem na sua vida agora?',
+  'O que ainda está em aberto?',
+  'O que te deu energia hoje?',
+  'O que você está esperando?',
+  'O que você aprendeu sobre si mesma ultimamente?',
+  'O que você está criando que ainda não tem nome?',
+  'Que conversa ficou com você?',
+  'O que você precisa parar de adiar?',
+  'O que você quer lembrar desta fase da sua vida?',
+  'O que está crescendo devagar, quase imperceptível?',
+  'Que pequena vitória você não celebrou ainda?',
+  'O que você está descobrindo sobre si mesma?',
+  'O que você faria se soubesse que ia funcionar?',
+  'O que você viu hoje que merecia uma foto?',
+  'Qual foi a coisa mais difícil desta semana?',
+  'O que você gostaria que alguém soubesse sobre você agora?',
+]
+
+function dayOfYear() {
+  const now = new Date()
+  return Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000)
 }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function truncate(str, n = 200) {
   if (!str) return ''
@@ -30,6 +74,19 @@ function daysUntil(dateStr) {
   return Math.ceil((new Date(dateStr) - Date.now()) / 86400000)
 }
 
+function relativeTime(dateStr) {
+  if (!dateStr) return ''
+  const d = Math.floor((Date.now() - new Date(dateStr)) / 86400000)
+  if (d === 0) return 'hoje'
+  if (d === 1) return '1d'
+  if (d < 30) return `${d}d`
+  return `${Math.floor(d / 30)}mo`
+}
+
+function isActive(p) {
+  return ['ativo', 'construindo', 'em-andamento'].includes(p.status)
+}
+
 function activityLine(post) {
   if (post.isArticle || post.articleTitle) return 'escreveu um ensaio'
   if (post.type === 'foto' || post.attachments?.some(a => a.fileType?.startsWith('image'))) return 'publicou uma foto'
@@ -37,9 +94,9 @@ function activityLine(post) {
   return 'guardou algo'
 }
 
-// ── 1. Saudação ───────────────────────────────────────────────────────────────
+// ── 1. Hero ───────────────────────────────────────────────────────────────────
 
-function Saudacao({ profile, posts }) {
+function Hero({ profile, posts, projects, capsules, streak }) {
   const h = new Date().getHours()
   const greet = h < 5 ? 'Boa noite' : h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'
   const first = (profile?.name ?? '').split(' ')[0]
@@ -48,68 +105,136 @@ function Saudacao({ profile, posts }) {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
   }).toUpperCase()
 
-  const daysKept = profile?.createdAt
+  const daysInArchive = profile?.createdAt
     ? Math.max(1, Math.floor((Date.now() - new Date(profile.createdAt)) / 86400000))
     : null
 
+  const entryCount     = posts?.length ?? 0
+  const activeProjects = (projects ?? []).filter(isActive).length
+  const capsuleCount   = (capsules ?? []).filter(c => new Date(c.unlockAt) > Date.now()).length
+  const currentStreak  = streak?.current ?? 0
+
+  const phrase = PHRASES[dayOfYear() % PHRASES.length]
+
+  const stats = [
+    `${entryCount.toLocaleString('pt-BR')} ${entryCount === 1 ? 'registro guardado' : 'registros guardados'}`,
+    activeProjects > 0 ? `${activeProjects} ${activeProjects === 1 ? 'projeto em movimento' : 'projetos em movimento'}` : null,
+    capsuleCount > 0 ? `${capsuleCount} ${capsuleCount === 1 ? 'cápsula esperando' : 'cápsulas esperando'}` : null,
+    currentStreak > 0 ? `${currentStreak} ${currentStreak === 1 ? 'dia seguido' : 'dias seguidos'}` : null,
+  ].filter(Boolean)
+
   return (
-    <div style={{ padding: '22px 20px 20px' }}>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.16em', color: 'var(--accent)', marginBottom: 14 }}>
+    <div style={{ padding: '24px 20px 20px' }}>
+      <p style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.16em', color: 'var(--accent)', margin: '0 0 16px' }}>
         {dateLine}
-      </div>
-      <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 33, lineHeight: 1.08, color: 'var(--ink)', fontWeight: 400, letterSpacing: '-0.02em' }}>
+      </p>
+      <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 34, lineHeight: 1.08, color: 'var(--ink)', fontWeight: 400, letterSpacing: '-0.02em' }}>
         {greet},<br />
         <span style={{ fontStyle: 'italic' }}>{first}.</span>
       </h1>
-      <div style={{ marginTop: 12, fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)' }}>
-        {daysKept && <>Dia <span style={{ color: 'var(--ink-2)' }}>{daysKept.toLocaleString('pt-BR')}</span> do seu arquivo · </>}
-        <span style={{ color: 'var(--ink-2)' }}>{(posts?.length ?? 0).toLocaleString('pt-BR')}</span> entradas guardadas
-      </div>
+
+      {daysInArchive && (
+        <p style={{ margin: '12px 0 4px', fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)' }}>
+          Dia <span style={{ color: 'var(--ink-2)' }}>{daysInArchive.toLocaleString('pt-BR')}</span> do seu arquivo.
+        </p>
+      )}
+
+      <p style={{ margin: '2px 0 20px', fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)', lineHeight: 1.6 }}>
+        {stats.join(' · ')}
+      </p>
+
+      <p style={{
+        margin: 0,
+        fontFamily: 'var(--serif)', fontSize: 15, fontStyle: 'italic',
+        color: 'var(--ink-2)', lineHeight: 1.6,
+        borderLeft: '2px solid var(--line-strong)', paddingLeft: 14,
+      }}>
+        {phrase}
+      </p>
     </div>
   )
 }
 
-// ── 2. Cápsula — Futuro ───────────────────────────────────────────────────────
+// ── 2. Pergunta do dia ────────────────────────────────────────────────────────
+
+function PerguntaDoDia() {
+  const q = QUESTIONS[dayOfYear() % QUESTIONS.length]
+  function open() { window.dispatchEvent(new CustomEvent('open-compose')) }
+
+  return (
+    <div style={{ padding: '0 20px 6px' }}>
+      <button
+        onClick={open}
+        style={{
+          display: 'block', width: '100%', textAlign: 'left',
+          background: 'none', border: '1px solid var(--line)', borderRadius: 16,
+          padding: '18px 20px', cursor: 'pointer',
+          transition: 'border-color .15s',
+        }}
+        onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--ink-3)'}
+        onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--line)'}
+      >
+        <p style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-3)', margin: '0 0 10px' }}>
+          Pergunta para hoje
+        </p>
+        <p style={{ fontFamily: 'var(--serif)', fontSize: 17, fontStyle: 'italic', color: 'var(--ink)', margin: '0 0 12px', lineHeight: 1.5 }}>
+          {q}
+        </p>
+        <p style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)', margin: 0, letterSpacing: '0.06em' }}>
+          Responder →
+        </p>
+      </button>
+    </div>
+  )
+}
+
+// ── 3. Cápsula — evento com barra de progresso ────────────────────────────────
 
 function CapsulaSection({ capsules }) {
   const navigate = useNavigate()
-
-  // Still loading
   if (capsules === null) return null
 
   const now = Date.now()
   const unlocked = [...capsules]
     .filter(c => new Date(c.unlockAt) <= now)
     .sort((a, b) => new Date(b.unlockAt) - new Date(a.unlockAt))[0]
+
   const upcoming = [...capsules]
     .filter(c => new Date(c.unlockAt) > now)
     .sort((a, b) => new Date(a.unlockAt) - new Date(b.unlockAt))[0]
 
-  // Unlocked capsule — highest priority
-  if (unlocked) {
-    const preview = truncate(unlocked.articleTitle || unlocked.content, 72)
+  function Wrapper({ children }) {
     return (
-      <div style={{ padding: '0 20px 4px' }}>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-3)', marginBottom: 10 }}>
+      <div style={{ padding: '20px 20px 4px' }}>
+        <p style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-3)', margin: '0 0 12px' }}>
           Cápsula
-        </div>
+        </p>
+        {children}
+      </div>
+    )
+  }
+
+  if (unlocked) {
+    const preview = truncate(unlocked.articleTitle || unlocked.content, 80)
+    return (
+      <Wrapper>
         <button
           onClick={() => navigate(`/posts/${unlocked.id}`)}
           style={{
             display: 'flex', alignItems: 'flex-start', gap: 14,
             width: '100%', textAlign: 'left', cursor: 'pointer',
             background: 'rgba(232,108,180,0.09)',
-            border: '1px solid rgba(232,108,180,0.35)',
-            borderRadius: 16, padding: '16px 18px',
+            border: '1px solid rgba(232,108,180,0.4)',
+            borderRadius: 16, padding: '18px 20px',
           }}
         >
-          <span style={{ fontSize: 22, lineHeight: 1, marginTop: 2 }}>🔓</span>
+          <span style={{ fontSize: 24, lineHeight: 1, marginTop: 2, flexShrink: 0 }}>🔓</span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 700, color: 'var(--accent)', margin: '0 0 4px' }}>
+            <p style={{ fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 700, color: 'var(--accent)', margin: '0 0 6px' }}>
               Uma cápsula está esperando por você
             </p>
             {preview && (
-              <p style={{ fontFamily: 'var(--serif)', fontSize: 14, fontStyle: 'italic', color: 'var(--ink-2)', margin: '0 0 8px', lineHeight: 1.5 }}>
+              <p style={{ fontFamily: 'var(--serif)', fontSize: 14, fontStyle: 'italic', color: 'var(--ink-2)', margin: '0 0 10px', lineHeight: 1.55 }}>
                 "{preview}"
               </p>
             )}
@@ -118,60 +243,87 @@ function CapsulaSection({ capsules }) {
             </p>
           </div>
         </button>
-      </div>
+      </Wrapper>
     )
   }
 
-  // Upcoming capsule
   if (upcoming) {
     const days = daysUntil(upcoming.unlockAt)
-    const preview = truncate(upcoming.articleTitle || upcoming.content, 60)
+    const created = new Date(upcoming.createdAt)
+    const unlock = new Date(upcoming.unlockAt)
+    const totalMs = unlock - created
+    const elapsedMs = Date.now() - created
+    const progress = Math.min(100, Math.max(2, (elapsedMs / totalMs) * 100))
+
+    const urgent = days <= 1
+    const close  = days <= 7
+    const near   = days <= 30
+
+    const barColor  = urgent ? 'var(--accent)' : close ? '#f97316' : near ? 'var(--ink-2)' : 'var(--ink-3)'
+    const labelColor = urgent ? 'var(--accent)' : close ? '#f97316' : 'var(--ink)'
+    const preview   = truncate(upcoming.articleTitle || upcoming.content, 60)
+
     return (
-      <div style={{ padding: '0 20px 4px' }}>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-3)', marginBottom: 10 }}>
-          Cápsula
-        </div>
+      <Wrapper>
         <button
           onClick={() => navigate('/capsules')}
           style={{
-            display: 'flex', alignItems: 'flex-start', gap: 14,
-            width: '100%', textAlign: 'left', cursor: 'pointer',
-            background: 'none', border: '1px solid var(--line)', borderRadius: 16, padding: '16px 18px',
+            display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
+            background: urgent ? 'rgba(232,108,180,0.05)' : 'none',
+            border: `1px solid ${urgent ? 'rgba(232,108,180,0.3)' : 'var(--line)'}`,
+            borderRadius: 16, padding: '18px 20px',
+            animation: urgent ? 'capsulePulse 2.5s ease-in-out infinite' : 'none',
           }}
         >
-          <span style={{ fontSize: 22, lineHeight: 1, marginTop: 2 }}>🔒</span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontFamily: 'var(--sans)', fontSize: 13, fontWeight: 600, color: 'var(--ink)', margin: '0 0 3px' }}>
-              Próxima cápsula · {days === 0 ? 'Abre hoje' : days === 1 ? 'Abre amanhã' : `Abre em ${days} dias`}
-            </p>
-            {preview && (
-              <p style={{ fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--ink-3)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {preview}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
+            <span style={{ fontSize: 22, lineHeight: 1, marginTop: 1, flexShrink: 0 }}>🔒</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontFamily: 'var(--sans)', fontSize: 13, fontWeight: 600, color: labelColor, margin: '0 0 3px' }}>
+                Próxima cápsula · {urgent ? 'Abre hoje' : days === 1 ? 'Abre amanhã' : `Abre em ${days} dias`}
               </p>
-            )}
+              {preview && (
+                <p style={{ fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--ink-3)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {preview}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          <div style={{ height: 3, borderRadius: 99, background: 'var(--line)', overflow: 'hidden' }}>
+            <div style={{
+              height: '100%', borderRadius: 99,
+              width: `${progress}%`,
+              background: barColor,
+              transition: 'width .6s ease',
+            }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)' }}>criada</span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: barColor }}>
+              {days === 0 ? 'hoje' : `${days}d`}
+            </span>
           </div>
         </button>
-      </div>
+        <style>{`@keyframes capsulePulse { 0%,100%{box-shadow:none} 50%{box-shadow:0 0 0 4px rgba(232,108,180,0.15)} }`}</style>
+      </Wrapper>
     )
   }
 
-  // No capsules
+  // No capsules — CTA
   return (
-    <div style={{ padding: '0 20px 4px' }}>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-3)', marginBottom: 10 }}>
-        Cápsula
-      </div>
+    <Wrapper>
       <button
         onClick={() => window.dispatchEvent(new CustomEvent('open-compose'))}
         style={{
           display: 'flex', alignItems: 'center', gap: 14,
           width: '100%', textAlign: 'left', cursor: 'pointer',
-          background: 'none', border: '1px dashed var(--line-strong)', borderRadius: 16, padding: '16px 18px',
+          background: 'none', border: '1px dashed var(--line-strong)', borderRadius: 16, padding: '16px 20px',
         }}
       >
-        <span style={{ fontSize: 22, lineHeight: 1 }}>⏳</span>
+        <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>⏳</span>
         <div>
-          <p style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-2)', margin: '0 0 2px' }}>
+          <p style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-2)', margin: '0 0 3px' }}>
             Escreva uma cápsula para o seu eu futuro
           </p>
           <p style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)', margin: 0 }}>
@@ -179,15 +331,14 @@ function CapsulaSection({ capsules }) {
           </p>
         </div>
       </button>
-    </div>
+    </Wrapper>
   )
 }
 
-// ── 3. Memória — Passado ──────────────────────────────────────────────────────
+// ── 4. Memória — editorial ────────────────────────────────────────────────────
 
 function MemoriaSection({ memories }) {
   const navigate = useNavigate()
-
   if (!memories) return null
 
   const sorted = [...memories].sort((a, b) => {
@@ -197,81 +348,95 @@ function MemoriaSection({ memories }) {
   })
   const memory = sorted[0] ?? null
 
-  const LINE = { height: 1, background: 'var(--line)', margin: '0 0' }
+  function openCompose() { window.dispatchEvent(new CustomEvent('open-compose')) }
+
+  const DIVIDER = <div style={{ height: 1, background: 'var(--line)', margin: '20px 20px 0' }} />
 
   if (!memory) {
     return (
-      <div style={{ padding: '24px 20px' }}>
-        <div style={LINE} />
-        <div style={{ padding: '22px 0 4px' }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-3)', marginBottom: 14 }}>
+      <>
+        {DIVIDER}
+        <div style={{ padding: '24px 20px 20px' }}>
+          <p style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-3)', margin: '0 0 16px' }}>
             Memória
-          </div>
-          <p style={{ fontFamily: 'var(--serif)', fontSize: 16, fontStyle: 'italic', color: 'var(--ink-3)', lineHeight: 1.6, margin: 0 }}>
+          </p>
+          <p style={{ fontFamily: 'var(--serif)', fontSize: 16, fontStyle: 'italic', color: 'var(--ink-3)', lineHeight: 1.65, margin: '0 0 8px' }}>
             Ainda não há memórias para este dia.
           </p>
-          <p style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)', lineHeight: 1.6, margin: '8px 0 0' }}>
+          <p style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)', lineHeight: 1.6, margin: 0 }}>
             Daqui a um ano, o que você guardar hoje pode voltar para te encontrar.
           </p>
         </div>
-        <div style={LINE} />
-      </div>
+        <div style={{ height: 1, background: 'var(--line)', margin: '0 20px 24px' }} />
+      </>
     )
   }
 
   const text = memory.articleTitle
     ? `${memory.articleTitle} — ${truncate(memory.content, 140)}`
-    : truncate(memory.content, 200)
+    : truncate(memory.content, 240)
 
-  function go() {
+  function goToMemory() {
     if (memory.isArticle || memory.articleTitle) navigate(`/articles/${memory.id}`)
     else navigate(`/posts/${memory.id}`)
   }
 
   return (
-    <div style={{ padding: '24px 20px' }}>
-      <div style={LINE} />
-      <div style={{ padding: '22px 0 4px' }}>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-3)', marginBottom: 14 }}>
-          Memória · {memory.label}
-        </div>
-        <button
-          onClick={go}
-          style={{ display: 'block', width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
-        >
-          <div style={{ borderLeft: '2px solid var(--accent)', paddingLeft: 16 }}>
-            <p style={{ fontFamily: 'var(--serif)', fontSize: 17, fontStyle: 'italic', color: 'var(--ink)', lineHeight: 1.65, margin: 0 }}>
+    <>
+      {DIVIDER}
+      <div style={{ padding: '24px 20px 20px' }}>
+        <p style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-3)', margin: '0 0 16px' }}>
+          Neste dia, {memory.label?.toLowerCase()}
+        </p>
+        <div style={{ borderLeft: '2px solid var(--accent)', paddingLeft: 18, marginBottom: 18 }}>
+          <button
+            onClick={goToMemory}
+            style={{ display: 'block', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
+          >
+            <p style={{ fontFamily: 'var(--serif)', fontSize: 17, fontStyle: 'italic', color: 'var(--ink)', lineHeight: 1.7, margin: '0 0 14px' }}>
               "{text}"
             </p>
-            <p style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)', margin: '12px 0 0', letterSpacing: '0.06em' }}>
+            <p style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)', margin: 0, letterSpacing: '0.06em' }}>
               Ver memória →
             </p>
-          </div>
+          </button>
+        </div>
+        <button
+          onClick={openCompose}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            background: 'rgba(232,108,180,0.08)', border: '1px solid rgba(232,108,180,0.25)',
+            borderRadius: 10, padding: '9px 16px', cursor: 'pointer',
+          }}
+        >
+          <Icon name="feather" size={14} stroke={1.8} style={{ color: 'var(--accent)' }} />
+          <span style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--accent)', fontWeight: 500 }}>
+            Responder hoje
+          </span>
         </button>
       </div>
-      <div style={LINE} />
-    </div>
+      <div style={{ height: 1, background: 'var(--line)', margin: '0 20px 24px' }} />
+    </>
   )
 }
 
-// ── 4. Projetos em movimento ──────────────────────────────────────────────────
+// ── 5. Projetos ───────────────────────────────────────────────────────────────
 
 function ProjetosSection({ projects }) {
   const navigate = useNavigate()
-
   if (!projects) return null
 
   const active = [...projects]
-    .filter(p => ['ativo', 'construindo', 'em-andamento'].includes(p.status))
+    .filter(isActive)
     .sort((a, b) => new Date(b.lastActivityAt ?? 0) - new Date(a.lastActivityAt ?? 0))
     .slice(0, 3)
 
   return (
-    <div style={{ padding: '0 20px 24px' }}>
+    <div style={{ padding: '0 20px 26px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>
+        <p style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-3)', margin: 0 }}>
           Projetos em movimento
-        </span>
+        </p>
         {active.length > 0 && (
           <button onClick={() => navigate('/projects')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)', padding: 0 }}>
             Ver todos →
@@ -282,11 +447,7 @@ function ProjetosSection({ projects }) {
       {active.length === 0 ? (
         <button
           onClick={() => navigate('/projects')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 12,
-            width: '100%', textAlign: 'left', cursor: 'pointer',
-            background: 'none', border: '1px dashed var(--line-strong)', borderRadius: 14, padding: '14px 16px',
-          }}
+          style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', cursor: 'pointer', background: 'none', border: '1px dashed var(--line-strong)', borderRadius: 14, padding: '14px 16px' }}
         >
           <span style={{ fontSize: 20 }}>🌱</span>
           <div>
@@ -295,7 +456,7 @@ function ProjetosSection({ projects }) {
           </div>
         </button>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
           {active.map(p => (
             <button
               key={p.id}
@@ -317,23 +478,21 @@ function ProjetosSection({ projects }) {
   )
 }
 
-// ── 5. Escrita — Presente ─────────────────────────────────────────────────────
+// ── 6. Escrita — Presente ─────────────────────────────────────────────────────
 
 function EscritaSection() {
   function open() { window.dispatchEvent(new CustomEvent('open-compose')) }
 
   return (
-    <div style={{ padding: '0 20px 28px' }}>
+    <div style={{ padding: '0 20px 26px' }}>
       <button
         onClick={open}
         style={{
           width: '100%', textAlign: 'left', cursor: 'pointer',
           display: 'flex', flexDirection: 'column', gap: 12,
-          padding: '22px 22px',
-          borderRadius: 18,
+          padding: '22px 22px', borderRadius: 18,
           border: '1.5px solid rgba(232,108,180,0.35)',
           background: 'rgba(232,108,180,0.05)',
-          boxShadow: '0 0 0 0 transparent',
           transition: 'border-color .15s',
         }}
         onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(232,108,180,0.7)'}
@@ -348,59 +507,56 @@ function EscritaSection() {
           </p>
         </div>
         <p style={{ fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink-3)', margin: 0, paddingLeft: 48 }}>
-          Uma nota, uma ideia, uma foto, um arquivo — no seu arquivo
+          Uma nota, uma ideia, uma foto, um arquivo
         </p>
       </button>
     </div>
   )
 }
 
-// ── 6. Trajetória rápida ──────────────────────────────────────────────────────
+// ── 7. Trajetória strip ───────────────────────────────────────────────────────
 
 function TrajetoriaStrip({ streak, projects }) {
   const navigate = useNavigate()
-  const current = streak?.current ?? 0
-  const total = streak?.totalActiveDays ?? 0
-  const activeCount = (projects ?? []).filter(p => ['ativo', 'construindo', 'em-andamento'].includes(p.status)).length
+  const current     = streak?.current ?? 0
+  const total       = streak?.totalActiveDays ?? 0
+  const activeCount = (projects ?? []).filter(isActive).length
+
+  const parts = [
+    `${current} ${current === 1 ? 'dia seguido' : 'dias seguidos'}`,
+    `${total} ${total === 1 ? 'dia no arquivo' : 'dias no arquivo'}`,
+    activeCount > 0 ? `${activeCount} ${activeCount === 1 ? 'projeto ativo' : 'projetos ativos'}` : null,
+  ].filter(Boolean)
 
   return (
     <button
       onClick={() => navigate('/trajetoria')}
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        margin: '0 20px 28px',
-        padding: '12px 16px',
-        borderRadius: 12,
-        border: '1px solid var(--line)',
-        background: 'none',
+        margin: '0 20px 28px', padding: '12px 16px', borderRadius: 12,
+        border: '1px solid var(--line)', background: 'none',
         cursor: 'pointer', width: 'calc(100% - 40px)',
       }}
     >
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: current > 0 ? 'var(--accent)' : 'var(--ink-3)' }}>
-          {current} {current === 1 ? 'dia seguido' : 'dias seguidos'}
-        </span>
-        <span style={{ color: 'var(--line-strong)', fontFamily: 'var(--mono)', fontSize: 11 }}>·</span>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--ink-3)' }}>
-          {total} {total === 1 ? 'dia no arquivo' : 'dias no arquivo'}
-        </span>
-        {activeCount > 0 && (
-          <>
-            <span style={{ color: 'var(--line-strong)', fontFamily: 'var(--mono)', fontSize: 11 }}>·</span>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--ink-3)' }}>
-              {activeCount} {activeCount === 1 ? 'projeto ativo' : 'projetos ativos'}
-            </span>
-          </>
-        )}
-      </div>
+      <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--ink-3)', lineHeight: 1.5 }}>
+        {parts.map((p, i) => (
+          <span key={i}>
+            {i > 0 && <span style={{ color: 'var(--line-strong)', margin: '0 8px' }}>·</span>}
+            {current > 0 && i === 0
+              ? <span><span style={{ color: 'var(--accent)' }}>{current}</span>{` ${current === 1 ? 'dia seguido' : 'dias seguidos'}`}</span>
+              : p
+            }
+          </span>
+        ))}
+      </span>
       <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)', flexShrink: 0, marginLeft: 10 }}>→</span>
     </button>
   )
 }
 
-// ── 7. Círculo ────────────────────────────────────────────────────────────────
+// ── 8. Círculo ────────────────────────────────────────────────────────────────
 
-function CirculoSection({ circlePosts, circleLoading }) {
+function CirculoSection({ circlePosts, circleLoading, updatePost }) {
   const navigate = useNavigate()
 
   return (
@@ -409,8 +565,8 @@ function CirculoSection({ circlePosts, circleLoading }) {
       <div style={{ borderTop: '1px solid var(--line)' }}>
         {circleLoading ? (
           <div style={{ padding: '32px 20px', display: 'flex', justifyContent: 'center' }}>
-            <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid var(--accent)', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
-            <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+            <div style={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid var(--accent)', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
           </div>
         ) : circlePosts.length === 0 ? (
           <div style={{ padding: '28px 20px' }}>
@@ -428,13 +584,11 @@ function CirculoSection({ circlePosts, circleLoading }) {
             </button>
           </div>
         ) : (
-          circlePosts.slice(0, 5).map(p => (
+          circlePosts.map(p => (
             <EntryCard
-              key={p.id}
-              post={p}
-              showAuthor
-              onLike={() => {}}
-              onSave={() => {}}
+              key={p.id} post={p} showAuthor
+              onLike={() => updatePost(p.id, 'react', 'heart')}
+              onSave={() => updatePost(p.id, 'save')}
             />
           ))
         )}
@@ -443,25 +597,7 @@ function CirculoSection({ circlePosts, circleLoading }) {
   )
 }
 
-// ── 8. Feed (do círculo, completo) ────────────────────────────────────────────
-
-function FeedSection({ circlePosts, circleLoading, onLike, onSave }) {
-  const navigate = useNavigate()
-  if (circleLoading || circlePosts.length <= 5) return null
-
-  return (
-    <div>
-      <SectionLabel>Do seu círculo hoje</SectionLabel>
-      <div style={{ borderTop: '1px solid var(--line)' }}>
-        {circlePosts.slice(5).map(p => (
-          <EntryCard key={p.id} post={p} showAuthor onLike={() => {}} onSave={() => {}} />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ── Guia (colapsado, no fundo) ────────────────────────────────────────────────
+// ── Guia colapsado ────────────────────────────────────────────────────────────
 
 function GuiaCollapsed({ posts }) {
   const navigate = useNavigate()
@@ -472,29 +608,17 @@ function GuiaCollapsed({ posts }) {
     <div style={{ borderTop: '1px solid var(--line)', margin: '8px 0' }}>
       <button
         onClick={() => setOpen(v => !v)}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          width: '100%', padding: '14px 20px', background: 'none', border: 'none', cursor: 'pointer',
-        }}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '14px 20px', background: 'none', border: 'none', cursor: 'pointer' }}
       >
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', color: 'var(--ink-3)', textTransform: 'uppercase' }}>
-          Guia do Archive
-        </span>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)' }}>
-          {open ? 'Ocultar' : 'Mostrar'}
-        </span>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', color: 'var(--ink-3)', textTransform: 'uppercase' }}>Guia do Archive</span>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)' }}>{open ? 'Ocultar' : 'Mostrar'}</span>
       </button>
       {open && (
         <div>
-          {posts.slice(0, 4).map(p => (
-            <EntryCard key={p.id} post={p} showAuthor />
-          ))}
+          {posts.slice(0, 4).map(p => <EntryCard key={p.id} post={p} showAuthor />)}
           {posts.length > 4 && (
             <div style={{ padding: '12px 20px', textAlign: 'center' }}>
-              <button
-                onClick={() => navigate('/explore')}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--accent)', letterSpacing: '0.08em' }}
-              >
+              <button onClick={() => navigate('/explore')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--accent)', letterSpacing: '0.08em' }}>
                 Ver todos os guias →
               </button>
             </div>
@@ -509,10 +633,7 @@ function GuiaCollapsed({ posts }) {
 
 function NotifBell({ onClick }) {
   return (
-    <button
-      onClick={onClick}
-      style={{ width: 38, height: 38, borderRadius: '50%', border: 'none', cursor: 'pointer', background: 'var(--surface-3)', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-    >
+    <button onClick={onClick} style={{ width: 38, height: 38, borderRadius: '50%', border: 'none', cursor: 'pointer', background: 'var(--surface-3)', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <Icon name="bell" size={19} />
     </button>
   )
@@ -542,6 +663,13 @@ export default function HomePage({ posts, profile, onLike, onSave }) {
       .finally(() => setCircleLoading(false))
   }, [])
 
+  async function updatePost(id, action, reactionType) {
+    try {
+      const updated = await api.patch(`/posts/${id}`, reactionType ? { action, reactionType } : { action })
+      setCirclePosts(cur => cur.map(p => p.id === id ? { ...updated, attachments: p.attachments, author: p.author } : p))
+    } catch {}
+  }
+
   return (
     <div style={{ animation: 'fadeUp var(--dur-screen) var(--ease-out)', maxWidth: 680, margin: '0 auto' }}>
       {/* Mobile AppBar */}
@@ -549,9 +677,7 @@ export default function HomePage({ posts, profile, onLike, onSave }) {
         left={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
-            <span style={{ fontFamily: 'var(--serif)', fontSize: 17, color: 'var(--ink)', letterSpacing: '-0.01em' }}>
-              The Archive
-            </span>
+            <span style={{ fontFamily: 'var(--serif)', fontSize: 17, color: 'var(--ink)', letterSpacing: '-0.01em' }}>The Archive</span>
           </div>
         }
         right={
@@ -564,42 +690,42 @@ export default function HomePage({ posts, profile, onLike, onSave }) {
         }
       />
 
-      {/* Stories */}
       <StoriesBar profile={profile} />
 
-      {/* 1. Saudação */}
-      <Saudacao profile={profile} posts={posts} />
+      {/* 1. Hero */}
+      <Hero profile={profile} posts={posts} projects={projects} capsules={capsules} streak={streak} />
 
-      {/* 2. Cápsula — Futuro */}
-      <div style={{ padding: '0 0 28px' }}>
-        <CapsulaSection capsules={capsules} />
+      {/* 2. Pergunta do dia */}
+      <div style={{ padding: '8px 0 20px' }}>
+        <PerguntaDoDia />
       </div>
 
-      {/* 3. Memória — Passado */}
-      <MemoriaSection memories={memories} />
+      {/* 3. Cápsula */}
+      <CapsulaSection capsules={capsules} />
 
-      {/* 4. Projetos */}
+      {/* 4. Memória */}
+      <div style={{ padding: '4px 0' }}>
+        <MemoriaSection memories={memories} />
+      </div>
+
+      {/* 5. Projetos */}
       <ProjetosSection projects={projects} />
 
-      {/* 5. Escrita — Presente */}
+      {/* 6. Escrita */}
       <EscritaSection />
 
-      {/* 6. Trajetória rápida */}
+      {/* 7. Trajetória */}
       <TrajetoriaStrip streak={streak} projects={projects} />
 
-      {/* 7. Círculo (primeiros 5) */}
-      <CirculoSection circlePosts={circlePosts} circleLoading={circleLoading} />
+      {/* 8. Círculo */}
+      <CirculoSection circlePosts={circlePosts} circleLoading={circleLoading} updatePost={updatePost} />
 
-      {/* 8. Feed (resto do círculo) */}
-      <FeedSection circlePosts={circlePosts} circleLoading={circleLoading} />
-
-      {/* Guia — colapsado, no fundo */}
+      {/* Guia — colapsado */}
       <GuiaCollapsed posts={guidePosts} />
 
-      {/* Footer */}
       <div style={{ padding: '28px 20px 12px', textAlign: 'center' }}>
-        <div style={{ fontFamily: 'var(--serif)', fontSize: 15, fontStyle: 'italic', color: 'var(--ink-3)' }}>É isso, hoje.</div>
-        <div style={{ fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink-3)', marginTop: 4 }}>Volte amanhã, ou guarde algo agora.</div>
+        <p style={{ fontFamily: 'var(--serif)', fontSize: 15, fontStyle: 'italic', color: 'var(--ink-3)', margin: '0 0 4px' }}>É isso, hoje.</p>
+        <p style={{ fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink-3)', margin: 0 }}>Volte amanhã, ou guarde algo agora.</p>
       </div>
     </div>
   )

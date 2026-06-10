@@ -3,132 +3,257 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../utils/api'
 import Icon from './ui/Icon'
 
-// ── Rail card wrapper ─────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-function RailCard({ title, action, onAction, children }) {
+function daysUntil(dateStr) {
+  return Math.ceil((new Date(dateStr) - Date.now()) / 86400000)
+}
+
+function daysSince(dateStr) {
+  if (!dateStr) return null
+  return Math.floor((Date.now() - new Date(dateStr)) / 86400000)
+}
+
+function isActive(p) {
+  return ['ativo', 'construindo', 'em-andamento'].includes(p.status)
+}
+
+// ── Row component ─────────────────────────────────────────────────────────────
+
+function Row({ icon, label, value, sub, accent, onClick }) {
   return (
-    <div style={{ marginBottom: 26 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>
-          {title}
-        </div>
-        {action && (
-          <button
-            onClick={onAction}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}
-          >
-            {action}
-          </button>
+    <button
+      onClick={onClick}
+      disabled={!onClick}
+      style={{
+        display: 'flex', alignItems: 'flex-start', gap: 12,
+        width: '100%', background: 'none', border: 'none',
+        padding: '10px 0', cursor: onClick ? 'pointer' : 'default',
+        textAlign: 'left', borderBottom: '1px solid var(--line)',
+      }}
+      onMouseEnter={e => { if (onClick) e.currentTarget.style.opacity = '0.75' }}
+      onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
+    >
+      <span style={{ fontSize: 17, lineHeight: 1, marginTop: 2, flexShrink: 0 }}>{icon}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-3)', margin: '0 0 3px' }}>
+          {label}
+        </p>
+        <p style={{ fontFamily: 'var(--sans)', fontSize: 13, color: accent ? 'var(--accent)' : 'var(--ink)', fontWeight: accent ? 600 : 400, margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {value}
+        </p>
+        {sub && (
+          <p style={{ fontFamily: 'var(--serif)', fontSize: 12.5, fontStyle: 'italic', color: 'var(--ink-3)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {sub}
+          </p>
         )}
       </div>
-      {children}
-    </div>
+    </button>
   )
 }
 
-// ── Today rail: "On this day" + latest notices ────────────────────────────────
+// ── Today rail ────────────────────────────────────────────────────────────────
 
 function TodayRail({ profile }) {
   const navigate = useNavigate()
-  const [memories, setMemories] = useState([])
-  const [notices, setNotices] = useState([])
+  const [capsules,  setCapsules]  = useState(null)
+  const [streak,    setStreak]    = useState(null)
+  const [projects,  setProjects]  = useState(null)
+  const [memories,  setMemories]  = useState(null)
+  const [notices,   setNotices]   = useState([])
 
   useEffect(() => {
-    const now = new Date()
-    api.get(`/archive/calendar/${now.getFullYear()}/${now.getMonth() + 1}`)
-      .then(data => {
-        // filter out today, keep older entries as "memories"
-        const today = now.getDate()
-        const older = (data.entries || []).filter(e => new Date(e.createdAt).getDate() !== today)
-        setMemories(older.slice(0, 2))
-      })
-      .catch(() => {})
-    api.get('/notifications')
-      .then(data => setNotices((data || []).slice(0, 3)))
-      .catch(() => {})
+    api.get('/capsules').then(setCapsules).catch(() => setCapsules([]))
+    api.get('/archive/streak').then(setStreak).catch(() => setStreak({}))
+    api.get('/projects').then(setProjects).catch(() => setProjects([]))
+    api.get('/archive/memories').then(d => setMemories(d ?? [])).catch(() => setMemories([]))
+    api.get('/notifications').then(d => setNotices((d ?? []).slice(0, 3))).catch(() => {})
   }, [])
+
+  const now = Date.now()
+
+  const nextCapsule = capsules
+    ? [...capsules].filter(c => new Date(c.unlockAt) > now).sort((a, b) => new Date(a.unlockAt) - new Date(b.unlockAt))[0]
+    : null
+  const unlockedCapsule = capsules
+    ? [...capsules].filter(c => new Date(c.unlockAt) <= now).sort((a, b) => new Date(b.unlockAt) - new Date(a.unlockAt))[0]
+    : null
+
+  const current    = streak?.current ?? 0
+  const totalDays  = streak?.totalActiveDays ?? 0
+
+  const activeProject = projects
+    ? [...projects].filter(isActive).sort((a, b) => new Date(b.lastActivityAt ?? 0) - new Date(a.lastActivityAt ?? 0))[0]
+    : null
+
+  const latestMemory = memories
+    ? [...memories].sort((a, b) => {
+        const ya = parseInt(a.label?.match(/\d+/)?.[0] ?? '0')
+        const yb = parseInt(b.label?.match(/\d+/)?.[0] ?? '0')
+        return yb - ya
+      })[0]
+    : null
 
   return (
     <div>
-      <RailCard title="Neste dia" action="Ver tudo" onAction={() => navigate('/archive?s=memories')}>
-        {memories.length === 0 ? (
-          <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 13, color: 'var(--ink-3)', margin: 0 }}>
-            Nada guardado neste dia em outros anos.
-          </p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {memories.map(m => {
-              const yearsAgo = new Date().getFullYear() - new Date(m.createdAt).getFullYear()
-              return (
-                <div
-                  key={m.id}
-                  onClick={() => navigate('/archive?s=memories')}
-                  style={{ cursor: 'pointer', borderRadius: 12, border: '1px solid var(--line-strong)', background: 'var(--surface-1)', padding: '11px 13px' }}
-                >
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.08em', color: 'var(--accent)', marginBottom: 6 }}>
-                    {yearsAgo} {yearsAgo === 1 ? 'ANO ATRÁS' : 'ANOS ATRÁS'}
-                  </div>
-                  <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 13.5, lineHeight: 1.4, color: 'var(--ink-2)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                    {m.title || m.content || 'Entrada guardada'}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </RailCard>
+      {/* Header */}
+      <p style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-3)', margin: '0 0 4px' }}>
+        Próximos momentos
+      </p>
 
-      <RailCard title="Últimos avisos" action="Abrir" onAction={() => navigate('/notifications')}>
-        {notices.length === 0 ? (
-          <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 13, color: 'var(--ink-3)', margin: 0 }}>
-            Nenhum aviso recente.
+      <div style={{ borderTop: '1px solid var(--line)', marginBottom: 24 }}>
+        {/* Cápsula aberta */}
+        {unlockedCapsule && (
+          <Row
+            icon="🔓"
+            label="Cápsula aberta"
+            value="Uma cápsula está esperando"
+            sub={`"${(unlockedCapsule.articleTitle || unlockedCapsule.content || '').slice(0, 50)}"`}
+            accent
+            onClick={() => navigate(`/posts/${unlockedCapsule.id}`)}
+          />
+        )}
+
+        {/* Próxima cápsula */}
+        {nextCapsule && (() => {
+          const days = daysUntil(nextCapsule.unlockAt)
+          const urgent = days <= 7
+          return (
+            <Row
+              icon="🔒"
+              label="Próxima cápsula"
+              value={days === 0 ? 'Abre hoje' : days === 1 ? 'Abre amanhã' : `Abre em ${days} dias`}
+              sub={`"${(nextCapsule.articleTitle || nextCapsule.content || '').slice(0, 50)}"`}
+              accent={urgent}
+              onClick={() => navigate('/capsules')}
+            />
+          )
+        })()}
+
+        {/* Sem cápsulas */}
+        {capsules !== null && !nextCapsule && !unlockedCapsule && (
+          <Row
+            icon="⏳"
+            label="Cápsula"
+            value="Nenhuma cápsula ainda"
+            sub="Escreva uma mensagem para o futuro"
+            onClick={() => window.dispatchEvent(new CustomEvent('open-compose'))}
+          />
+        )}
+
+        {/* Sequência */}
+        <Row
+          icon="🔥"
+          label="Sequência"
+          value={current > 0
+            ? `${current} ${current === 1 ? 'dia seguido' : 'dias seguidos'}`
+            : 'Sem sequência ativa'}
+          sub={totalDays > 0 ? `${totalDays} dias no arquivo no total` : undefined}
+          accent={current >= 7}
+          onClick={() => navigate('/trajetoria')}
+        />
+
+        {/* Projeto mais ativo */}
+        {activeProject ? (
+          <Row
+            icon={activeProject.emoji ?? '🌱'}
+            label="Projeto em movimento"
+            value={activeProject.title}
+            sub={daysSince(activeProject.lastActivityAt) === 0
+              ? 'Atividade hoje'
+              : `Última atividade há ${daysSince(activeProject.lastActivityAt)}d`}
+            onClick={() => navigate(`/projects/${activeProject.slug || activeProject.id}`)}
+          />
+        ) : projects !== null && (
+          <Row
+            icon="🌱"
+            label="Projetos"
+            value="Nenhum projeto ativo"
+            onClick={() => navigate('/projects')}
+          />
+        )}
+
+        {/* Memória recente */}
+        {latestMemory ? (
+          <Row
+            icon="💭"
+            label={`Memória · ${latestMemory.label?.toLowerCase() ?? ''}`}
+            value={latestMemory.articleTitle || '(sem título)'}
+            sub={`"${(latestMemory.content || '').replace(/\n/g, ' ').trim().slice(0, 60)}"`}
+            onClick={() => latestMemory.articleTitle
+              ? navigate(`/articles/${latestMemory.id}`)
+              : navigate(`/posts/${latestMemory.id}`)
+            }
+          />
+        ) : memories !== null && memories.length === 0 && (
+          <Row
+            icon="💭"
+            label="Memória"
+            value="Nenhuma memória para hoje"
+            sub="Volte quando tiver um ano de arquivo"
+          />
+        )}
+      </div>
+
+      {/* Últimos avisos */}
+      {notices.length > 0 && (
+        <div>
+          <p style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-3)', margin: '0 0 4px' }}>
+            Últimos avisos
           </p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+          <div style={{ borderTop: '1px solid var(--line)' }}>
             {notices.map(n => {
               const isMemory = n.type === 'memory'
+              const text = n.type === 'react' || n.type === 'like' ? 'apreciou sua entrada'
+                : n.type === 'comment' ? 'deixou uma nota'
+                : n.type === 'collect' ? 'guardou sua entrada'
+                : n.type === 'follow' ? 'entrou no seu círculo'
+                : n.type === 'mention' ? 'te mencionou'
+                : 'Uma memória ressurgiu'
+
               return (
-                <div
+                <button
                   key={n.id}
                   onClick={() => navigate('/notifications')}
-                  style={{ display: 'flex', gap: 10, cursor: 'pointer', alignItems: 'center' }}
+                  style={{ display: 'flex', gap: 10, width: '100%', background: 'none', border: 'none', padding: '10px 0', cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid var(--line)', alignItems: 'center' }}
                 >
                   {isMemory ? (
-                    <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: 'rgba(232,108,180,0.12)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Icon name="sparkle" size={15} />
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: 'rgba(232,108,180,0.12)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Icon name="sparkle" size={13} />
                     </div>
                   ) : (
-                    <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, overflow: 'hidden', border: '1px solid var(--line)', background: 'linear-gradient(135deg,#c084fc,#E86CB4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 12, color: '#fff' }}>
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#c084fc,#E86CB4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 11, color: '#fff' }}>
                         {(n.actor?.name ?? '?')[0]}
                       </span>
                     </div>
                   )}
-                  <div style={{ fontFamily: 'var(--sans)', fontSize: 12.5, lineHeight: 1.4, color: 'var(--ink-3)', minWidth: 0, flex: 1 }}>
+                  <span style={{ fontFamily: 'var(--sans)', fontSize: 12.5, lineHeight: 1.4, color: 'var(--ink-3)', flex: 1 }}>
                     {!isMemory && <span style={{ color: 'var(--ink-2)', fontWeight: 600 }}>{(n.actor?.name ?? '').split(' ')[0]} </span>}
-                    {n.type === 'react' || n.type === 'like' ? 'apreciou sua entrada'
-                      : n.type === 'comment' ? 'deixou uma nota'
-                      : n.type === 'collect' ? 'guardou sua entrada'
-                      : n.type === 'follow' ? 'entrou no seu círculo'
-                      : n.type === 'mention' ? 'te mencionou'
-                      : 'Uma memória ressurgiu'}
-                  </div>
-                </div>
+                    {text}
+                  </span>
+                </button>
               )
             })}
           </div>
-        )}
-      </RailCard>
+          <button
+            onClick={() => navigate('/notifications')}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)', padding: '10px 0', letterSpacing: '0.06em' }}
+          >
+            Ver todos os avisos →
+          </button>
+        </div>
+      )}
     </div>
   )
 }
 
-// ── Archive rail: bio + stats + collections ───────────────────────────────────
+// ── Archive rail (unchanged) ──────────────────────────────────────────────────
 
 function ArchiveRail({ profile }) {
   const navigate = useNavigate()
   const [collections, setCollections] = useState([])
-  const [postsCount, setPostsCount] = useState(null)
+  const [postsCount,  setPostsCount]  = useState(null)
 
   useEffect(() => {
     api.get('/collections').then(setCollections).catch(() => {})
@@ -141,7 +266,10 @@ function ArchiveRail({ profile }) {
 
   return (
     <div>
-      <RailCard title="Sobre este arquivo">
+      <div style={{ marginBottom: 26 }}>
+        <p style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-3)', margin: '0 0 14px' }}>
+          Sobre este arquivo
+        </p>
         {profile.bio && (
           <p style={{ margin: '0 0 16px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, lineHeight: 1.55, color: 'var(--ink-2)' }}>
             {profile.bio}
@@ -159,13 +287,15 @@ function ArchiveRail({ profile }) {
             </div>
           ))}
         </div>
-      </RailCard>
+      </div>
 
-      <RailCard title="Coleções" action="Ver todas" onAction={() => navigate('/archive?s=collections')}>
+      <div style={{ marginBottom: 26 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
+          <p style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-3)', margin: 0 }}>Coleções</p>
+          <button onClick={() => navigate('/archive?s=collections')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--accent)', fontWeight: 500 }}>Ver todas</button>
+        </div>
         {collections.length === 0 ? (
-          <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 13, color: 'var(--ink-3)', margin: 0 }}>
-            Nenhuma coleção ainda.
-          </p>
+          <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 13, color: 'var(--ink-3)', margin: 0 }}>Nenhuma coleção ainda.</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {collections.slice(0, 5).map(c => (
@@ -183,32 +313,28 @@ function ArchiveRail({ profile }) {
             ))}
           </div>
         )}
-      </RailCard>
+      </div>
     </div>
   )
 }
 
-// ── Main right panel ──────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function RightPanel({ profile }) {
   const location = useLocation()
-  const params = new URLSearchParams(location.search)
-  const archiveSection = params.get('s')
+  const params   = new URLSearchParams(location.search)
 
-  const isToday = location.pathname === '/'
+  const isToday   = location.pathname === '/'
   const isArchive = location.pathname === '/archive'
 
-  // Show rail only on Today and Archive family
-  const showRail = isToday || isArchive
-
-  if (!showRail) return null
+  if (!isToday && !isArchive) return null
 
   return (
     <aside
       className="hidden lg:block shrink-0 sticky top-0 h-screen overflow-y-auto scrollbar-hide"
       style={{ width: 300, padding: '48px 8px 48px 24px' }}
     >
-      {isToday && <TodayRail profile={profile} />}
+      {isToday   && <TodayRail profile={profile} />}
       {isArchive && <ArchiveRail profile={profile} />}
     </aside>
   )
