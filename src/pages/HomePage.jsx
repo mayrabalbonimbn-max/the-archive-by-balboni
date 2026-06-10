@@ -104,9 +104,7 @@ function Hero({ profile, posts, projects, capsules, streak }) {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
   }).toUpperCase()
 
-  const daysInArchive = profile?.createdAt
-    ? Math.max(1, Math.floor((Date.now() - new Date(profile.createdAt)) / 86400000))
-    : null
+  const daysInArchive = streak?.daysInArchive ?? null
 
   const entryCount     = posts?.length ?? 0
   const activeProjects = (projects ?? []).filter(isActive).length

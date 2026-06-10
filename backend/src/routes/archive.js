@@ -113,7 +113,15 @@ router.get('/streak', async (req, res) => {
       prev = d
     }
 
-    res.json({ current, best, totalActiveDays: days.length })
+    // daysInArchive: calendar days from first entry to today, inclusive.
+    // Calculated server-side to avoid browser timezone issues.
+    let daysInArchive = null
+    if (days.length > 0) {
+      const firstDay = Math.min(...days)
+      daysInArchive = Math.floor((today.valueOf() - firstDay) / 86400000) + 1
+    }
+
+    res.json({ current, best, totalActiveDays: days.length, daysInArchive })
   } catch (err) {
     console.error('GET /archive/streak error:', err)
     res.status(500).json({ error: 'Erro interno.' })

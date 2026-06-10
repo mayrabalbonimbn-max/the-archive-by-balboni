@@ -234,10 +234,10 @@ router.get('/stats', async (req, res) => {
     const [postStats, projectStats] = await Promise.all([
       pool.query(
         `SELECT
-           MIN(created_at)                                              AS first_entry_at,
-           COUNT(*)::int                                                AS total_memories,
+           MIN(created_at) FILTER (WHERE is_time_capsule = false OR is_time_capsule IS NULL) AS first_entry_at,
+           COUNT(*) FILTER (WHERE is_time_capsule = false OR is_time_capsule IS NULL)::int AS total_memories,
            COUNT(*) FILTER (WHERE is_time_capsule AND opened_at IS NOT NULL)::int AS opened_capsules,
-           COUNT(DISTINCT created_at::date)::int                       AS days_writing
+           COUNT(DISTINCT created_at::date) FILTER (WHERE is_time_capsule = false OR is_time_capsule IS NULL)::int AS days_writing
          FROM posts
          WHERE profile_id = $1`,
         [pid]

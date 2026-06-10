@@ -84,7 +84,7 @@ function EditorialFicha({ profile, stats }) {
 
       {hasNumbers && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <NumRow n={stats.totalMemories} label="memórias guardadas" />
+          <NumRow n={stats.totalMemories} label="registros guardados" />
           <NumRow n={stats.daysWriting} label="dias escrevendo" />
           <NumRow n={stats.openedCapsules || undefined} label="cápsulas abertas" />
           <NumRow n={stats.activeProjects || undefined} label="projetos em curso" />
