@@ -25,7 +25,7 @@ export function usePosts() {
         form.append('titles', JSON.stringify(attachments.map(item => item.title || '')))
         post.attachments = await api.upload(`/posts/${post.id}/attachments`, form)
       }
-      setPosts(prev => [post, ...prev])
+      if (!post.isTimeCapsule) setPosts(prev => [post, ...prev])
       return post
     } catch (err) {
       await api.delete(`/posts/${post.id}`).catch(() => {})
