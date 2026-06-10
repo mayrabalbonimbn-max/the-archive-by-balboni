@@ -66,27 +66,65 @@ function isSandboxable(attachment) {
 }
 
 function VideoAttachment({ attachment }) {
+  const [playing, setPlaying] = useState(false)
   const src = videoStreamUrl(attachment.id)
+  const ext = (attachment.originalName || '').split('.').pop()?.toUpperCase() || 'MP4'
+
+  if (playing) {
+    return (
+      <div style={{ marginTop: 10, borderRadius: 14, overflow: 'hidden', background: '#000', border: '1px solid var(--line)' }}>
+        <video
+          src={src}
+          controls
+          autoPlay
+          playsInline
+          preload="auto"
+          style={{ display: 'block', width: '100%', maxHeight: 420, background: '#000' }}
+        />
+      </div>
+    )
+  }
+
   return (
-    <div style={{ marginTop: 10, borderRadius: 14, overflow: 'hidden', background: '#000', border: '1px solid var(--line)' }}>
-      <video
-        src={src}
-        controls
-        playsInline
-        preload="metadata"
-        style={{ display: 'block', width: '100%', maxHeight: 420, background: '#000' }}
-      />
-      {attachment.originalName && (
-        <div style={{ padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--ink-3)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-            Vídeo
-          </span>
-          <span style={{ fontFamily: 'var(--sans)', fontSize: 11.5, color: 'var(--ink-3)' }}>
-            {attachment.size >= 1024 * 1024 ? `${(attachment.size / 1024 / 1024).toFixed(1)} MB` : `${Math.ceil(attachment.size / 1024)} KB`}
-          </span>
+    <button
+      onClick={() => setPlaying(true)}
+      style={{
+        marginTop: 10, width: '100%', display: 'block',
+        borderRadius: 14, overflow: 'hidden', border: '1px solid var(--line)',
+        background: 'linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 100%)',
+        cursor: 'pointer', padding: 0, textAlign: 'left',
+      }}
+    >
+      {/* Visual area */}
+      <div style={{ position: 'relative', padding: '28px 20px 24px', display: 'flex', alignItems: 'center', gap: 18 }}>
+        {/* Play button */}
+        <div style={{
+          flexShrink: 0, width: 52, height: 52, borderRadius: '50%',
+          background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 4px 20px -4px var(--accent)',
+        }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+            <polygon points="6,3 20,12 6,21"/>
+          </svg>
         </div>
-      )}
-    </div>
+        {/* Info */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', color: 'var(--accent)', marginBottom: 5 }}>
+            VÍDEO · {ext}
+          </div>
+          <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink)', lineHeight: 1.3 }}>
+            {attachment.originalName
+              ? attachment.originalName.replace(/\.[^.]+$/, '')
+              : 'Reproduzir vídeo'}
+          </div>
+          <div style={{ fontFamily: 'var(--sans)', fontSize: 11.5, color: 'var(--ink-3)', marginTop: 3 }}>
+            {formatSize(attachment.size)} — toque para reproduzir
+          </div>
+        </div>
+      </div>
+      {/* Bottom bar */}
+      <div style={{ height: 3, background: 'linear-gradient(90deg, var(--accent) 0%, transparent 100%)', opacity: 0.35 }} />
+    </button>
   )
 }
 
