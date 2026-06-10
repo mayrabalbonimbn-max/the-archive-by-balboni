@@ -420,6 +420,191 @@ function MemoriaSection({ memories }) {
   )
 }
 
+// ── 5b. Graph preview ─────────────────────────────────────────────────────────
+
+function GraphPreviewSection({ graphData }) {
+  const navigate = useNavigate()
+
+  if (!graphData) return null
+
+  const { nodes, links } = graphData
+
+  const postCount = nodes.filter(n => n.type === 'post' || n.type === 'article').length
+  const hasEnough = postCount >= 3 && links.length >= 2
+
+  // Count connections per node
+  const connCount = new Map()
+  links.forEach(l => {
+    connCount.set(l.source, (connCount.get(l.source) || 0) + 1)
+    connCount.set(l.target, (connCount.get(l.target) || 0) + 1)
+  })
+
+  // Top tags by connections
+  const topTags = nodes
+    .filter(n => n.type === 'tag')
+    .sort((a, b) => (connCount.get(b.id) || 0) - (connCount.get(a.id) || 0))
+    .slice(0, 7)
+
+  // Top posts/articles by connections
+  const topPosts = nodes
+    .filter(n => n.type === 'post' || n.type === 'article')
+    .sort((a, b) => (connCount.get(b.id) || 0) - (connCount.get(a.id) || 0))
+    .slice(0, 5)
+
+  // SVG layout
+  const cx = 120, cy = 84
+  const rInner = 52, rOuter = 76
+
+  const tagPositions = topTags.map((n, i) => {
+    const angle = (i / topTags.length) * Math.PI * 2 - Math.PI / 2
+    const count = connCount.get(n.id) || 1
+    return { ...n, x: cx + Math.cos(angle) * rInner, y: cy + Math.sin(angle) * rInner, count }
+  })
+
+  const postPositions = topPosts.map((n, i) => {
+    const angle = ((i + 0.5) / topPosts.length) * Math.PI * 2 - Math.PI / 2
+    return { ...n, x: cx + Math.cos(angle) * rOuter, y: cy + Math.sin(angle) * rOuter }
+  })
+
+  // Top 3 tags as pills for the stats line
+  const tagPills = topTags.slice(0, 4)
+
+  return (
+    <div style={{ padding: '0 20px 26px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <p style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-3)', margin: 0 }}>
+          Conexões do seu arquivo
+        </p>
+        <button
+          onClick={() => navigate('/graph')}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)', padding: 0 }}
+        >
+          Explorar →
+        </button>
+      </div>
+
+      {!hasEnough ? (
+        <p style={{ fontFamily: 'var(--serif)', fontSize: 14, fontStyle: 'italic', color: 'var(--ink-3)', lineHeight: 1.6, margin: 0 }}>
+          Suas conexões começam a aparecer conforme você usa tags, projetos e links internos.
+        </p>
+      ) : (
+        <button
+          onClick={() => navigate('/graph')}
+          style={{
+            display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
+            background: 'none', border: '1px solid var(--line)', borderRadius: 16,
+            padding: '16px 18px', transition: 'border-color .15s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--ink-3)'}
+          onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--line)'}
+        >
+          {/* Stats row */}
+          <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+            <div>
+              <p style={{ fontFamily: 'var(--serif)', fontSize: 20, color: '#F2EDE6', margin: '0 0 2px', lineHeight: 1 }}>
+                {postCount}
+              </p>
+              <p style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#6b6560', margin: 0 }}>
+                registros
+              </p>
+            </div>
+            <div style={{ width: 1, background: '#222', alignSelf: 'stretch' }} />
+            <div>
+              <p style={{ fontFamily: 'var(--serif)', fontSize: 20, color: '#F2EDE6', margin: '0 0 2px', lineHeight: 1 }}>
+                {links.length}
+              </p>
+              <p style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#6b6560', margin: 0 }}>
+                conexões
+              </p>
+            </div>
+            {tagPills.length > 0 && (
+              <>
+                <div style={{ width: 1, background: '#222', alignSelf: 'stretch' }} />
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center' }}>
+                  {tagPills.map(t => (
+                    <span key={t.id} style={{
+                      fontFamily: 'var(--mono)', fontSize: 10, color: '#E86CB4',
+                      background: 'rgba(232,108,180,0.1)', borderRadius: 6,
+                      padding: '2px 7px', letterSpacing: '0.04em',
+                    }}>
+                      {t.label}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Mini SVG graph */}
+          <div style={{ borderRadius: 10, overflow: 'hidden', background: '#080808', lineHeight: 0 }}>
+            <svg
+              width="100%"
+              viewBox="0 0 240 168"
+              xmlns="http://www.w3.org/2000/svg"
+              style={{ display: 'block' }}
+            >
+              {/* Lines: posts → center */}
+              {postPositions.map((n, i) => (
+                <line key={`pl-${i}`}
+                  x1={cx} y1={cy} x2={n.x} y2={n.y}
+                  stroke="#2a2a2a" strokeWidth="0.8"
+                />
+              ))}
+              {/* Lines: center → tags */}
+              {tagPositions.map((n, i) => (
+                <line key={`tl-${i}`}
+                  x1={cx} y1={cy} x2={n.x} y2={n.y}
+                  stroke="#E86CB4" strokeWidth="0.6" strokeOpacity="0.35"
+                />
+              ))}
+              {/* Post dots (outer ring) */}
+              {postPositions.map((n, i) => (
+                <circle key={`pd-${i}`} cx={n.x} cy={n.y} r={2.5} fill="#3a3530" />
+              ))}
+              {/* Tag nodes (inner ring) */}
+              {tagPositions.map((n, i) => {
+                const r = Math.min(5, 3 + n.count * 0.4)
+                const label = n.label.length > 9 ? n.label.slice(0, 9) : n.label
+                const labelY = n.y > cy ? n.y + r + 9 : n.y - r - 3
+                return (
+                  <g key={`tn-${i}`}>
+                    <circle cx={n.x} cy={n.y} r={r} fill="#E86CB4" fillOpacity="0.75" />
+                    <text
+                      x={n.x} y={labelY}
+                      textAnchor="middle"
+                      fill="#6b6560"
+                      fontSize="7"
+                      fontFamily="monospace"
+                    >
+                      {label}
+                    </text>
+                  </g>
+                )
+              })}
+              {/* Center node — "você" */}
+              <circle cx={cx} cy={cy} r={9} fill="#E86CB4" />
+              <text
+                x={cx} y={cy + 3.5}
+                textAnchor="middle"
+                fill="white"
+                fontSize="7.5"
+                fontFamily="Georgia, serif"
+                fontStyle="italic"
+              >
+                eu
+              </text>
+            </svg>
+          </div>
+
+          <p style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#6b6560', margin: '12px 0 0', letterSpacing: '0.06em' }}>
+            Explorar conexões →
+          </p>
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ── 5. Projetos ───────────────────────────────────────────────────────────────
 
 function ProjetosSection({ projects }) {
@@ -650,6 +835,7 @@ export default function HomePage({ posts, profile, onLike, onSave }) {
   const [circlePosts,   setCirclePosts]   = useState([])
   const [circleLoading, setCircleLoading] = useState(true)
   const [guidePosts,    setGuidePosts]    = useState([])
+  const [graphData,     setGraphData]     = useState(null)
 
   useEffect(() => {
     api.get('/archive/memories').then(d => setMemories(d.slice(0, 6))).catch(() => setMemories([]))
@@ -657,6 +843,7 @@ export default function HomePage({ posts, profile, onLike, onSave }) {
     api.get('/projects').then(setProjects).catch(() => setProjects([]))
     api.get('/archive/streak').then(setStreak).catch(() => setStreak({}))
     api.get('/posts/guide').then(setGuidePosts).catch(() => {})
+    api.get('/archive/graph').then(setGraphData).catch(() => setGraphData({ nodes: [], links: [] }))
     api.get('/posts/following')
       .then(d => setCirclePosts(d))
       .catch(() => {})
@@ -710,6 +897,9 @@ export default function HomePage({ posts, profile, onLike, onSave }) {
 
       {/* 5. Projetos */}
       <ProjetosSection projects={projects} />
+
+      {/* 5b. Graph preview */}
+      <GraphPreviewSection graphData={graphData} />
 
       {/* 6. Escrita */}
       <EscritaSection />
