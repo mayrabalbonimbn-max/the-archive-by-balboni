@@ -2,37 +2,41 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import AppBar from '../components/ui/AppBar'
 import Icon from '../components/ui/Icon'
-import Avatar from '../components/ui/Avatar'
 import PhotoTile from '../components/ui/PhotoTile'
-import Chip from '../components/ui/Chip'
 import EntryCard from '../components/ui/EntryCard'
 import { useCollections } from '../hooks/useCollections'
-import { useProfile } from '../hooks/useProfile'
 import { api, attachmentBlob } from '../utils/api'
 import { useAttachmentUrl } from '../hooks/useAttachmentUrl'
 
-const SECTIONS = [
-  { id: 'overview',     label: 'Arquivo' },
-  { id: 'memories',     label: 'Memórias' },
-  { id: 'calendar',     label: 'Calendário' },
-  { id: 'collections',  label: 'Coleções' },
-  { id: 'library',      label: 'Arquivos' },
-  { id: 'photography',  label: 'Fotos' },
-  { id: 'stories',      label: 'Momentos' },
+// Subsections visible in subnav (not shown on index)
+const SUBSECTIONS = [
+  { id: 'memories',    label: 'Memórias' },
+  { id: 'calendar',   label: 'Calendário' },
+  { id: 'collections', label: 'Coleções' },
 ]
 
-// ── Subnav — mobile only ──────────────────────────────────────────────────────
+// ── Subnav — shown only inside a subsection ───────────────────────────────────
 function Subnav({ active, onSelect }) {
   return (
     <div
-      className="md:hidden"
       style={{
         position: 'sticky', top: 0, zIndex: 20,
         background: '#000', borderBottom: '1px solid var(--line)',
       }}
     >
-      <div style={{ display: 'flex', gap: 22, overflowX: 'auto', padding: '0 20px', scrollbarWidth: 'none' }}>
-        {SECTIONS.map(s => {
+      <div style={{ display: 'flex', alignItems: 'center', gap: 0, overflowX: 'auto', padding: '0 20px', scrollbarWidth: 'none' }}>
+        <button
+          onClick={() => onSelect('index')}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            padding: '13px 16px 11px 0', marginRight: 6,
+            fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.06em',
+            color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 5,
+          }}
+        >
+          <Icon name="back" size={13} /> Arquivo
+        </button>
+        {SUBSECTIONS.map(s => {
           const on = s.id === active
           return (
             <button
@@ -40,7 +44,7 @@ function Subnav({ active, onSelect }) {
               onClick={() => onSelect(s.id)}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
-                padding: '13px 0 11px', position: 'relative',
+                padding: '13px 0 11px', marginRight: 22, position: 'relative',
                 whiteSpace: 'nowrap',
                 fontFamily: 'var(--sans)', fontSize: 14,
                 fontWeight: on ? 600 : 500,
@@ -92,65 +96,172 @@ function DPageHead({ eyebrow, title, italic, sub }) {
   )
 }
 
-// ── Overview ──────────────────────────────────────────────────────────────────
-const FILTERS = [
-  ['all', 'Tudo'],
-  ['note', 'Notas'],
-  ['article', 'Ensaios'],
-  ['photo', 'Fotos'],
-  ['pdf', 'Documentos'],
-  ['code', 'Código'],
+// ── Index — landing do Arquivo ────────────────────────────────────────────────
+const TYPE_FILTERS = [
+  { id: 'note',    label: 'Notas',      icon: '📝' },
+  { id: 'article', label: 'Ensaios',    icon: '📄' },
+  { id: 'photo',   label: 'Fotos',      icon: '🖼' },
+  { id: 'pdf',     label: 'Documentos', icon: '📎' },
+  { id: 'code',    label: 'Código',     icon: '💻' },
 ]
 
-function OverviewSection({ profile }) {
-  const [posts, setPosts] = useState(null)
-  const [filter, setFilter] = useState('all')
+function IndexSection({ onSection }) {
+  const navigate = useNavigate()
+  const [recent, setRecent] = useState(null)
+  const [summary, setSummary] = useState(null)
+  const { collections } = useCollections()
 
   useEffect(() => {
-    api.get('/posts').then(setPosts).catch(() => setPosts([]))
+    api.get('/posts').then(posts => {
+      setRecent(posts.slice(0, 3))
+      // Compute type counts for navigation chips
+      const counts = {}
+      posts.forEach(p => { counts[p.type] = (counts[p.type] || 0) + 1 })
+      setSummary({ total: posts.length, counts })
+    }).catch(() => { setRecent([]); setSummary({ total: 0, counts: {} }) })
   }, [])
 
-  const shown = !posts ? [] : (filter === 'all' ? posts : posts.filter(p => p.type === filter))
+  const CARDS = [
+    {
+      id: 'memories', emoji: '💭', label: 'Memórias',
+      sub: 'O que você guardou neste dia, em outros anos',
+      action: () => onSection('memories'),
+    },
+    {
+      id: 'calendar', emoji: '🗓', label: 'Calendário',
+      sub: 'Navegar por data',
+      action: () => onSection('calendar'),
+    },
+    {
+      id: 'photos', emoji: '📷', label: 'Fotografias',
+      sub: 'Galeria de imagens',
+      action: () => navigate('/photos'),
+    },
+    {
+      id: 'library', emoji: '📎', label: 'Documentos',
+      sub: 'PDFs, Markdown e código',
+      action: () => navigate('/library'),
+    },
+    {
+      id: 'collections', emoji: '📁', label: 'Coleções',
+      sub: collections.length > 0 ? `${collections.length} ${collections.length === 1 ? 'coleção' : 'coleções'}` : 'Curadoria manual',
+      action: () => onSection('collections'),
+    },
+    {
+      id: 'capsules', emoji: '📦', label: 'Cápsulas',
+      sub: 'Cartas para o futuro',
+      action: () => navigate('/capsules'),
+    },
+    {
+      id: 'projects', emoji: '🌱', label: 'Projetos',
+      sub: 'Em andamento e concluídos',
+      action: () => navigate('/projects'),
+    },
+    {
+      id: 'moments', emoji: '🎬', label: 'Momentos',
+      sub: 'Registros rápidos',
+      action: () => navigate('/archive/stories'),
+    },
+  ]
 
   return (
-    <div>
-      {/* Desktop page header */}
-      <div className="hidden md:block" style={{ padding: '0 20px 4px' }}>
-        <DPageHead
-          title="Seu"
-          italic="Arquivo"
-          sub="Um registro lento do que você lê, constrói e nota — guardado, não transmitido."
-        />
+    <div style={{ paddingBottom: 40 }}>
+      {/* Header */}
+      <div style={{ padding: '24px 20px 20px' }}>
+        <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', color: 'var(--ink)', lineHeight: 1.1 }}>
+          Seu <span style={{ fontStyle: 'italic' }}>Arquivo</span>
+        </h1>
+        <p style={{ margin: '8px 0 0', fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.6 }}>
+          Tudo que você guardou, por caminhos diferentes.
+          {summary && summary.total > 0 && (
+            <> · <span style={{ color: 'var(--ink-2)' }}>{summary.total}</span> {summary.total === 1 ? 'entrada' : 'entradas'}</>
+          )}
+        </p>
       </div>
 
-      {/* Mobile identity row */}
-      <div className="md:hidden" style={{ padding: '20px 20px 14px', display: 'flex', alignItems: 'center', gap: 14 }}>
-        <Avatar name={profile?.name} src={profile?.avatar} size={56} ring />
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: 'var(--serif)', fontSize: 22, color: 'var(--ink)', letterSpacing: '-0.01em' }}>
-            {profile?.name}
-          </div>
-          <div style={{ fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink-3)', marginTop: 1 }}>
-            {profile?.handle}
-            {posts && <> · <span style={{ color: 'var(--ink-2)' }}>{posts.length}</span> entradas</>}
-          </div>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '4px 20px 16px', scrollbarWidth: 'none' }}>
-        {FILTERS.map(([id, label]) => (
-          <Chip key={id} active={filter === id} onClick={() => setFilter(id)}>{label}</Chip>
+      {/* Card grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '0 16px' }}>
+        {CARDS.map(card => (
+          <button
+            key={card.id}
+            onClick={card.action}
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+              gap: 8, padding: '16px 15px 14px',
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid var(--line)',
+              borderRadius: 16, cursor: 'pointer', textAlign: 'left',
+              transition: 'border-color .15s, background .15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--line-strong)'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line)'; e.currentTarget.style.background = 'rgba(255,255,255,0.02)' }}
+          >
+            <span style={{ fontSize: 22, lineHeight: 1 }}>{card.emoji}</span>
+            <div>
+              <div style={{ fontFamily: 'var(--sans)', fontSize: 13.5, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.2 }}>
+                {card.label}
+              </div>
+              <div style={{ fontFamily: 'var(--sans)', fontSize: 11.5, color: 'var(--ink-3)', marginTop: 3, lineHeight: 1.4 }}>
+                {card.sub}
+              </div>
+            </div>
+          </button>
         ))}
       </div>
 
-      <div style={{ borderTop: '1px solid var(--line)' }}>
-        {!posts ? <Spinner /> : shown.length === 0 ? (
-          <p style={{ padding: '32px 20px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-3)' }}>
-            Nenhuma entrada aqui ainda.
-          </p>
-        ) : (
-          shown.map(p => <EntryCard key={p.id} post={p} showAuthor={false} />)
-        )}
+      {/* Navegar por tipo */}
+      <div style={{ marginTop: 28, padding: '0 16px' }}>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', color: 'var(--ink-3)', marginBottom: 10 }}>
+          NAVEGAR POR TIPO
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {TYPE_FILTERS.map(f => {
+            const count = summary?.counts[f.id] ?? 0
+            const dest = f.id === 'photo' ? '/photos' : f.id === 'pdf' ? '/library' : '/diary'
+            return (
+              <button
+                key={f.id}
+                onClick={() => navigate(dest)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '7px 13px', borderRadius: 999,
+                  border: '1px solid var(--line)', background: 'transparent',
+                  cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: 13,
+                  color: count > 0 ? 'var(--ink-2)' : 'var(--ink-3)',
+                }}
+              >
+                {f.icon} {f.label}
+                {count > 0 && (
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)' }}>{count}</span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Últimos guardados */}
+      <div style={{ marginTop: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 12px' }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', color: 'var(--ink-3)' }}>
+            ÚLTIMOS GUARDADOS
+          </div>
+          <button
+            onClick={() => navigate('/diary')}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', letterSpacing: '0.04em' }}
+          >
+            Ver tudo →
+          </button>
+        </div>
+        <div style={{ borderTop: '1px solid var(--line)' }}>
+          {recent === null ? <Spinner /> : recent.length === 0 ? (
+            <p style={{ padding: '24px 20px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-3)' }}>
+              Nenhuma entrada ainda.
+            </p>
+          ) : (
+            recent.map(p => <EntryCard key={p.id} post={p} showAuthor={false} />)
+          )}
+        </div>
       </div>
     </div>
   )
@@ -771,31 +882,27 @@ function PhotographySection() {
 export default function ArchiveHubPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { profile } = useProfile()
 
-  const section = searchParams.get('s') ?? 'overview'
+  const section = searchParams.get('s') ?? 'index'
 
   function setSection(s) {
-    // These have dedicated, richer pages — navigate there directly
-    if (s === 'library')      { navigate('/library'); return }
-    if (s === 'photography')  { navigate('/photos');  return }
-    if (s === 'stories')      { navigate('/archive/stories'); return }
+    if (s === 'index') { setSearchParams({}); return }
     setSearchParams({ s })
   }
 
   const SectionBody = {
-    overview:    () => <OverviewSection profile={profile} />,
+    index:       () => <IndexSection onSection={setSection} />,
     memories:    () => <MemoriesSection />,
     calendar:    () => <CalendarSection />,
     collections: () => <CollectionsSection />,
-  }[section] ?? (() => <OverviewSection profile={profile} />)
+  }[section] ?? (() => <IndexSection onSection={setSection} />)
 
   return (
     <div style={{ animation: 'fadeUp var(--dur-screen) var(--ease-out)' }}>
       <AppBar
         left={
           <span style={{ fontFamily: 'var(--serif)', fontSize: 19, color: 'var(--ink)', fontStyle: 'italic' }}>
-            Seu Arquivo
+            Arquivo
           </span>
         }
         right={
@@ -807,7 +914,7 @@ export default function ArchiveHubPage() {
           </button>
         }
       />
-      <Subnav active={section} onSelect={setSection} />
+      {section !== 'index' && <Subnav active={section} onSelect={setSection} />}
       <SectionBody />
     </div>
   )

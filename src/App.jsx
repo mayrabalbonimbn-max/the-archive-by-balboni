@@ -159,7 +159,7 @@ function AuthenticatedApp({ onLogout }) {
             <Route path="/projects"         element={<ProjectsPage />} />
             <Route path="/projects/:slug"   element={<ProjectDetailPage />} />
             <Route path="/life-map"         element={<LifeMapPage />} />
-            <Route path="/graph"            element={<GraphPage />} />
+            <Route path="/graph"            element={<Navigate to="/trajetoria" replace />} />
             <Route path="/dashboard"        element={<DashboardPage />} />
             <Route path="/year-review/:year" element={<YearReviewPage />} />
             <Route path="/knowledge"        element={<KnowledgePage />} />

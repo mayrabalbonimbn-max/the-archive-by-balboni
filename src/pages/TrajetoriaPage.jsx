@@ -32,7 +32,7 @@ function agoLabel(date) {
   if (years === 1) return 'há um ano'
   if (months >= 2) return `há ${months} meses`
   if (months === 1) return 'há um mês'
-  return `há ${days} dias`
+  return `há ${days} ${days === 1 ? 'dia' : 'dias'}`
 }
 
 function calcAge(from) {

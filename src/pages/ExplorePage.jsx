@@ -12,14 +12,12 @@ import { profileUrl } from '../utils/helpers'
 
 // ── Static feature cards for "Comece por aqui" ───────────────────────────────
 const FEATURES = [
-  { emoji: '✍️', label: 'Escrever uma nota',   action: 'compose' },
-  { emoji: '⌛', label: 'Cápsulas',             path: '/capsules' },
-  { emoji: '🔗', label: 'Graph',               path: '/graph' },
-  { emoji: '📁', label: 'Coleções',            path: '/archive?s=collections' },
-  { emoji: '💭', label: 'Memórias',            path: '/archive?s=memories' },
-  { emoji: '📸', label: 'Fotos',               path: '/photos' },
-  { emoji: '📖', label: 'Trajetória',           path: '/trajetoria' },
-  { emoji: '🗂️', label: 'Seu Arquivo',         path: '/archive' },
+  { emoji: '⌛', label: 'Cápsulas',    path: '/capsules' },
+  { emoji: '📁', label: 'Coleções',   path: '/archive?s=collections' },
+  { emoji: '💭', label: 'Memórias',   path: '/archive?s=memories' },
+  { emoji: '📸', label: 'Fotos',      path: '/photos' },
+  { emoji: '📖', label: 'Trajetória', path: '/trajetoria' },
+  { emoji: '🗂️', label: 'Arquivo',   path: '/archive' },
 ]
 
 // Tones for public archive cards — deterministic by index

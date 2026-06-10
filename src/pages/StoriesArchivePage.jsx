@@ -18,7 +18,7 @@ function timeAgo(dateStr) {
   const days = Math.floor(diff / 86400000)
   if (days === 0) return 'hoje'
   if (days === 1) return 'ontem'
-  if (days < 7) return `há ${days} dias`
+  if (days < 7) return `há ${days} ${days === 1 ? 'dia' : 'dias'}`
   return d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })
 }
 
