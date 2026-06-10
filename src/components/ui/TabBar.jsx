@@ -1,5 +1,7 @@
-import { NavLink } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import Icon from './Icon'
+import { api } from '../../utils/api'
 
 const TABS = [
   { to: '/',        end: true,  icon: 'today',   label: 'Hoje' },
@@ -10,6 +12,20 @@ const TABS = [
 ]
 
 export default function TabBar({ onCompose }) {
+  const [dmUnread, setDmUnread] = useState(0)
+  const location = useLocation()
+
+  useEffect(() => {
+    // Reset when entering messages
+    if (location.pathname.startsWith('/messages')) {
+      setDmUnread(0)
+      return
+    }
+    api.get('/conversations')
+      .then(convs => setDmUnread(convs.filter(c => c.unread > 0).length))
+      .catch(() => {})
+  }, [location.pathname])
+
   return (
     <div
       className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-black"
@@ -36,14 +52,17 @@ export default function TabBar({ onCompose }) {
           </div>
         </button>
 
-        {/* Explorar, Você */}
-        {TABS.slice(2).map(tab => <TabBtn key={tab.to} tab={tab} />)}
+        {/* Explorar */}
+        <TabBtn tab={TABS[2]} />
+
+        {/* Você — com badge de DMs não lidas */}
+        <TabBtn tab={TABS[3]} badge={dmUnread > 0} />
       </div>
     </div>
   )
 }
 
-function TabBtn({ tab }) {
+function TabBtn({ tab, badge }) {
   return (
     <NavLink
       to={tab.to}
@@ -56,11 +75,22 @@ function TabBtn({ tab }) {
         cursor: 'pointer',
         width: 60,
         textDecoration: 'none',
+        position: 'relative',
       })}
     >
       {({ isActive }) => (
         <>
-          <Icon name={tab.icon} size={23} stroke={isActive ? 1.9 : 1.6} />
+          <div style={{ position: 'relative', display: 'inline-flex' }}>
+            <Icon name={tab.icon} size={23} stroke={isActive ? 1.9 : 1.6} />
+            {badge && (
+              <span style={{
+                position: 'absolute', top: -2, right: -4,
+                width: 8, height: 8, borderRadius: '50%',
+                background: 'var(--accent)',
+                border: '1.5px solid #000',
+              }} />
+            )}
+          </div>
           <span style={{
             fontSize: 10.5,
             fontFamily: 'var(--sans)',

@@ -290,4 +290,6 @@ pre code { color: #e6edf3; }
   .prose-archive table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 1em 0; }
   .prose-archive th, .prose-archive td { border: 1px solid var(--line); padding: 0.4em 0.75em; text-align: left; }
   .prose-archive th { background: var(--surface-2); color: var(--ink-1); }
+  .prose-archive a.mention-link { color: var(--accent); font-weight: 500; text-decoration: none; cursor: pointer; }
+  .prose-archive a.mention-link:hover { text-decoration: underline; }
 }

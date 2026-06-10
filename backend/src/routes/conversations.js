@@ -24,7 +24,12 @@ router.get('/', async (req, res) => {
          (SELECT dm.created_at
             FROM direct_messages dm
            WHERE dm.conversation_id = c.id
-           ORDER BY dm.created_at DESC LIMIT 1) AS last_at
+           ORDER BY dm.created_at DESC LIMIT 1) AS last_at,
+         (SELECT COUNT(*)::int
+            FROM direct_messages dm
+           WHERE dm.conversation_id = c.id
+             AND dm.sender_id != $1
+             AND dm.created_at > COALESCE(cp_me.last_read_at, '1970-01-01')) AS unread_count
        FROM conversations c
        JOIN conversation_participants cp_me
          ON cp_me.conversation_id = c.id AND cp_me.profile_id = $1
@@ -38,7 +43,7 @@ router.get('/', async (req, res) => {
       id: r.id,
       participant: { id: r.other_id, name: r.other_name, handle: r.other_handle, avatar: r.other_avatar },
       lastMessage: r.last_content ? { content: r.last_content, createdAt: r.last_at } : null,
-      unread: 0,
+      unread: Number(r.unread_count || 0),
     })))
   } catch (err) {
     console.error('[conversations GET /]', err)
@@ -100,6 +105,12 @@ router.get('/:id/messages', async (req, res) => {
       [pid, id]
     )
     if (!conv) return res.status(404).json({ error: 'Conversa não encontrada' })
+
+    // Mark as read when opening
+    await pool.query(
+      `UPDATE conversation_participants SET last_read_at = now() WHERE conversation_id = $1 AND profile_id = $2`,
+      [id, pid]
+    )
 
     const { rows } = await pool.query(
       `SELECT dm.id,

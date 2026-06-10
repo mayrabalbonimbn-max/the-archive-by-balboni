@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../utils/api'
 import { formatRelativeTime, profileUrl } from '../utils/helpers'
+import RichText from '../utils/richText'
 
 export default function CommentsBox({ postId, initialCount = 0, autoOpen = false, highlightId = null }) {
   const navigate = useNavigate()
@@ -167,7 +168,7 @@ export default function CommentsBox({ postId, initialCount = 0, autoOpen = false
                     <button onClick={saveEdit} style={{ ...S.sendBtn, background: 'var(--surface-3)', color: 'var(--ink)' }}>Salvar</button>
                   </div>
                 ) : (
-                  <p style={S.text}>{comment.content}</p>
+                  <p style={S.text}><RichText text={comment.content} /></p>
                 )}
 
                 <div style={S.actions}>
@@ -196,7 +197,7 @@ export default function CommentsBox({ postId, initialCount = 0, autoOpen = false
                             <button onClick={saveEdit} style={{ ...S.sendBtn, background: 'var(--surface-3)', color: 'var(--ink)' }}>Salvar</button>
                           </div>
                         ) : (
-                          <p style={S.text}>{reply.content}</p>
+                          <p style={S.text}><RichText text={reply.content} /></p>
                         )}
                         {reply.canEdit && (
                           <div style={S.actions}>

@@ -9,6 +9,7 @@ import { api, attachmentBlob } from '../../utils/api'
 import CommentsBox from '../CommentsBox'
 import EditPostModal from '../EditPostModal'
 import { profileUrl } from '../../utils/helpers'
+import RichText from '../../utils/richText'
 
 function fmtDate(iso) {
   if (!iso) return ''
@@ -184,7 +185,7 @@ export default function EntryCard({ post, showAuthor = true, onLike, onSave, onD
           display: '-webkit-box', WebkitLineClamp: images.length > 0 ? 2 : 3,
           WebkitBoxOrient: 'vertical', overflow: 'hidden',
         }}>
-          {localPost.content}
+          <RichText text={localPost.content} />
         </p>
       )}
 
