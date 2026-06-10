@@ -158,6 +158,11 @@ function IndexSection({ onSection }) {
       action: () => navigate('/projects'),
     },
     {
+      id: 'trajectory', emoji: '🧭', label: 'Trajetória',
+      sub: 'Como o arquivo conta a sua história',
+      action: () => navigate('/trajetoria'),
+    },
+    {
       id: 'moments', emoji: '🎬', label: 'Momentos',
       sub: 'Diário em vídeo',
       action: () => navigate('/archive/stories'),
@@ -172,11 +177,33 @@ function IndexSection({ onSection }) {
           Seu <span style={{ fontStyle: 'italic' }}>Arquivo</span>
         </h1>
         <p style={{ margin: '8px 0 0', fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.6 }}>
-          Tudo que você guardou, por caminhos diferentes.
+          Tudo que você guardou, por caminhos diferentes. Se quiser ler a história que isso conta, vá até Trajetória.
           {summary && summary.total > 0 && (
             <> · <span style={{ color: 'var(--ink-2)' }}>{summary.total}</span> {summary.total === 1 ? 'entrada' : 'entradas'}</>
           )}
         </p>
+      </div>
+
+      <div style={{ padding: '0 16px 6px' }}>
+        <button
+          onClick={() => navigate('/trajetoria')}
+          style={{
+            width: '100%', textAlign: 'left',
+            border: '1px solid rgba(232,108,180,0.22)', borderRadius: 16,
+            background: 'linear-gradient(135deg, rgba(232,108,180,0.08), rgba(255,255,255,0.02))',
+            padding: '16px 16px 14px', cursor: 'pointer',
+          }}
+        >
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 8 }}>
+            Leitura do arquivo
+          </div>
+          <div style={{ fontFamily: 'var(--serif)', fontSize: 18, color: 'var(--ink)', fontStyle: 'italic', lineHeight: 1.4 }}>
+            Ver a história que seus registros contam.
+          </div>
+          <div style={{ marginTop: 6, fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink-3)', lineHeight: 1.5 }}>
+            Narrativa, marcos, números, conexões e retrospectiva em um só lugar.
+          </div>
+        </button>
       </div>
 
       {/* Card grid */}
@@ -212,7 +239,7 @@ function IndexSection({ onSection }) {
       {/* Navegar por tipo */}
       <div style={{ marginTop: 28, padding: '0 16px' }}>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', color: 'var(--ink-3)', marginBottom: 10 }}>
-          NAVEGAR POR TIPO
+          LEITURA RÁPIDA
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {TYPE_FILTERS.map(f => {

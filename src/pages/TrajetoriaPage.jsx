@@ -224,8 +224,50 @@ function NarrativaPanel() {
     </div>
   )
 
+  const s = data?.insights?.summary || {}
+  const featured = [
+    { value: s.totalPosts || 0, label: 'registros', hint: 'o total do seu arquivo' },
+    { value: s.totalArticles || 0, label: 'ensaios', hint: 'escrita mais longa' },
+    { value: s.totalCodes || 0, label: 'códigos', hint: 'camada técnica' },
+    { value: s.totalPhotos || 0, label: 'fotos', hint: 'memória visual' },
+  ]
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <div style={{ marginBottom: 34, padding: '16px 18px', borderRadius: 16, border: '1px solid var(--line)', background: 'rgba(255,255,255,0.02)' }}>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', color: 'var(--ink-3)', textTransform: 'uppercase', marginBottom: 12 }}>
+          Leitura rápida
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+          {featured.map(item => (
+            <div key={item.label} style={{ padding: '12px 13px', borderRadius: 12, border: '1px solid var(--line)', background: 'var(--surface-2)' }}>
+              <div style={{ fontFamily: 'var(--serif)', fontSize: 24, color: 'var(--ink)', lineHeight: 1 }}>{item.value}</div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.1em', color: 'var(--ink-3)', textTransform: 'uppercase', marginTop: 4 }}>
+                {item.label}
+              </div>
+              <div style={{ fontFamily: 'var(--sans)', fontSize: 11.5, color: 'var(--ink-3)', marginTop: 5, lineHeight: 1.45 }}>
+                {item.hint}
+              </div>
+            </div>
+          ))}
+        </div>
+        {(data?.insights?.mostFrequentCategory || data?.insights?.mostActiveProject) && (
+          <div style={{ marginTop: 12, fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink-3)', lineHeight: 1.6 }}>
+            {data.insights.mostFrequentCategory && (
+              <span>
+                Sua categoria mais recorrente é <span style={{ color: 'var(--ink)' }}>{data.insights.mostFrequentCategory.name}</span>.
+              </span>
+            )}
+            {data.insights.mostFrequentCategory && data.insights.mostActiveProject && <span> </span>}
+            {data.insights.mostActiveProject && (
+              <span>
+                Seu projeto mais vivo é <span style={{ color: 'var(--ink)' }}>{data.insights.mostActiveProject.emoji ? `${data.insights.mostActiveProject.emoji} ` : ''}{data.insights.mostActiveProject.title}</span>.
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
       {chapters.map((ch, i) => (
         <div key={i}>
           <div style={{ paddingBottom: 48 }}>
