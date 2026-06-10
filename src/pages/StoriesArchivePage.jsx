@@ -1,156 +1,183 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from '../utils/api'
+import { useNavigate } from 'react-router-dom'
 
-const BASE = import.meta.env.VITE_API_URL || '/api'
+const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
-async function fetchStoryBlob(id) {
+function videoStreamUrl(id) {
   const token = localStorage.getItem('ms_token') ?? ''
-  const res = await fetch(`${BASE}/stories/${id}/media`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  })
-  if (!res.ok) return null
-  return URL.createObjectURL(await res.blob())
+  return `${API_BASE}/attachments/${id}/view?token=${encodeURIComponent(token)}`
 }
 
-function timeAgo(dateStr) {
+function formatDate(dateStr) {
   const d = new Date(dateStr)
-  const diff = Date.now() - d.getTime()
-  const days = Math.floor(diff / 86400000)
-  if (days === 0) return 'hoje'
-  if (days === 1) return 'ontem'
-  if (days < 7) return `há ${days} ${days === 1 ? 'dia' : 'dias'}`
-  return d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })
+  return d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-function groupByDate(stories) {
+function formatDateGroup(dateStr) {
+  return new Date(dateStr).toLocaleDateString('pt-BR', { year: 'numeric', month: 'long', day: 'numeric' })
+}
+
+function formatSize(size) {
+  return size >= 1024 * 1024 ? `${(size / 1024 / 1024).toFixed(1)} MB` : `${Math.ceil(size / 1024)} KB`
+}
+
+function groupByDate(videos) {
   const groups = new Map()
-  stories.forEach(s => {
-    const key = new Date(s.createdAt).toLocaleDateString('pt-BR', { year: 'numeric', month: 'long', day: 'numeric' })
+  videos.forEach(v => {
+    const key = formatDateGroup(v.createdAt)
     if (!groups.has(key)) groups.set(key, [])
-    groups.get(key).push(s)
+    groups.get(key).push(v)
   })
   return [...groups.entries()]
 }
 
-function textStyle(fontKey) {
-  if (fontKey === 'sans')  return { fontFamily: 'var(--sans)', fontWeight: 600, fontSize: 13 }
-  if (fontKey === 'mono')  return { fontFamily: 'var(--mono)', fontSize: 11 }
-  return { fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 14 }
-}
+// ── VideoTile ──────────────────────────────────────────────────────────────────
 
-// ── StoryThumbnail ─────────────────────────────────────────────────────────────
-
-function StoryThumbnail({ story, onClick }) {
-  const [blobUrl, setBlobUrl] = useState(null)
-  const isExpired = new Date(story.expiresAt) < new Date()
-
-  useEffect(() => {
-    if (story.type !== 'photo') return
-    let alive = true
-    fetchStoryBlob(story.id).then(url => { if (alive && url) setBlobUrl(url) })
-    return () => { alive = false }
-  }, [story.id])
+function VideoTile({ video, onClick }) {
+  const videoRef = useRef(null)
+  const src = videoStreamUrl(video.id)
 
   return (
     <div
       onClick={onClick}
-      style={{ width: '100%', aspectRatio: '9/16', borderRadius: 10, overflow: 'hidden', cursor: 'pointer', position: 'relative', flexShrink: 0 }}
+      style={{
+        position: 'relative', borderRadius: 10, overflow: 'hidden',
+        background: '#0a0a0a', border: '1px solid var(--line)',
+        cursor: 'pointer', aspectRatio: '16/9',
+      }}
     >
-      {story.type === 'photo' ? (
-        blobUrl
-          ? <img src={blobUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : <div style={{ width: '100%', height: '100%', background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin opacity-40" />
-            </div>
-      ) : (
-        <div style={{ width: '100%', height: '100%', background: story.bgColor || '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12 }}>
-          <p style={{ ...textStyle(story.fontStyle), color: '#fff', textAlign: 'center', margin: 0, lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical' }}>
-            {story.content}
+      <video
+        ref={videoRef}
+        src={src}
+        preload="metadata"
+        muted
+        playsInline
+        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', pointerEvents: 'none' }}
+      />
+      {/* Play overlay */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(0,0,0,0.3)',
+        transition: 'background 0.15s',
+      }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: '50%',
+          background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><polygon points="6,3 20,12 6,21"/></svg>
+        </div>
+      </div>
+      {/* Caption if available */}
+      {video.postContent && (
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          background: 'linear-gradient(transparent, rgba(0,0,0,0.75))',
+          padding: '20px 10px 8px',
+        }}>
+          <p style={{
+            margin: 0, fontFamily: 'var(--sans)', fontSize: 11,
+            color: 'rgba(255,255,255,0.85)', lineHeight: 1.4,
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+          }}>
+            {video.postContent}
           </p>
         </div>
       )}
-
-      {/* Expired badge */}
-      {isExpired && (
-        <div style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.6)', borderRadius: 4, padding: '2px 5px' }}>
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'rgba(255,255,255,0.6)' }}>arquivo</span>
-        </div>
-      )}
-
-      {/* Visibility badge */}
-      <div style={{ position: 'absolute', bottom: 6, left: 6 }}>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'rgba(255,255,255,0.5)' }}>
-          {story.visibility === 'private' ? 'só eu' : story.visibility === 'friends' ? 'amigos' : 'público'}
-        </span>
-      </div>
     </div>
   )
 }
 
-// ── FullscreenView ─────────────────────────────────────────────────────────────
+// ── FullscreenPlayer ───────────────────────────────────────────────────────────
 
-function FullscreenView({ story, onClose }) {
-  const [blobUrl, setBlobUrl] = useState(null)
+function FullscreenPlayer({ video, onClose }) {
+  const src = videoStreamUrl(video.id)
 
   useEffect(() => {
-    if (story.type !== 'photo') return
-    let alive = true
-    fetchStoryBlob(story.id).then(url => { if (alive && url) setBlobUrl(url) })
-    return () => { alive = false }
-  }, [story.id])
-
-  const fs = story.fontStyle === 'sans'
-    ? { fontFamily: 'var(--sans)', fontWeight: 600, fontSize: 28 }
-    : story.fontStyle === 'mono'
-      ? { fontFamily: 'var(--mono)', fontSize: 20 }
-      : { fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 30 }
+    function onKey(e) { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#000', display: 'flex', flexDirection: 'column' }}
       onClick={onClose}
     >
-      {story.type === 'text' && <div style={{ position: 'absolute', inset: 0, background: story.bgColor || '#0a0a0a' }} />}
-      {story.type === 'photo'
-        ? blobUrl
-          ? <img src={blobUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', position: 'relative', zIndex: 1 }} />
-          : <div style={{ color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--sans)', fontSize: 13 }}>Carregando…</div>
-        : <p style={{ ...fs, color: '#fff', textAlign: 'center', padding: '0 32px', position: 'relative', zIndex: 1, lineHeight: 1.45 }}>{story.content}</p>
-      }
-      <button
-        onClick={e => { e.stopPropagation(); onClose() }}
-        style={{ position: 'absolute', top: 'max(20px, calc(env(safe-area-inset-top, 0px) + 14px))', right: 20, zIndex: 2, background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: 36, height: 36, color: '#fff', fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      {/* Top bar */}
+      <div style={{
+        flexShrink: 0,
+        padding: 'max(20px, calc(env(safe-area-inset-top, 0px) + 14px)) 20px 12px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        background: 'linear-gradient(rgba(0,0,0,0.7), transparent)',
+        position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1,
+      }}
+        onClick={e => e.stopPropagation()}
       >
-        ×
-      </button>
-      <div style={{ position: 'absolute', bottom: 'max(24px, calc(env(safe-area-inset-bottom, 0px) + 16px))', left: 0, right: 0, textAlign: 'center', zIndex: 2 }}>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
-          {new Date(story.createdAt).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.5)' }}>
+          {formatDate(video.createdAt)}
         </span>
+        <button
+          onClick={onClose}
+          style={{ background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: '50%', width: 34, height: 34, color: '#fff', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          ×
+        </button>
       </div>
+
+      {/* Video */}
+      <video
+        src={src}
+        controls
+        autoPlay
+        playsInline
+        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+        onClick={e => e.stopPropagation()}
+      />
+
+      {/* Bottom caption */}
+      {video.postContent && (
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
+          padding: '32px 24px max(24px, calc(env(safe-area-inset-bottom, 0px) + 16px))',
+        }}
+          onClick={e => e.stopPropagation()}
+        >
+          <p style={{ margin: 0, fontFamily: 'var(--sans)', fontSize: 14, color: 'rgba(255,255,255,0.85)', lineHeight: 1.55 }}>
+            {video.postContent}
+          </p>
+          <span style={{ display: 'block', marginTop: 4, fontFamily: 'var(--mono)', fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>
+            {formatSize(video.size)}
+          </span>
+        </div>
+      )}
     </div>
   )
 }
 
-// ── StoriesArchivePage ─────────────────────────────────────────────────────────
+// ── StoriesArchivePage (Momentos) ──────────────────────────────────────────────
 
 export default function StoriesArchivePage() {
-  const [stories, setStories] = useState([])
+  const [videos, setVideos] = useState([])
   const [loading, setLoading] = useState(true)
   const [viewing, setViewing] = useState(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
-    api.get('/stories/archive')
-      .then(data => { setStories(data); setLoading(false) })
+    api.get('/archive/videos')
+      .then(data => { setVideos(data); setLoading(false) })
       .catch(() => setLoading(false))
   }, [])
 
-  const groups = groupByDate(stories)
+  const groups = groupByDate(videos)
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: 80 }}>
       {/* Header */}
-      <div style={{ padding: '24px 20px 8px', borderBottom: '1px solid var(--line)' }}>
+      <div style={{ padding: '24px 20px 16px', borderBottom: '1px solid var(--line)' }}>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.16em', color: 'var(--accent)', marginBottom: 8 }}>
           ARQUIVO
         </div>
@@ -158,7 +185,7 @@ export default function StoriesArchivePage() {
           Momentos
         </h1>
         <p style={{ margin: '8px 0 0', fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.55 }}>
-          Registros rápidos do que você viveu. Saem da superfície após 24h, mas nunca saem do seu arquivo.
+          Vídeos guardados — diário gravado, memórias especiais, registros que merecem mais que uma foto.
         </p>
       </div>
 
@@ -170,38 +197,55 @@ export default function StoriesArchivePage() {
           </div>
         )}
 
-        {!loading && stories.length === 0 && (
+        {!loading && videos.length === 0 && (
           <div style={{ textAlign: 'center', padding: '64px 20px' }}>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 20px' }}>
+              <rect x="2" y="6" width="14" height="12" rx="2"/>
+              <path d="M16 9l6-3v12l-6-3"/>
+            </svg>
             <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 22, color: 'var(--ink-3)', margin: '0 0 10px' }}>
-              Nenhum momento ainda.
+              Nenhum vídeo ainda.
             </p>
-            <p style={{ fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink-3)', margin: 0 }}>
-              Registre seu primeiro momento pelo Arquivo.
+            <p style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', margin: '0 0 24px', lineHeight: 1.6 }}>
+              Grave um diário, um momento especial<br />ou algo que você quer lembrar.
             </p>
+            <button
+              onClick={() => navigate('/')}
+              style={{
+                background: 'none', border: '1px solid var(--line-strong)',
+                borderRadius: 999, padding: '10px 24px', cursor: 'pointer',
+                fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-2)',
+              }}
+            >
+              Criar primeiro vídeo →
+            </button>
           </div>
         )}
 
         {groups.map(([dateLabel, items]) => (
           <div key={dateLabel}>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.12em', color: 'var(--ink-3)', padding: '20px 0 10px', textTransform: 'uppercase' }}>
+            <div style={{
+              fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.12em',
+              color: 'var(--ink-3)', padding: '20px 0 10px', textTransform: 'uppercase',
+            }}>
               {dateLabel}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-              {items.map(s => (
-                <StoryThumbnail key={s.id} story={s} onClick={() => setViewing(s)} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+              {items.map(v => (
+                <VideoTile key={v.id} video={v} onClick={() => setViewing(v)} />
               ))}
             </div>
           </div>
         ))}
 
-        {!loading && stories.length > 0 && (
+        {!loading && videos.length > 0 && (
           <p style={{ fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--ink-3)', textAlign: 'center', marginTop: 32, lineHeight: 1.6 }}>
-            {stories.length} {stories.length === 1 ? 'story guardado' : 'stories guardados'} no seu arquivo.
+            {videos.length} {videos.length === 1 ? 'vídeo guardado' : 'vídeos guardados'} no seu arquivo.
           </p>
         )}
       </div>
 
-      {viewing && <FullscreenView story={viewing} onClose={() => setViewing(null)} />}
+      {viewing && <FullscreenPlayer video={viewing} onClose={() => setViewing(null)} />}
     </div>
   )
 }

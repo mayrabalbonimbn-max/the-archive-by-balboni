@@ -3,6 +3,12 @@ import { attachmentBlob } from '../utils/api'
 import { useAttachmentUrl } from '../hooks/useAttachmentUrl'
 import CodeSandbox from './CodeSandbox'
 
+const API_BASE = import.meta.env.VITE_API_URL || '/api'
+function videoStreamUrl(id) {
+  const token = localStorage.getItem('ms_token') ?? ''
+  return `${API_BASE}/attachments/${id}/view?token=${encodeURIComponent(token)}`
+}
+
 function formatSize(size) {
   return size >= 1024 * 1024 ? `${(size / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.ceil(size / 1024))} KB`
 }
@@ -59,6 +65,31 @@ function isSandboxable(attachment) {
   return SANDBOX_EXTS.includes(ext)
 }
 
+function VideoAttachment({ attachment }) {
+  const src = videoStreamUrl(attachment.id)
+  return (
+    <div style={{ marginTop: 10, borderRadius: 14, overflow: 'hidden', background: '#000', border: '1px solid var(--line)' }}>
+      <video
+        src={src}
+        controls
+        playsInline
+        preload="metadata"
+        style={{ display: 'block', width: '100%', maxHeight: 420, background: '#000' }}
+      />
+      {attachment.originalName && (
+        <div style={{ padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--ink-3)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+            Vídeo
+          </span>
+          <span style={{ fontFamily: 'var(--sans)', fontSize: 11.5, color: 'var(--ink-3)' }}>
+            {attachment.size >= 1024 * 1024 ? `${(attachment.size / 1024 / 1024).toFixed(1)} MB` : `${Math.ceil(attachment.size / 1024)} KB`}
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function PostAttachments({ attachments = [] }) {
   const [textModal, setTextModal] = useState(null)
   const [openImage, setOpenImage] = useState(null)
@@ -69,7 +100,8 @@ export default function PostAttachments({ attachments = [] }) {
 
   if (attachments.length === 0) return null
   const images = attachments.filter(item => item.fileType === 'image')
-  const files = attachments.filter(item => item.fileType !== 'image')
+  const videos = attachments.filter(item => item.fileType === 'video')
+  const files = attachments.filter(item => item.fileType !== 'image' && item.fileType !== 'video')
 
   async function viewAttachment(attachment) {
     setError('')
@@ -113,6 +145,8 @@ export default function PostAttachments({ attachments = [] }) {
           {images.map(attachment => <ImageAttachment key={attachment.id} attachment={attachment} onOpen={att => { imageOpenedAt.current = Date.now(); setOpenImage(att) }} />)}
         </div>
       )}
+
+      {videos.map(attachment => <VideoAttachment key={attachment.id} attachment={attachment} />)}
 
       {files.length > 0 && (
         <div className="mt-2.5 space-y-2">

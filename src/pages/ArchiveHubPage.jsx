@@ -159,7 +159,7 @@ function IndexSection({ onSection }) {
     },
     {
       id: 'moments', emoji: '🎬', label: 'Momentos',
-      sub: 'Registros rápidos',
+      sub: 'Diário em vídeo',
       action: () => navigate('/archive/stories'),
     },
   ]

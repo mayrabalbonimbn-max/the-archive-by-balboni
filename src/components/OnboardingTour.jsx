@@ -77,6 +77,17 @@ function IlloEvolution() {
   )
 }
 
+function IlloVideo() {
+  return (
+    <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+      <rect x="10" y="22" width="42" height="36" rx="4" stroke="var(--accent)" strokeWidth="1.5" fill="none" />
+      <path d="M52 35L68 28L68 52L52 45Z" stroke="var(--accent)" strokeWidth="1.5" fill="none" strokeLinejoin="round" />
+      <circle cx="31" cy="40" r="7" stroke="var(--accent)" strokeWidth="1" opacity="0.35" fill="none" />
+      <polygon points="29,37 29,43 35,40" fill="var(--accent)" opacity="0.5" />
+    </svg>
+  )
+}
+
 function IlloStory() {
   return (
     <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
@@ -117,15 +128,15 @@ const CHAPTERS = [
     title: 'O Archive não é uma rede social.',
     lines: [
       'Aqui você não disputa atenção.',
-      'Você guarda aquilo que vale a pena lembrar.',
+      'Você constrói um arquivo da sua vida — e decide com quem compartilha cada pedaço.',
     ],
   },
   {
     id: 'compose',
     Illo: IlloCompose,
-    title: 'Comece registrando.',
+    title: 'Registre do jeito que quiser.',
     lines: [
-      'Uma nota. Uma fotografia. Um trecho de código.',
+      'Uma nota. Uma fotografia. Um vídeo gravado. Um ensaio. Um trecho de código.',
       'Cada entrada é privada por padrão — você decide se compartilha.',
     ],
   },
@@ -134,10 +145,9 @@ const CHAPTERS = [
     Illo: IlloProjects,
     title: 'Projetos dão contexto.',
     lines: [
-      'Agrupe registros sob um projeto.',
-      'Acompanhe o progresso ao longo do tempo.',
+      'Agrupe registros sob um projeto e acompanhe sua evolução ao longo do tempo.',
     ],
-    examples: ['Python AI Agent', 'The Archive', 'Balboni Lab'],
+    examples: ['Python AI Agent', 'The Archive', 'Balboni Creative Direction Lab'],
   },
   {
     id: 'archive',
@@ -145,9 +155,9 @@ const CHAPTERS = [
     title: 'O Arquivo é o seu índice.',
     lines: [
       'Tudo que você guardar tem um lugar.',
-      'Navegue por seção — não por feed.',
+      'Navegue por seção — não por feed cronológico.',
     ],
-    tags: ['Memórias', 'Calendário', 'Fotografias', 'Documentos', 'Coleções', 'Cápsulas', 'Projetos', 'Momentos'],
+    tags: ['Memórias', 'Calendário', 'Fotografias', 'Arquivos', 'Coleções', 'Cápsulas', 'Projetos', 'Momentos'],
   },
   {
     id: 'capsules',
@@ -159,19 +169,28 @@ const CHAPTERS = [
     ],
   },
   {
+    id: 'video',
+    Illo: IlloVideo,
+    title: 'Momentos que merecem ser gravados.',
+    lines: [
+      'Registre vídeos curtos — um diário falado, uma memória especial, um antes e depois.',
+      'Não é para viralizar. É para guardar.',
+    ],
+  },
+  {
     id: 'evolution',
     Illo: IlloEvolution,
-    title: 'Sua evolução fica registrada.',
-    lines: ['Tudo nasce automaticamente dos registros que você cria.'],
-    tags: ['Trajetória', 'Grafo', 'Conquistas', 'Retrospectiva', 'Dashboard'],
+    title: 'Sua evolução fica visível.',
+    lines: ['Os seus registros, ao longo do tempo, contam uma história que você não teria escrito de outra forma.'],
+    tags: ['Trajetória', 'Grafo de conexões', 'Conquistas', 'Revisão anual', 'Estatísticas'],
   },
   {
     id: 'story',
     Illo: IlloStory,
-    title: 'Seu arquivo conta sua história.',
+    title: 'Você é o único leitor que importa.',
     lines: [
-      'Com o tempo, o Archive constrói uma narrativa da sua vida criativa.',
-      'Você é o único leitor que importa.',
+      'Com o tempo, o Archive se torna a narrativa mais fiel da sua vida criativa.',
+      'Guarde com cuidado. Volte quando quiser.',
     ],
   },
   {

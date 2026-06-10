@@ -39,6 +39,7 @@ export default function Icon({ name, size = 22, stroke = 1.6, fill = false, clas
     upload:     <g {...p}><path d="M12 16V5M8 9l4-4 4 4"/><path d="M5 16v3h14v-3"/></g>,
     file:       <g {...p}><path d="M6 2h9l4 4v16H6V2z"/><path d="M14 2v5h5"/><path d="M8 13h8M8 17h5"/></g>,
     play:       <polygon points="6,3 20,12 6,21" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>,
+    video:      <g {...p}><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 9l6-3v12l-6-3"/></g>,
     stories:    <g {...p}><circle cx="12" cy="12" r="5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4l1.4-1.4M17 7l1.4-1.4"/></g>,
     check:      <g {...p}><path d="M5 12l5 5L19 7"/></g>,
     settings:   <g {...p}><circle cx="12" cy="12" r="2.8"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></g>,

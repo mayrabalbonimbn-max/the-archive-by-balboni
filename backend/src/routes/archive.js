@@ -421,6 +421,23 @@ router.get('/photos', async (req, res) => {
   }
 })
 
+router.get('/videos', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT a.*, p.content AS post_content, p.article_title, p.id AS post_id_full
+       FROM post_attachments a
+       JOIN posts p ON p.id = a.post_id
+       WHERE a.profile_id = $1 AND a.file_type = 'video'
+       ORDER BY a.created_at DESC`,
+      [req.user.profileId]
+    )
+    res.json(result.rows.map(fileJson))
+  } catch (err) {
+    console.error('GET /archive/videos error:', err)
+    res.status(500).json({ error: 'Erro interno do servidor.' })
+  }
+})
+
 router.get('/tags', async (req, res) => {
   try {
     const result = await pool.query(

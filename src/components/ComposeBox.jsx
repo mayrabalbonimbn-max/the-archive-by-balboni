@@ -42,21 +42,27 @@ function detectCategoria(text) {
 }
 
 const MAX_IMAGE_SIZE = 25 * 1024 * 1024
+const MAX_VIDEO_SIZE = 200 * 1024 * 1024
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp']
+const VIDEO_EXTENSIONS = ['mp4', 'mov', 'webm']
 const ALLOWED_EXTENSIONS = [
   ...IMAGE_EXTENSIONS,
+  ...VIDEO_EXTENSIONS,
   'pdf', 'py', 'md', 'markdown',
   'js', 'jsx', 'ts', 'tsx', 'html', 'css', 'json', 'sql', 'sh', 'bash', 'txt',
 ]
 
 function validateFile(file) {
   const ext = file.name.split('.').pop()?.toLowerCase()
-  if (!ALLOWED_EXTENSIONS.includes(ext)) return 'Formato inválido. Use PDF, imagens (JPG, PNG, WebP), Markdown, Python ou código (JS, TS, HTML, CSS, JSON, SQL, SH, TXT).'
+  if (!ALLOWED_EXTENSIONS.includes(ext)) return 'Formato inválido. Use imagens, vídeo (MP4, MOV, WebM), PDF, Markdown, Python ou código.'
   const isImage = IMAGE_EXTENSIONS.includes(ext)
-  const limit = isImage ? MAX_IMAGE_SIZE : MAX_FILE_SIZE
+  const isVideo = VIDEO_EXTENSIONS.includes(ext)
+  const limit = isImage ? MAX_IMAGE_SIZE : isVideo ? MAX_VIDEO_SIZE : MAX_FILE_SIZE
   if (file.size > limit) {
-    return isImage ? 'Imagem muito grande. Máximo 25 MB.' : 'Arquivo muito grande. Máximo 10 MB.'
+    if (isImage) return 'Imagem muito grande. Máximo 25 MB.'
+    if (isVideo) return 'Vídeo muito grande. Máximo 200 MB.'
+    return 'Arquivo muito grande. Máximo 10 MB.'
   }
   return null
 }
@@ -69,6 +75,7 @@ const CREATE_TYPES = [
   { id: 'note',     label: 'Nota',       icon: 'note',     hint: 'Um pensamento breve, guardado de passagem' },
   { id: 'article',  label: 'Ensaio',     icon: 'feather',  hint: 'Escrita mais longa, espaço para pensar' },
   { id: 'photo',    label: 'Foto',       icon: 'image',    hint: 'Uma imagem, um momento' },
+  { id: 'video',    label: 'Vídeo',      icon: 'video',    hint: 'Um diário gravado, uma memória, um registro especial' },
   { id: 'pdf',      label: 'Documento',  icon: 'pdf',      hint: 'Envie um PDF' },
   { id: 'markdown', label: 'Markdown',   icon: 'markdown', hint: 'Envie um arquivo .md' },
   { id: 'arquivo',  label: 'Arquivo',    icon: 'file',     hint: 'Envie um script Python, JS, HTML ou qualquer arquivo de código' },
@@ -83,6 +90,7 @@ const PRIVACY = [
 
 const FILE_ACCEPT = {
   photo:    'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp',
+  video:    'video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov',
   pdf:      'application/pdf,.pdf',
   markdown: 'text/markdown,.md,.markdown',
   arquivo:  '.py,.js,.jsx,.ts,.tsx,.html,.css,.json,.sql,.sh,.bash,.txt,.md,.markdown,application/pdf,.pdf',
@@ -147,7 +155,7 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
     api.get('/projects').then(setProjects).catch(() => {})
   }, [])
 
-  const isFile = ['photo', 'pdf', 'markdown', 'arquivo', 'code'].includes(entryType)
+  const isFile = ['photo', 'video', 'pdf', 'markdown', 'arquivo', 'code'].includes(entryType)
   const isArticle = entryType === 'article'
   const isCode = entryType === 'code'
   const isArquivo = entryType === 'arquivo'
@@ -417,12 +425,15 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
               </div>
               <div style={{ fontFamily: 'var(--serif)', fontSize: 16, fontStyle: 'italic', color: 'var(--ink)' }}>
                 {entryType === 'photo' ? 'Solte sua foto aqui'
+                  : entryType === 'video' ? 'Solte seu vídeo aqui'
                   : entryType === 'pdf' ? 'Solte seu PDF aqui'
                   : entryType === 'markdown' ? 'Solte seu arquivo .md aqui'
                   : 'Solte seu arquivo aqui'}
               </div>
               <div style={{ fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink-3)' }}>
-                {isArquivo ? '.py .js .jsx .ts .tsx .html .css .json .sql .sh .bash .txt .md .pdf' : isDesktop ? 'ou clique para navegar' : 'ou toque para navegar'}
+                {entryType === 'video' ? 'MP4, MOV, WebM — até 200 MB'
+                  : isArquivo ? '.py .js .jsx .ts .tsx .html .css .json .sql .sh .bash .txt .md .pdf'
+                  : isDesktop ? 'ou clique para navegar' : 'ou toque para navegar'}
               </div>
               {isArquivo && (
                 <div style={{ fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--ink-3)' }}>
