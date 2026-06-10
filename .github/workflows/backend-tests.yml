@@ -50,5 +50,16 @@ jobs:
       - name: Install backend dependencies
         run: npm ci
 
+      - name: Wait for Postgres
+        run: |
+          for i in {1..20}; do
+            node -e "const { Client } = require('pg'); const c = new Client({ connectionString: process.env.DATABASE_URL }); c.connect().then(() => c.end()).then(() => process.exit(0)).catch(() => process.exit(1))" && exit 0
+            sleep 1
+          done
+          exit 1
+
+      - name: Prepare test database
+        run: node -e "require('./src/db').initialize().then(() => process.exit(0)).catch(err => { console.error(err); process.exit(1) })"
+
       - name: Run backend tests
         run: npm test
