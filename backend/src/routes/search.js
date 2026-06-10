@@ -24,7 +24,7 @@ router.use(requireAuth)
     await pool.query(`
       CREATE INDEX IF NOT EXISTS collections_fts_idx
         ON collections USING GIN(
-          to_tsvector('portuguese', coalesce(name,'') || ' ' || coalesce(description,''))
+          to_tsvector('portuguese', coalesce(name,''))
         )
     `)
   } catch (err) {
@@ -164,23 +164,23 @@ router.get('/', async (req, res) => {
         [profileId, q, HL_OPTS]
       ),
 
-      // Collections: FTS
+      // Collections: FTS (no description column)
       pool.query(
         `SELECT
-           id, name, description, emoji, color,
+           id, name, emoji, color,
            ts_rank(
-             to_tsvector('portuguese', coalesce(name,'') || ' ' || coalesce(description,'')),
+             to_tsvector('portuguese', coalesce(name,'')),
              websearch_to_tsquery('portuguese', $2)
            ) AS rank,
            ts_headline(
              'portuguese',
-             coalesce(name,'') || '. ' || coalesce(description,''),
+             coalesce(name,''),
              websearch_to_tsquery('portuguese', $2),
              $3
            ) AS headline
          FROM collections
          WHERE profile_id = $1
-           AND to_tsvector('portuguese', coalesce(name,'') || ' ' || coalesce(description,''))
+           AND to_tsvector('portuguese', coalesce(name,''))
                @@ websearch_to_tsquery('portuguese', $2)
          ORDER BY rank DESC
          LIMIT 8`,
@@ -207,7 +207,6 @@ router.get('/', async (req, res) => {
       collections: collectionsResult.rows.map(r => ({
         id: r.id,
         name: r.name,
-        description: r.description,
         emoji: r.emoji,
         rank: parseFloat(r.rank) || 0,
         headline: sanitizeHeadline(r.headline),

@@ -13,30 +13,30 @@ router.get('/', async (req, res) => {
     const { rows } = await pool.query(
       `SELECT
          c.id,
-         cp_other.profile_id          AS other_id,
-         p.name                       AS other_name,
-         p.handle                     AS other_handle,
-         p.avatar                     AS other_avatar,
-         (SELECT dm.content
-            FROM direct_messages dm
-           WHERE dm.conversation_id = c.id
-           ORDER BY dm.created_at DESC LIMIT 1) AS last_content,
-         (SELECT dm.created_at
-            FROM direct_messages dm
-           WHERE dm.conversation_id = c.id
-           ORDER BY dm.created_at DESC LIMIT 1) AS last_at,
+         cp_other.profile_id AS other_id,
+         p.name              AS other_name,
+         p.handle            AS other_handle,
+         p.avatar            AS other_avatar,
+         dm_last.content     AS last_content,
+         dm_last.created_at  AS last_at,
          (SELECT COUNT(*)::int
             FROM direct_messages dm
            WHERE dm.conversation_id = c.id
              AND dm.sender_id != $1
-             AND dm.created_at > COALESCE(cp_me.last_read_at, '1970-01-01')) AS unread_count
+             AND dm.created_at > COALESCE(cp_me.last_read_at, TIMESTAMPTZ '1970-01-01')) AS unread_count
        FROM conversations c
        JOIN conversation_participants cp_me
          ON cp_me.conversation_id = c.id AND cp_me.profile_id = $1
        JOIN conversation_participants cp_other
          ON cp_other.conversation_id = c.id AND cp_other.profile_id != $1
        JOIN profiles p ON p.id = cp_other.profile_id
-       ORDER BY COALESCE(last_at, c.created_at) DESC`,
+       LEFT JOIN LATERAL (
+         SELECT content, created_at
+           FROM direct_messages
+          WHERE conversation_id = c.id
+          ORDER BY created_at DESC LIMIT 1
+       ) dm_last ON true
+       ORDER BY COALESCE(dm_last.created_at, c.created_at) DESC`,
       [pid]
     )
     res.json(rows.map(r => ({
