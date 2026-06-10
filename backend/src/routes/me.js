@@ -9,6 +9,19 @@ const requireAuth = require('../middleware/auth')
 
 const router = express.Router()
 const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, '..', '..', 'storage', 'uploads')
+
+// Startup migration: add profile fields if missing
+;(async () => {
+  try {
+    await pool.query(`
+      ALTER TABLE profiles
+        ADD COLUMN IF NOT EXISTS title    TEXT,
+        ADD COLUMN IF NOT EXISTS location TEXT
+    `)
+  } catch (err) {
+    console.error('[me] migration error:', err.message)
+  }
+})()
 const PROFILE_MEDIA = {
   avatar: 'avatar',
   cover: 'cover_image',
@@ -58,6 +71,8 @@ function toProfile(row) {
     name: row.name,
     handle: row.handle,
     bio: row.bio,
+    title: row.title || null,
+    location: row.location || null,
     avatar: isStoredFile(row.avatar) ? null : row.avatar,
     hasAvatar: Boolean(row.avatar),
     headerColor: row.header_color,
@@ -98,15 +113,17 @@ router.get('/', async (req, res) => {
 // PATCH /api/me
 router.patch('/', async (req, res) => {
   try {
-    const { name, handle, bio, headerColor, interests, onboardingCompleted } = req.body
+    const { name, handle, bio, title, location, headerColor, interests, onboardingCompleted } = req.body
     const fields = []
     const values = []
     let i = 1
 
-    if (name !== undefined) { fields.push(`name = $${i++}`); values.push(name) }
-    if (bio !== undefined)  { fields.push(`bio = $${i++}`);  values.push(bio) }
-    if (headerColor !== undefined) { fields.push(`header_color = $${i++}`); values.push(headerColor) }
-    if (interests !== undefined) { fields.push(`interests = $${i++}`); values.push(interests) }
+    if (name !== undefined)     { fields.push(`name = $${i++}`);               values.push(name) }
+    if (bio !== undefined)      { fields.push(`bio = $${i++}`);                values.push(bio) }
+    if (title !== undefined)    { fields.push(`title = $${i++}`);              values.push(title || null) }
+    if (location !== undefined) { fields.push(`location = $${i++}`);           values.push(location || null) }
+    if (headerColor !== undefined) { fields.push(`header_color = $${i++}`);   values.push(headerColor) }
+    if (interests !== undefined)   { fields.push(`interests = $${i++}`);       values.push(interests) }
     if (onboardingCompleted !== undefined) { fields.push(`onboarding_completed = $${i++}`); values.push(Boolean(onboardingCompleted)) }
 
     if (handle !== undefined) {
@@ -207,6 +224,43 @@ router.delete('/media/:kind', async (req, res) => {
   } catch (err) {
     console.error('DELETE /me/media error:', err)
     res.status(500).json({ error: 'Não foi possível remover a imagem.' })
+  }
+})
+
+// GET /api/me/stats
+router.get('/stats', async (req, res) => {
+  const pid = req.user.profileId
+  try {
+    const [postStats, projectStats] = await Promise.all([
+      pool.query(
+        `SELECT
+           MIN(created_at)                                              AS first_entry_at,
+           COUNT(*)::int                                                AS total_memories,
+           COUNT(*) FILTER (WHERE is_time_capsule AND opened_at IS NOT NULL)::int AS opened_capsules,
+           COUNT(DISTINCT created_at::date)::int                       AS days_writing
+         FROM posts
+         WHERE profile_id = $1`,
+        [pid]
+      ),
+      pool.query(
+        `SELECT COUNT(*)::int AS active_projects
+         FROM projects
+         WHERE profile_id = $1 AND status IN ('ativo', 'construindo')`,
+        [pid]
+      ),
+    ])
+
+    const p = postStats.rows[0]
+    res.json({
+      firstEntryAt:    p.first_entry_at || null,
+      totalMemories:   p.total_memories || 0,
+      openedCapsules:  p.opened_capsules || 0,
+      daysWriting:     p.days_writing || 0,
+      activeProjects:  projectStats.rows[0]?.active_projects || 0,
+    })
+  } catch (err) {
+    console.error('GET /me/stats error:', err)
+    res.status(500).json({ error: 'Erro interno.' })
   }
 })
 

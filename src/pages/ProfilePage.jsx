@@ -17,6 +17,84 @@ function useStreak() {
   return streak
 }
 
+function useProfileStats() {
+  const [stats, setStats] = useState(null)
+  useEffect(() => {
+    api.get('/me/stats').then(setStats).catch(() => {})
+  }, [])
+  return stats
+}
+
+function fmtMonth(iso) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+}
+
+function fmtDay(iso) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+}
+
+function FichaRow({ label, value }) {
+  if (!value) return null
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+      <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--ink-3)', letterSpacing: '0.04em', flexShrink: 0 }}>
+        {label}
+      </span>
+      <span style={{ fontFamily: 'var(--serif)', fontSize: 14, color: 'var(--ink-2)', fontStyle: 'italic', textAlign: 'right' }}>
+        {value}
+      </span>
+    </div>
+  )
+}
+
+function NumRow({ n, label }) {
+  if (!n) return null
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+      <span style={{ fontFamily: 'var(--serif)', fontSize: 24, color: 'var(--ink)', lineHeight: 1, minWidth: '3ch', textAlign: 'right', letterSpacing: '-0.02em' }}>
+        {Number(n).toLocaleString('pt-BR')}
+      </span>
+      <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)', letterSpacing: '0.04em' }}>
+        {label}
+      </span>
+    </div>
+  )
+}
+
+function EditorialFicha({ profile, stats }) {
+  const hasNumbers = stats && (stats.totalMemories > 0 || stats.daysWriting > 0 || stats.openedCapsules > 0 || stats.activeProjects > 0)
+
+  return (
+    <div style={{
+      margin: '0 20px',
+      padding: '16px 18px',
+      borderRadius: 14,
+      border: '1px solid rgba(242,237,230,0.08)',
+      background: 'rgba(242,237,230,0.015)',
+    }}>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '0.2em', color: 'var(--ink-3)', marginBottom: 12, textTransform: 'uppercase' }}>
+        Ficha
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: hasNumbers ? 14 : 0, paddingBottom: hasNumbers ? 14 : 0, borderBottom: hasNumbers ? '1px solid rgba(242,237,230,0.06)' : 'none' }}>
+        <FichaRow label="Arquivando desde" value={fmtMonth(profile.createdAt)} />
+        <FichaRow label="Primeira entrada" value={fmtDay(stats?.firstEntryAt)} />
+      </div>
+
+      {hasNumbers && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <NumRow n={stats.totalMemories} label="memórias guardadas" />
+          <NumRow n={stats.daysWriting} label="dias escrevendo" />
+          <NumRow n={stats.openedCapsules || undefined} label="cápsulas abertas" />
+          <NumRow n={stats.activeProjects || undefined} label="projetos em curso" />
+        </div>
+      )}
+    </div>
+  )
+}
+
 const STATUS_COLORS = {
   ideia: '#6b7280', construindo: '#f59e0b', ativo: '#10b981',
   pausado: '#6b7280', concluído: '#8b5cf6',
@@ -50,17 +128,6 @@ function CopyLinkButton({ handle }) {
   )
 }
 
-function Stat({ n, label, onClick }) {
-  return (
-    <div
-      onClick={onClick}
-      style={{ textAlign: 'center', cursor: onClick ? 'pointer' : 'default' }}
-    >
-      <div style={{ fontFamily: 'var(--serif)', fontSize: 21, color: 'var(--ink)', letterSpacing: '-0.01em' }}>{n}</div>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.1em', color: onClick ? 'var(--accent)' : 'var(--ink-3)', textTransform: 'uppercase', marginTop: 2 }}>{label}</div>
-    </div>
-  )
-}
 
 const TYPE_FILTERS = [
   { id: 'all', label: 'Tudo' },
@@ -77,6 +144,7 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
   const [typeFilter, setTypeFilter] = useState('all')
   const [tagFilter, setTagFilter] = useState(null)
   const streak = useStreak()
+  const stats = useProfileStats()
   const [projects, setProjects] = useState([])
   const [showNewProject, setShowNewProject] = useState(false)
   const [newProject, setNewProject] = useState({ emoji: '🌱', title: '', description: '', status: 'ativo', githubUrl: '', websiteUrl: '', tags: '', startedAt: '', completedAt: '' })
@@ -108,14 +176,6 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
     if (tagFilter) list = list.filter(p => p.tags?.includes(tagFilter))
     return list
   }, [sorted, typeFilter, tagFilter])
-
-  const daysKept = profile.createdAt
-    ? Math.floor((Date.now() - new Date(profile.createdAt)) / 86400000) + 1
-    : 0
-
-  const joinedLabel = profile.createdAt
-    ? new Date(profile.createdAt).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
-    : ''
 
   return (
     <div style={{ animation: 'fadeUp var(--dur-screen) var(--ease-out)' }}>
@@ -150,14 +210,11 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
             {profile.bio}
           </p>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 12, fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>
-          {profile.location && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <Icon name="pin" size={13} />{profile.location}
-            </span>
-          )}
-          {joinedLabel && <span>Desde {joinedLabel}</span>}
-        </div>
+        {profile.location && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 10, fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>
+            <Icon name="pin" size={13} />{profile.location}
+          </div>
+        )}
       </div>
 
       {/* Action */}
@@ -176,56 +233,20 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
         <CopyLinkButton handle={profile.handle} />
       </div>
 
-      {/* Stats card */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-around', padding: '18px 20px',
-        margin: '0 20px', borderRadius: 16,
-        border: '1px solid var(--line)', background: 'rgba(255,255,255,0.015)',
-      }}>
-        <Stat n={posts.length.toLocaleString('pt-BR')} label="Entradas" />
-        <Stat n={collections.length} label="Coleções" />
-        <Stat n={profile.followerCount ?? 0} label="Círculo" onClick={() => navigate('/friends')} />
-        <Stat n={daysKept.toLocaleString('pt-BR')} label="Dias" />
-      </div>
+      {/* Editorial ficha */}
+      <EditorialFicha profile={profile} stats={stats} />
 
-      {/* Streak row */}
-      {streak && (streak.current > 0 || streak.best > 0) && (
-        <div style={{
-          display: 'flex', gap: 10, padding: '14px 20px 0',
-        }}>
-          {streak.current > 0 && (
-            <div style={{
-              flex: 1, display: 'flex', alignItems: 'center', gap: 8,
-              padding: '10px 14px', borderRadius: 13,
-              border: '1px solid var(--line)', background: 'var(--surface-2)',
-            }}>
-              <span style={{ fontSize: 20, lineHeight: 1 }}>🔥</span>
-              <div>
-                <div style={{ fontFamily: 'var(--serif)', fontSize: 18, color: 'var(--ink)', lineHeight: 1 }}>
-                  {streak.current} {streak.current === 1 ? 'dia' : 'dias'}
-                </div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.08em', color: 'var(--ink-3)', marginTop: 2 }}>
-                  SEQUÊNCIA
-                </div>
-              </div>
-            </div>
-          )}
-          {streak.best > 0 && (
-            <div style={{
-              flex: 1, display: 'flex', alignItems: 'center', gap: 8,
-              padding: '10px 14px', borderRadius: 13,
-              border: '1px solid var(--line)', background: 'var(--surface-2)',
-            }}>
-              <span style={{ fontSize: 20, lineHeight: 1 }}>🏆</span>
-              <div>
-                <div style={{ fontFamily: 'var(--serif)', fontSize: 18, color: 'var(--ink)', lineHeight: 1 }}>
-                  {streak.best} {streak.best === 1 ? 'dia' : 'dias'}
-                </div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.08em', color: 'var(--ink-3)', marginTop: 2 }}>
-                  MELHOR
-                </div>
-              </div>
-            </div>
+      {/* Streak — shown only when active */}
+      {streak && streak.current > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 20px 0' }}>
+          <span style={{ fontSize: 18, lineHeight: 1 }}>🔥</span>
+          <span style={{ fontFamily: 'var(--serif)', fontSize: 16, color: 'var(--ink)', lineHeight: 1 }}>
+            {streak.current} dias seguidos
+          </span>
+          {streak.best > streak.current && (
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)', marginLeft: 4 }}>
+              · melhor: {streak.best}
+            </span>
           )}
         </div>
       )}

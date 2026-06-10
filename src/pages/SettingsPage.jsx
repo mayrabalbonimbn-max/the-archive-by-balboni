@@ -1,20 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { exportPostsAsMarkdown } from '../utils/storage'
 import { api, getPushVapidKey, subscribePush, unsubscribePush, sendTestPush } from '../utils/api'
 import AppBar from '../components/ui/AppBar'
 import Avatar from '../components/ui/Avatar'
 import Icon from '../components/ui/Icon'
-
-function exportPostsAsJSON(posts) {
-  const blob = new Blob([JSON.stringify(posts, null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `the-archive-backup-${new Date().toISOString().split('T')[0]}.json`
-  a.click()
-  URL.revokeObjectURL(url)
-}
 
 function DiagRow({ ok, label }) {
   return (
@@ -91,6 +80,100 @@ function AccentBtn({ onClick, children, disabled = false, type = 'button' }) {
     >
       {children}
     </button>
+  )
+}
+
+const API_BASE = import.meta.env.VITE_API_URL || '/api'
+
+function triggerDownload(format) {
+  const token = localStorage.getItem('ms_token')
+  const a = document.createElement('a')
+  a.href = `${API_BASE}/me/export?format=${format}&token=${encodeURIComponent(token || '')}`
+  a.download = ''
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+}
+
+function ExportSection() {
+  const [loading, setLoading] = useState(null)
+
+  async function handleExport(format) {
+    setLoading(format)
+    try {
+      await new Promise(resolve => setTimeout(resolve, 300))
+      triggerDownload(format)
+    } finally {
+      setTimeout(() => setLoading(null), 2000)
+    }
+  }
+
+  const formats = [
+    {
+      key: 'zip',
+      icon: '⬇',
+      label: 'ZIP completo',
+      desc: 'Todos os dados + arquivos de mídia (fotos, áudios, vídeos). Leva tudo.',
+      accent: true,
+    },
+    {
+      key: 'json',
+      icon: '{ }',
+      label: 'JSON estruturado',
+      desc: 'Export completo em JSON: entradas, artigos, cápsulas, projetos, coleções e comentários.',
+      accent: false,
+    },
+    {
+      key: 'markdown',
+      icon: '#',
+      label: 'Markdown legível',
+      desc: 'Um único arquivo .md com todo o seu arquivo, organizado por seção.',
+      accent: false,
+    },
+  ]
+
+  return (
+    <div style={{ marginBottom: 40 }}>
+      <SectionHead label="Exportar meu arquivo" />
+      <p style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', marginTop: 0, marginBottom: 20, lineHeight: 1.6 }}>
+        Seus dados são seus. Se o Archive desaparecer amanhã, você leva toda a sua história.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {formats.map(f => (
+          <button
+            key={f.key}
+            onClick={() => handleExport(f.key)}
+            disabled={loading !== null}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left',
+              padding: '14px 16px', borderRadius: 12, cursor: loading ? 'default' : 'pointer',
+              border: `1px solid ${f.accent ? 'var(--accent)' : 'var(--line-strong)'}`,
+              background: f.accent ? 'rgba(232,108,180,0.06)' : 'transparent',
+              opacity: loading && loading !== f.key ? 0.5 : 1,
+              transition: 'opacity 0.15s',
+            }}
+          >
+            <span style={{
+              width: 36, height: 36, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: f.accent ? 'rgba(232,108,180,0.15)' : 'rgba(255,255,255,0.06)',
+              fontFamily: 'var(--mono)', fontSize: 12, color: f.accent ? 'var(--accent)' : 'var(--ink-2)',
+              flexShrink: 0,
+            }}>
+              {loading === f.key ? '…' : f.icon}
+            </span>
+            <span style={{ flex: 1 }}>
+              <span style={{ display: 'block', fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 600, color: f.accent ? 'var(--accent)' : 'var(--ink)', marginBottom: 2 }}>
+                {f.label}
+              </span>
+              <span style={{ display: 'block', fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink-3)', lineHeight: 1.5 }}>
+                {f.desc}
+              </span>
+            </span>
+            <span style={{ color: 'var(--ink-3)', fontSize: 16, flexShrink: 0 }}>↓</span>
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -373,16 +456,7 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
         </div>
 
         {/* ── Exportar ── */}
-        <div style={{ marginBottom: 40 }}>
-          <SectionHead label="Exportar" />
-          <div style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', marginBottom: 16 }}>
-            Backup dos seus {posts.length} registros.
-          </div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <OutlineBtn onClick={() => exportPostsAsJSON(posts)}>Exportar JSON</OutlineBtn>
-            <OutlineBtn onClick={() => exportPostsAsMarkdown(posts)}>Exportar Markdown</OutlineBtn>
-          </div>
-        </div>
+        <ExportSection />
 
         {/* ── Importar ── */}
         <div style={{ marginBottom: 40 }}>

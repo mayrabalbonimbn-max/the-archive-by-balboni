@@ -14,6 +14,7 @@ app.get('/api/health', (_, res) => res.json({ ok: true }))
 
 app.use('/api/auth', require('./routes/auth'))
 app.use('/api/me', require('./routes/me'))
+app.use('/api/me', require('./routes/export'))
 app.use('/api/posts', require('./routes/posts'))
 app.use('/api/profiles', require('./routes/profiles'))
 app.use('/api/collections', require('./routes/collections'))

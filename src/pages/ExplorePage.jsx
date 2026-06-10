@@ -6,7 +6,6 @@ import SectionLabel from '../components/ui/SectionLabel'
 import PhotoTile from '../components/ui/PhotoTile'
 import Avatar from '../components/ui/Avatar'
 import PersonRow from '../components/ui/PersonRow'
-import EntryCard from '../components/ui/EntryCard'
 import VerifiedBadge from '../components/ui/VerifiedBadge'
 import { api } from '../utils/api'
 import { profileUrl } from '../utils/helpers'
@@ -297,10 +296,106 @@ function DefaultState({ suggested, guidePosts, guideLoading }) {
   )
 }
 
+// ── Search result components ──────────────────────────────────────────────────
+const MARK_STYLE = `
+  .hl-snippet mark {
+    background: rgba(232,108,180,0.18);
+    color: var(--accent);
+    border-radius: 2px;
+    padding: 0 2px;
+    font-style: inherit;
+  }
+`
+
+function Snippet({ html, style }) {
+  if (!html) return null
+  return (
+    <span
+      className="hl-snippet"
+      style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.6, ...style }}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  )
+}
+
+function PostResult({ post, navigate }) {
+  const date = new Date(post.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
+  const label = post.isArticle ? 'Artigo' : (post.type || 'Nota')
+  const path = post.isArticle ? `/articles/${post.id}` : `/posts/${post.id}`
+
+  return (
+    <div
+      onClick={() => navigate(path)}
+      style={{ padding: '13px 20px', cursor: 'pointer', borderBottom: '1px solid var(--line)' }}
+    >
+      <div style={{ display: 'flex', gap: 8, marginBottom: 5, alignItems: 'center' }}>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--ink-3)' }}>{date}</span>
+        <span style={{ color: 'var(--ink-3)', opacity: 0.4, fontSize: 10 }}>·</span>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{label}</span>
+      </div>
+      {post.articleTitle && (
+        <div style={{ fontFamily: 'var(--serif)', fontSize: 15, color: 'var(--ink)', fontStyle: 'italic', marginBottom: 4, lineHeight: 1.35 }}>
+          {post.articleTitle}
+        </div>
+      )}
+      {post.headline
+        ? <Snippet html={post.headline} />
+        : <span style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.5 }}>{(post.content || '').slice(0, 120)}{post.content?.length > 120 ? '…' : ''}</span>
+      }
+    </div>
+  )
+}
+
+function ProjectResult({ project, navigate }) {
+  return (
+    <div
+      onClick={() => navigate(`/projects/${project.slug || project.id}`)}
+      style={{ padding: '13px 20px', cursor: 'pointer', borderBottom: '1px solid var(--line)', display: 'flex', gap: 12, alignItems: 'flex-start' }}
+    >
+      <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0, marginTop: 1 }}>{project.emoji || '🚀'}</span>
+      <div>
+        <div style={{ fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 600, color: 'var(--ink)', marginBottom: 3 }}>{project.title}</div>
+        {project.headline
+          ? <Snippet html={project.headline} />
+          : project.description
+            ? <span style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)' }}>{project.description.slice(0, 100)}</span>
+            : null
+        }
+      </div>
+    </div>
+  )
+}
+
+function CollectionResult({ collection, navigate }) {
+  return (
+    <div
+      onClick={() => navigate(`/collections/${collection.id}`)}
+      style={{ padding: '13px 20px', cursor: 'pointer', borderBottom: '1px solid var(--line)', display: 'flex', gap: 12, alignItems: 'flex-start' }}
+    >
+      <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0, marginTop: 1 }}>{collection.emoji || '🗂️'}</span>
+      <div>
+        <div style={{ fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 600, color: 'var(--ink)', marginBottom: 3 }}>{collection.name}</div>
+        {collection.headline
+          ? <Snippet html={collection.headline} />
+          : collection.description
+            ? <span style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)' }}>{collection.description.slice(0, 100)}</span>
+            : null
+        }
+      </div>
+    </div>
+  )
+}
+
 // ── SearchResults ─────────────────────────────────────────────────────────────
 function SearchResults({ q, results, loading }) {
-  const people = results?.users ?? []
-  const entries = [...(results?.posts ?? []), ...(results?.articles ?? [])]
+  const navigate = useNavigate()
+  const people  = results?.users ?? []
+  const posts   = results?.posts ?? []
+  const articles = results?.articles ?? []
+  const projects = results?.projects ?? []
+  const collections = results?.collections ?? []
+  const totalEntries = posts.length + articles.length
+  const hasAny = people.length || totalEntries || projects.length || collections.length
 
   if (loading) {
     return (
@@ -311,7 +406,7 @@ function SearchResults({ q, results, loading }) {
     )
   }
 
-  if (!people.length && !entries.length) {
+  if (!hasAny) {
     return (
       <div style={{ padding: '56px 20px', textAlign: 'center', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 16, color: 'var(--ink-3)' }}>
         Nada ainda para "{q}".
@@ -321,19 +416,49 @@ function SearchResults({ q, results, loading }) {
 
   return (
     <>
+      <style>{MARK_STYLE}</style>
+
       {people.length > 0 && (
-        <div style={{ marginBottom: 10 }}>
+        <div style={{ marginBottom: 8 }}>
           <SectionLabel>Pessoas</SectionLabel>
           <div style={{ borderTop: '1px solid var(--line)' }}>
             {people.map(u => <PersonRow key={u.id} person={u} />)}
           </div>
         </div>
       )}
-      {entries.length > 0 && (
-        <div>
-          <SectionLabel>Entradas</SectionLabel>
+
+      {posts.length > 0 && (
+        <div style={{ marginBottom: 8 }}>
+          <SectionLabel>Entradas ({posts.length})</SectionLabel>
           <div style={{ borderTop: '1px solid var(--line)' }}>
-            {entries.map(p => <EntryCard key={p.id} post={p} showAuthor />)}
+            {posts.map(p => <PostResult key={p.id} post={p} navigate={navigate} />)}
+          </div>
+        </div>
+      )}
+
+      {articles.length > 0 && (
+        <div style={{ marginBottom: 8 }}>
+          <SectionLabel>Artigos ({articles.length})</SectionLabel>
+          <div style={{ borderTop: '1px solid var(--line)' }}>
+            {articles.map(p => <PostResult key={p.id} post={p} navigate={navigate} />)}
+          </div>
+        </div>
+      )}
+
+      {projects.length > 0 && (
+        <div style={{ marginBottom: 8 }}>
+          <SectionLabel>Projetos ({projects.length})</SectionLabel>
+          <div style={{ borderTop: '1px solid var(--line)' }}>
+            {projects.map(p => <ProjectResult key={p.id} project={p} navigate={navigate} />)}
+          </div>
+        </div>
+      )}
+
+      {collections.length > 0 && (
+        <div style={{ marginBottom: 8 }}>
+          <SectionLabel>Coleções ({collections.length})</SectionLabel>
+          <div style={{ borderTop: '1px solid var(--line)' }}>
+            {collections.map(c => <CollectionResult key={c.id} collection={c} navigate={navigate} />)}
           </div>
         </div>
       )}
