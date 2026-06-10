@@ -351,6 +351,20 @@ ALTER TABLE projects ADD COLUMN IF NOT EXISTS what_it_is TEXT DEFAULT '';
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS what_it_solves TEXT DEFAULT '';
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS features TEXT[] DEFAULT '{}';
 
+-- Invite codes (signup_mode = invite_only)
+CREATE TABLE IF NOT EXISTS invite_codes (
+  id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code                  VARCHAR(32) NOT NULL UNIQUE,
+  created_by_profile_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  max_uses              INTEGER NOT NULL DEFAULT 1,
+  used_count            INTEGER NOT NULL DEFAULT 0,
+  expires_at            TIMESTAMPTZ,
+  revoked_at            TIMESTAMPTZ,
+  note                  TEXT,
+  created_at            TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_invite_codes_code ON invite_codes(code);
+
 -- Post categoria (semantic nature of the content)
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS categoria VARCHAR(40) DEFAULT NULL;
 

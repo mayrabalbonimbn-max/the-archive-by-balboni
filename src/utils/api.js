@@ -82,6 +82,16 @@ export async function publicProfileMediaBlob(profileId, kind) {
   return res.blob()
 }
 
+export async function getSignupMode() {
+  try {
+    const res = await fetch(`${BASE}/auth/signup-mode`)
+    if (!res.ok) return { mode: 'open' }
+    return res.json()
+  } catch {
+    return { mode: 'open' }
+  }
+}
+
 export const authApi = {
   login:         (credentials) => authFetch('/login', credentials),
   register:      (profile)     => authFetch('/register', profile),

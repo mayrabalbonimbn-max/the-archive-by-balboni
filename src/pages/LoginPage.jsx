@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { authApi } from '../utils/api'
+import { useEffect, useState } from 'react'
+import { authApi, getSignupMode } from '../utils/api'
 
 const HEADER_COLORS = [
   'linear-gradient(135deg, #c084fc, #f472b6)',
@@ -162,8 +162,14 @@ function RegisterView({ onLogin, onSwitchToLogin }) {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [headerColor, setHeaderColor] = useState(HEADER_COLORS[0])
+  const [inviteCode, setInviteCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [signupMode, setSignupMode] = useState(null) // null = loading
+
+  useEffect(() => {
+    getSignupMode().then(d => setSignupMode(d.mode))
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -174,6 +180,7 @@ function RegisterView({ onLogin, onSwitchToLogin }) {
     if (!password) return setError('Senha é obrigatória.')
     if (password.length < 6) return setError('Senha deve ter ao menos 6 caracteres.')
     if (password !== confirm) return setError('As senhas não coincidem.')
+    if (signupMode === 'invite_only' && !inviteCode.trim()) return setError('Código de convite é obrigatório.')
 
     setLoading(true)
     try {
@@ -183,6 +190,7 @@ function RegisterView({ onLogin, onSwitchToLogin }) {
         bio: bio.trim(),
         password,
         headerColor,
+        inviteCode: signupMode === 'invite_only' ? inviteCode.trim() : undefined,
       })
       onLogin(data.token)
     } catch (err) {
@@ -192,12 +200,61 @@ function RegisterView({ onLogin, onSwitchToLogin }) {
     }
   }
 
+  // Loading signup mode
+  if (signupMode === null) {
+    return (
+      <div className="animate-fade-in text-center py-8">
+        <div className="w-5 h-5 rounded-full border-2 border-brand-rose border-t-transparent animate-spin mx-auto" />
+      </div>
+    )
+  }
+
+  // Registrations disabled
+  if (signupMode === 'disabled') {
+    return (
+      <div className="animate-fade-in text-center py-6">
+        <div className="text-3xl mb-4">🔒</div>
+        <h2 className="text-dark-text font-editorial text-xl mb-2">Acesso por convite</h2>
+        <p className="text-dark-muted text-sm leading-relaxed mb-6">
+          O Archive está disponível apenas por convite.<br />
+          Entre em contato com quem te indicou.
+        </p>
+        <button
+          onClick={onSwitchToLogin}
+          className="text-dark-muted text-sm hover:text-brand-rose transition-colors"
+        >
+          ← Voltar para o login
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="animate-fade-in">
       <h2 className="text-dark-text font-editorial text-2xl mb-1">Criar perfil</h2>
-      <p className="text-dark-muted text-sm mb-6">Seu espaço, só seu.</p>
+      <p className="text-dark-muted text-sm mb-6">
+        {signupMode === 'invite_only' ? 'Acesso por convite.' : 'Seu espaço, só seu.'}
+      </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Invite code — only when invite_only */}
+        {signupMode === 'invite_only' && (
+          <div>
+            <label className="block text-dark-muted text-xs mb-1.5 tracking-wide uppercase">
+              Código de convite
+            </label>
+            <input
+              value={inviteCode}
+              onChange={e => setInviteCode(e.target.value)}
+              className="input-dark"
+              placeholder="Cole o código aqui"
+              autoFocus
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </div>
+        )}
+
         <div>
           <label className="block text-dark-muted text-xs mb-1.5 tracking-wide uppercase">Nome</label>
           <input
@@ -205,7 +262,7 @@ function RegisterView({ onLogin, onSwitchToLogin }) {
             onChange={e => setName(e.target.value)}
             className="input-dark"
             placeholder="Seu nome"
-            autoFocus
+            autoFocus={signupMode !== 'invite_only'}
           />
         </div>
 
