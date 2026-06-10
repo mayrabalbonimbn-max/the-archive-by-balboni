@@ -45,6 +45,15 @@ function SectionHead({ label }) {
   )
 }
 
+const PUBLIC_SECTION_OPTIONS = [
+  { id: 'projects', label: 'Projetos' },
+  { id: 'collections', label: 'Coleções' },
+  { id: 'photos', label: 'Fotos' },
+  { id: 'articles', label: 'Ensaios' },
+  { id: 'entries', label: 'Entradas recentes' },
+  { id: 'trajectory', label: 'Trajetória' },
+]
+
 function OutlineBtn({ onClick, children, danger = false, disabled = false }) {
   return (
     <button
@@ -136,7 +145,7 @@ function ExportSection() {
     <div style={{ marginBottom: 40 }}>
       <SectionHead label="Exportar meu arquivo" />
       <p style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', marginTop: 0, marginBottom: 20, lineHeight: 1.6 }}>
-        Seus dados são seus. Se o Archive desaparecer amanhã, você leva toda a sua história.
+        Seus dados são seus. Faça um backup completo quando quiser: JSON para restaurar, Markdown para ler e ZIP para levar mídias junto.
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {formats.map(f => (
@@ -226,8 +235,8 @@ function InviteSettingsSection() {
   }
 
   function copyInvite(code) {
-    const signupUrl = `${window.location.origin}/?view=register`
-    const text = `Código de convite: ${code}\nCriar perfil: ${signupUrl}`
+    const signupUrl = `${window.location.origin}/?view=register&invite=${encodeURIComponent(code)}`
+    const text = `Mayra te convidou para criar seu arquivo no The Archive.\n\n1. Acesse: ${signupUrl}\n2. Escolha "Criar perfil"\n3. Use este código de convite: ${code}\n\nO Archive é um lugar para guardar ideias, memórias, projetos e fotos com calma.`
     navigator.clipboard?.writeText(text).then(() => {
       setCopied(code)
       setTimeout(() => setCopied(''), 2200)
@@ -345,6 +354,8 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
   const [bio, setBio] = useState(profile?.bio ?? '')
   const [title, setTitle] = useState(profile?.title ?? '')
   const [location, setLocation] = useState(profile?.location ?? '')
+  const [publicIntro, setPublicIntro] = useState(profile?.publicIntro ?? '')
+  const [publicSections, setPublicSections] = useState(profile?.publicSections ?? ['projects', 'collections', 'photos', 'entries'])
   const [saved, setSaved] = useState(false)
   const [importMode, setImportMode] = useState('merge')
   const [importStatus, setImportStatus] = useState(null)
@@ -362,7 +373,7 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
   const [pushLoading, setPushLoading] = useState(false)
   const [pushMsg, setPushMsg] = useState('')
   const [pushDiag, setPushDiag] = useState(null) // { swOk, permOk, subOk }
-  const canManageInvites = profile?.handle?.toLowerCase() === '@mayrabalboni'
+  const canManageInvites = profile?.isAdmin === true
 
   useEffect(() => {
     const swOk = 'serviceWorker' in navigator
@@ -440,7 +451,7 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
 
   async function handleSaveProfile() {
     try {
-      await onUpdateProfile({ name, handle, bio, title, location })
+      await onUpdateProfile({ name, handle, bio, title, location, publicIntro, publicSections })
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     } catch (err) {
@@ -499,7 +510,9 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
     }
   }
 
-  console.log('[SettingsPage] rendering — profile:', profile?.handle ?? 'NULL', 'name:', name)
+  function togglePublicSection(section) {
+    setPublicSections(cur => cur.includes(section) ? cur.filter(s => s !== section) : [...cur, section])
+  }
 
   // Diagnostic guard (should never happen if App.jsx is working correctly)
   if (!profile) {
@@ -614,6 +627,54 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
               {passwordLoading ? 'Salvando…' : 'Atualizar senha'}
             </AccentBtn>
           </form>
+        </div>
+
+        {/* ── Perfil público ── */}
+        <div style={{ marginBottom: 40 }}>
+          <SectionHead label="Perfil público" />
+          <p style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', marginTop: 0, marginBottom: 18, lineHeight: 1.6 }}>
+            Escolha como seu arquivo aparece para outras pessoas. Conteúdo privado continua privado.
+          </p>
+          <Field label="Apresentação pública">
+            <textarea
+              value={publicIntro}
+              onChange={e => setPublicIntro(e.target.value)}
+              style={{ ...fieldInput, resize: 'none' }}
+              rows={3}
+              maxLength={240}
+              placeholder="Ex: Um arquivo sobre fotografia, tecnologia, estudos e projetos em construção."
+            />
+          </Field>
+          <div style={{ marginBottom: 18 }}>
+            <label style={fieldLabel}>Mostrar na vitrine</label>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {PUBLIC_SECTION_OPTIONS.map(opt => {
+                const on = publicSections.includes(opt.id)
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => togglePublicSection(opt.id)}
+                    style={{
+                      padding: '8px 13px',
+                      borderRadius: 999,
+                      border: `1px solid ${on ? 'var(--accent)' : 'var(--line-strong)'}`,
+                      background: on ? 'rgba(232,108,180,0.12)' : 'transparent',
+                      color: on ? 'var(--accent)' : 'var(--ink-3)',
+                      fontFamily: 'var(--sans)',
+                      fontSize: 13,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <AccentBtn onClick={handleSaveProfile}>
+            {saved ? '✓ Salvo!' : 'Salvar vitrine'}
+          </AccentBtn>
         </div>
 
         {canManageInvites && <InviteSettingsSection />}

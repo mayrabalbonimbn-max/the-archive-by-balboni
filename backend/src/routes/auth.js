@@ -89,11 +89,17 @@ function requireAdminSecret(req, res, next) {
   next()
 }
 
-function requireInviteManager(req, res, next) {
-  if ((req.user?.handle || '').toLowerCase() !== '@mayrabalboni') {
-    return res.status(403).json({ error: 'Acesso negado.' })
+async function requireInviteManager(req, res, next) {
+  try {
+    const { rows } = await pool.query('SELECT role FROM profiles WHERE id = $1', [req.user.profileId])
+    if (rows[0]?.role !== 'admin') {
+      return res.status(403).json({ error: 'Acesso negado.' })
+    }
+    next()
+  } catch (err) {
+    console.error('invite manager auth error:', err)
+    return res.status(500).json({ error: 'Erro interno.' })
   }
-  next()
 }
 
 function databaseErrorResponse(err, res) {
@@ -133,7 +139,7 @@ router.get('/signup-mode', (req, res) => {
   res.json({ mode: getSignupMode() })
 })
 
-// ─── Authenticated invite management for @mayrabalboni ───────────────────────
+// ─── Authenticated invite management for admins ──────────────────────────────
 
 router.get('/invites', requireAuth, requireInviteManager, async (req, res) => {
   try {

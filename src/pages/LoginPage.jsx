@@ -156,13 +156,15 @@ function ResetPasswordView({ onSwitchToLogin }) {
 
 // ─── Register form ────────────────────────────────────────────────────────────
 function RegisterView({ onLogin, onSwitchToLogin }) {
+  const params = new URLSearchParams(window.location.search)
+  const inviteFromLink = params.get('invite') || ''
   const [name, setName] = useState('')
   const [handle, setHandle] = useState('')
   const [bio, setBio] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [headerColor, setHeaderColor] = useState(HEADER_COLORS[0])
-  const [inviteCode, setInviteCode] = useState('')
+  const [inviteCode, setInviteCode] = useState(inviteFromLink)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [signupMode, setSignupMode] = useState(null) // null = loading
@@ -233,7 +235,9 @@ function RegisterView({ onLogin, onSwitchToLogin }) {
     <div className="animate-fade-in">
       <h2 className="text-dark-text font-editorial text-2xl mb-1">Criar perfil</h2>
       <p className="text-dark-muted text-sm mb-6">
-        {signupMode === 'invite_only' ? 'Acesso por convite.' : 'Seu espaço, só seu.'}
+        {inviteFromLink
+          ? 'Mayra te convidou para criar seu arquivo.'
+          : signupMode === 'invite_only' ? 'Acesso por convite.' : 'Seu espaço, só seu.'}
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">

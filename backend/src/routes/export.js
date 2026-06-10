@@ -95,7 +95,7 @@ router.get('/export',
           SELECT c.id, c.post_id, c.content, c.created_at, LEFT(p.content, 120) AS post_excerpt
           FROM comments c
           JOIN posts p ON p.id = c.post_id
-          WHERE c.profile_id = $1
+          WHERE c.author_id = $1
           ORDER BY c.created_at DESC
         `, [profileId]),
       ])

@@ -123,6 +123,15 @@ function IlloBegin() {
 
 const CHAPTERS = [
   {
+    id: 'goals',
+    Illo: IlloBegin,
+    title: 'O que você quer construir aqui?',
+    lines: [
+      'Escolha alguns caminhos para começar. Você pode mudar isso depois.',
+    ],
+    strategic: true,
+  },
+  {
     id: 'philosophy',
     Illo: IlloPhilosophy,
     title: 'O Archive não é uma rede social.',
@@ -205,11 +214,21 @@ const CHAPTERS = [
   },
 ]
 
+const GOALS = [
+  { id: 'diario', label: 'Diário', desc: 'Registrar dias, pensamentos e fases.' },
+  { id: 'portfolio', label: 'Portfólio', desc: 'Mostrar projetos e evolução.' },
+  { id: 'fotos', label: 'Fotos', desc: 'Guardar imagens com contexto.' },
+  { id: 'estudos', label: 'Estudos', desc: 'Organizar aprendizados e referências.' },
+  { id: 'projetos', label: 'Projetos', desc: 'Acompanhar o que está construindo.' },
+  { id: 'memorias', label: 'Memórias', desc: 'Revisitar passado e criar cápsulas.' },
+]
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function OnboardingTour({ onComplete }) {
   const [idx, setIdx]     = useState(0)
   const [fading, setFading] = useState(false)
+  const [selectedGoals, setSelectedGoals] = useState(['diario', 'memorias'])
   const touchStartX = useRef(null)
 
   const total  = CHAPTERS.length
@@ -222,9 +241,12 @@ export default function OnboardingTour({ onComplete }) {
     setTimeout(() => { setIdx(n); setFading(false) }, 200)
   }
 
-  function next() { isLast ? onComplete() : go(idx + 1) }
+  function finish() {
+    onComplete({ onboardingGoals: selectedGoals })
+  }
+  function next() { isLast ? finish() : go(idx + 1) }
   function back() { go(idx - 1) }
-  function skip() { onComplete() }
+  function skip() { finish() }
 
   // Keyboard navigation
   useEffect(() => {
@@ -247,7 +269,11 @@ export default function OnboardingTour({ onComplete }) {
     else if (dx > 50) back()
   }
 
-  const { Illo, title, lines, examples, tags, cta } = ch
+  const { Illo, title, lines, examples, tags, cta, strategic } = ch
+
+  function toggleGoal(id) {
+    setSelectedGoals(cur => cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id])
+  }
 
   return createPortal(
     <div
@@ -364,6 +390,37 @@ export default function OnboardingTour({ onComplete }) {
                 {tag.toUpperCase()}
               </span>
             ))}
+          </div>
+        )}
+
+        {strategic && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9, width: '100%', marginTop: 4 }}>
+            {GOALS.map(goal => {
+              const on = selectedGoals.includes(goal.id)
+              return (
+                <button
+                  key={goal.id}
+                  type="button"
+                  onClick={() => toggleGoal(goal.id)}
+                  style={{
+                    textAlign: 'left',
+                    padding: '13px 14px',
+                    borderRadius: 14,
+                    border: `1px solid ${on ? 'rgba(232,108,180,0.7)' : 'var(--line)'}`,
+                    background: on ? 'rgba(232,108,180,0.12)' : 'rgba(255,255,255,0.02)',
+                    color: 'var(--ink)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div style={{ fontFamily: 'var(--sans)', fontSize: 13.5, fontWeight: 700, color: on ? 'var(--accent)' : 'var(--ink)', marginBottom: 4 }}>
+                    {goal.label}
+                  </div>
+                  <div style={{ fontFamily: 'var(--sans)', fontSize: 11.5, color: 'var(--ink-3)', lineHeight: 1.4 }}>
+                    {goal.desc}
+                  </div>
+                </button>
+              )
+            })}
           </div>
         )}
       </div>

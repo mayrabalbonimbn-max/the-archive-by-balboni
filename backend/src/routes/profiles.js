@@ -34,6 +34,8 @@ function toPublicProfile(row) {
     interests: row.interests || '',
     coverImage: isStoredFile(row.cover_image) ? null : row.cover_image || null,
     hasCoverImage: Boolean(row.cover_image),
+    publicSections: row.public_sections || ['projects', 'collections', 'photos', 'entries'],
+    publicIntro: row.public_intro || '',
     createdAt: row.created_at,
     followerCount: Number(row.follower_count || 0),
     followingCount: Number(row.following_count || 0),
@@ -256,10 +258,10 @@ router.get('/:id/summary', async (req, res) => {
         [req.user.profileId, profileId]
       ),
       pool.query(
-        `SELECT id, name, description, status, emoji, slug
+        `SELECT id, title AS name, description, status, emoji, slug, is_featured
          FROM projects
-         WHERE profile_id = $1 AND visibility != 'private'
-         ORDER BY created_at DESC
+         WHERE profile_id = $1
+         ORDER BY is_featured DESC, created_at DESC
          LIMIT 6`,
         [profileId]
       ),

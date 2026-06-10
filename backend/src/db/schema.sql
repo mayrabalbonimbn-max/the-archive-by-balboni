@@ -303,6 +303,11 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN NOT N
 
 -- System / official profiles
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_system BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'member';
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS onboarding_goals TEXT[] DEFAULT '{}';
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS public_sections TEXT[] DEFAULT '{"projects","collections","photos","entries"}';
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS public_intro TEXT DEFAULT '';
+UPDATE profiles SET role = 'admin' WHERE lower(handle) = lower('@mayrabalboni');
 
 -- Memory reflections
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS parent_memory_post_id UUID REFERENCES posts(id) ON DELETE SET NULL;

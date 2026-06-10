@@ -64,6 +64,7 @@ function NumRow({ n, label }) {
 
 function EditorialFicha({ profile, stats }) {
   const hasNumbers = stats && (stats.totalMemories > 0 || stats.daysWriting > 0 || stats.openedCapsules > 0 || stats.activeProjects > 0)
+  const topTags = stats?.topTags?.slice(0, 3).map(t => `#${t.tag}`).join(' ')
 
   return (
     <div style={{
@@ -80,6 +81,9 @@ function EditorialFicha({ profile, stats }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: hasNumbers ? 14 : 0, paddingBottom: hasNumbers ? 14 : 0, borderBottom: hasNumbers ? '1px solid rgba(242,237,230,0.06)' : 'none' }}>
         <FichaRow label="Arquivando desde" value={fmtMonth(profile.createdAt)} />
         <FichaRow label="Primeira entrada" value={fmtDay(stats?.firstEntryAt)} />
+        <FichaRow label="Tema recorrente" value={stats?.mostFrequentCategory?.name} />
+        <FichaRow label="Projeto mais vivo" value={stats?.mostActiveProject ? `${stats.mostActiveProject.emoji || ''} ${stats.mostActiveProject.title}`.trim() : ''} />
+        <FichaRow label="Tags principais" value={topTags} />
       </div>
 
       {hasNumbers && (

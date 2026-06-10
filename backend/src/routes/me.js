@@ -16,8 +16,13 @@ const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, '..', '..', 'st
     await pool.query(`
       ALTER TABLE profiles
         ADD COLUMN IF NOT EXISTS title    TEXT,
-        ADD COLUMN IF NOT EXISTS location TEXT
+        ADD COLUMN IF NOT EXISTS location TEXT,
+        ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'member',
+        ADD COLUMN IF NOT EXISTS onboarding_goals TEXT[] DEFAULT '{}',
+        ADD COLUMN IF NOT EXISTS public_sections TEXT[] DEFAULT '{"projects","collections","photos","entries"}',
+        ADD COLUMN IF NOT EXISTS public_intro TEXT DEFAULT ''
     `)
+    await pool.query(`UPDATE profiles SET role = 'admin' WHERE lower(handle) = lower('@mayrabalboni')`)
   } catch (err) {
     console.error('[me] migration error:', err.message)
   }
@@ -83,6 +88,11 @@ function toProfile(row) {
     followerCount: Number(row.follower_count || 0),
     followingCount: Number(row.following_count || 0),
     onboardingCompleted: Boolean(row.onboarding_completed),
+    onboardingGoals: row.onboarding_goals || [],
+    publicSections: row.public_sections || ['projects', 'collections', 'photos', 'entries'],
+    publicIntro: row.public_intro || '',
+    role: row.role || 'member',
+    isAdmin: row.role === 'admin',
     createdAt: row.created_at,
     verified: row.is_system || false,
   }
@@ -113,7 +123,7 @@ router.get('/', async (req, res) => {
 // PATCH /api/me
 router.patch('/', async (req, res) => {
   try {
-    const { name, handle, bio, title, location, headerColor, interests, onboardingCompleted } = req.body
+    const { name, handle, bio, title, location, headerColor, interests, onboardingCompleted, onboardingGoals, publicSections, publicIntro } = req.body
     const fields = []
     const values = []
     let i = 1
@@ -125,6 +135,19 @@ router.patch('/', async (req, res) => {
     if (headerColor !== undefined) { fields.push(`header_color = $${i++}`);   values.push(headerColor) }
     if (interests !== undefined)   { fields.push(`interests = $${i++}`);       values.push(interests) }
     if (onboardingCompleted !== undefined) { fields.push(`onboarding_completed = $${i++}`); values.push(Boolean(onboardingCompleted)) }
+    if (Array.isArray(onboardingGoals)) {
+      fields.push(`onboarding_goals = $${i++}`)
+      values.push(onboardingGoals.map(String).slice(0, 8))
+    }
+    if (Array.isArray(publicSections)) {
+      const allowed = new Set(['projects', 'collections', 'photos', 'articles', 'entries', 'trajectory'])
+      fields.push(`public_sections = $${i++}`)
+      values.push(publicSections.filter(s => allowed.has(s)).slice(0, 6))
+    }
+    if (publicIntro !== undefined) {
+      fields.push(`public_intro = $${i++}`)
+      values.push(String(publicIntro || '').slice(0, 240))
+    }
 
     if (handle !== undefined) {
       const cleanHandle = handle.startsWith('@') ? handle.trim() : '@' + handle.trim()
@@ -231,7 +254,7 @@ router.delete('/media/:kind', async (req, res) => {
 router.get('/stats', async (req, res) => {
   const pid = req.user.profileId
   try {
-    const [postStats, projectStats] = await Promise.all([
+    const [postStats, projectStats, categoryStats, activeProject, tagStats] = await Promise.all([
       pool.query(
         `SELECT
            MIN(created_at) FILTER (WHERE is_time_capsule = false OR is_time_capsule IS NULL) AS first_entry_at,
@@ -248,15 +271,52 @@ router.get('/stats', async (req, res) => {
          WHERE profile_id = $1 AND status IN ('ativo', 'construindo')`,
         [pid]
       ),
+      pool.query(
+        `SELECT categoria, COUNT(*)::int AS count
+         FROM posts
+         WHERE profile_id = $1
+           AND categoria IS NOT NULL
+           AND (is_time_capsule = false OR is_time_capsule IS NULL)
+         GROUP BY categoria
+         ORDER BY count DESC
+         LIMIT 1`,
+        [pid]
+      ),
+      pool.query(
+        `SELECT pr.title, pr.emoji, COUNT(p.id)::int AS post_count
+         FROM projects pr
+         JOIN posts p ON p.project_id = pr.id
+         WHERE pr.profile_id = $1
+         GROUP BY pr.id
+         ORDER BY post_count DESC, pr.updated_at DESC
+         LIMIT 1`,
+        [pid]
+      ),
+      pool.query(
+        `SELECT t.slug, COUNT(*)::int AS count
+         FROM post_tags pt
+         JOIN tags t ON t.id = pt.tag_id
+         JOIN posts p ON p.id = pt.post_id
+         WHERE t.profile_id = $1 AND p.profile_id = $1
+         GROUP BY t.slug
+         ORDER BY count DESC, t.slug
+         LIMIT 5`,
+        [pid]
+      ),
     ])
 
     const p = postStats.rows[0]
+    const category = categoryStats.rows[0]
+    const project = activeProject.rows[0]
     res.json({
       firstEntryAt:    p.first_entry_at || null,
       totalMemories:   p.total_memories || 0,
       openedCapsules:  p.opened_capsules || 0,
       daysWriting:     p.days_writing || 0,
       activeProjects:  projectStats.rows[0]?.active_projects || 0,
+      mostFrequentCategory: category ? { name: category.categoria, count: category.count } : null,
+      mostActiveProject: project ? { title: project.title, emoji: project.emoji, postCount: project.post_count } : null,
+      topTags: tagStats.rows.map(r => ({ tag: r.slug, count: r.count })),
     })
   } catch (err) {
     console.error('GET /me/stats error:', err)

@@ -7,6 +7,7 @@ import PhotoTile from '../components/ui/PhotoTile'
 import Avatar from '../components/ui/Avatar'
 import PersonRow from '../components/ui/PersonRow'
 import VerifiedBadge from '../components/ui/VerifiedBadge'
+import EntryCard from '../components/ui/EntryCard'
 import { api } from '../utils/api'
 import { profileUrl } from '../utils/helpers'
 
@@ -263,6 +264,63 @@ function PeopleSection({ people, navigate }) {
 }
 
 // ── DefaultState ──────────────────────────────────────────────────────────────
+function SocialFeedSection() {
+  const [tab, setTab] = useState('following')
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  const tabs = [
+    { id: 'following', label: 'Seguindo', path: '/posts/following', empty: 'Siga pessoas para montar seu feed.' },
+    { id: 'friends', label: 'Círculo', path: '/posts/friends', empty: 'Adicione amigos para ver registros do círculo.' },
+    { id: 'public', label: 'Públicos', path: '/posts/explore', empty: 'Nenhuma entrada pública ainda.' },
+  ]
+  const active = tabs.find(t => t.id === tab)
+
+  useEffect(() => {
+    setLoading(true)
+    api.get(active.path)
+      .then(data => setItems(data.slice(0, 8)))
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false))
+  }, [active.path])
+
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <SectionLabel>Do seu círculo</SectionLabel>
+      <div style={{ display: 'flex', gap: 8, padding: '0 20px 12px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+        {tabs.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            style={{
+              flexShrink: 0,
+              padding: '7px 13px',
+              borderRadius: 999,
+              border: `1px solid ${tab === t.id ? 'var(--accent)' : 'var(--line-strong)'}`,
+              background: tab === t.id ? 'rgba(232,108,180,0.12)' : 'transparent',
+              color: tab === t.id ? 'var(--accent)' : 'var(--ink-3)',
+              fontFamily: 'var(--sans)',
+              fontSize: 12.5,
+              cursor: 'pointer',
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div style={{ borderTop: '1px solid var(--line)' }}>
+        {loading ? (
+          <div style={{ padding: '24px 20px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 14, color: 'var(--ink-3)' }}>Carregando...</div>
+        ) : items.length === 0 ? (
+          <div style={{ padding: '24px 20px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 14, color: 'var(--ink-3)' }}>{active.empty}</div>
+        ) : (
+          items.map(p => <EntryCard key={p.id} post={p} showAuthor />)
+        )}
+      </div>
+    </div>
+  )
+}
+
 function DefaultState({ suggested, guidePosts, guideLoading }) {
   const navigate = useNavigate()
 
@@ -275,6 +333,8 @@ function DefaultState({ suggested, guidePosts, guideLoading }) {
 
       {/* 2. Do Archive — guide posts */}
       <ArchivePostsSection guidePosts={guidePosts} loading={guideLoading} />
+
+      <SocialFeedSection />
 
       {/* 3. Public archives — only if people exist */}
       {realPeople.length > 0 && (

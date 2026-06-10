@@ -17,6 +17,12 @@ function Stat({ n, label, onClick }) {
   )
 }
 
+function hasSection(profile, id) {
+  const sections = profile?.publicSections
+  if (!Array.isArray(sections) || sections.length === 0) return true
+  return sections.includes(id)
+}
+
 export default function PublicProfilePage({ profile: viewerProfile }) {
   const { id, username } = useParams()
   const navigate = useNavigate()
@@ -132,6 +138,9 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
     : 0
   const collections = summary?.collections ?? []
   const publicProjects = (summary?.projects ?? []).filter(p => p.status !== 'arquivado')
+  const recentArticles = summary?.recentArticles ?? []
+  const recentPhotos = summary?.recentPhotos ?? []
+  const tags = summary?.tags ?? []
 
   return (
     <div style={{ animation: 'fadeUp var(--dur-screen) var(--ease-out)' }}>
@@ -151,10 +160,16 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
         }
       />
 
-      {/* Identity */}
+      {/* Public archive hero */}
       <div style={{ padding: '20px 20px 0' }}>
+        <div style={{
+          border: '1px solid var(--line)',
+          borderRadius: 18,
+          background: 'linear-gradient(180deg, rgba(232,108,180,0.08), rgba(255,255,255,0.015))',
+          padding: 18,
+        }}>
         <Avatar name={profile.name} src={profile.avatar} size={76} />
-        <h1 style={{ margin: '16px 0 3px', fontFamily: 'var(--serif)', fontSize: 28, color: 'var(--ink)', fontWeight: 400, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <h1 style={{ margin: '16px 0 3px', fontFamily: 'var(--serif)', fontSize: 30, color: 'var(--ink)', fontWeight: 400, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 8 }}>
           {profile.name}
           {profile.verified && <VerifiedBadge size={22} />}
         </h1>
@@ -169,6 +184,20 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
             {profile.bio}
           </p>
         )}
+        {profile.publicIntro && (
+          <p style={{ margin: '14px 0 0', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 16, lineHeight: 1.65, color: 'var(--ink)' }}>
+            {profile.publicIntro}
+          </p>
+        )}
+        {tags.length > 0 && (
+          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 14 }}>
+            {tags.slice(0, 6).map(t => (
+              <span key={t.tag} style={{ padding: '5px 10px', borderRadius: 999, border: '1px solid rgba(232,108,180,0.25)', color: 'var(--accent)', fontFamily: 'var(--mono)', fontSize: 10.5 }}>
+                #{t.tag}
+              </span>
+            ))}
+          </div>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 12, fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>
           {profile.location && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -177,10 +206,20 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
           )}
           {joinedLabel && <span>Desde {joinedLabel}</span>}
         </div>
+        </div>
       </div>
 
       {/* Action */}
-      {!isSelf && (
+      {isSelf ? (
+        <div style={{ padding: '18px 20px 20px' }}>
+          <button
+            onClick={() => navigate('/settings')}
+            style={{ width: '100%', padding: 12, borderRadius: 13, cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 600, border: '1px solid var(--line-strong)', background: 'transparent', color: 'var(--ink)' }}
+          >
+            Editar vitrine pública
+          </button>
+        </div>
+      ) : (
         <div style={{ padding: '18px 20px 20px', display: 'flex', gap: 10 }}>
           <button
             onClick={toggleFollow}
@@ -228,7 +267,7 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
       </div>
 
       {/* Collections strip */}
-      {collections.length > 0 && (
+      {hasSection(profile, 'collections') && collections.length > 0 && (
         <div style={{ marginTop: 28 }}>
           <SectionLabel>Coleções</SectionLabel>
           <div style={{ display: 'flex', gap: 11, overflowX: 'auto', padding: '12px 20px 6px', scrollbarWidth: 'none' }}>
@@ -258,7 +297,7 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
       )}
 
       {/* Projects strip */}
-      {publicProjects.length > 0 && (
+      {hasSection(profile, 'projects') && publicProjects.length > 0 && (
         <div style={{ marginTop: 26 }}>
           <SectionLabel>Construindo</SectionLabel>
           <div style={{ display: 'flex', gap: 10, overflowX: 'auto', padding: '10px 20px 6px', scrollbarWidth: 'none' }}>
@@ -289,8 +328,45 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
         </div>
       )}
 
+      {hasSection(profile, 'photos') && recentPhotos.length > 0 && (
+        <div style={{ marginTop: 26 }}>
+          <SectionLabel>Fotografias</SectionLabel>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, padding: '10px 20px 6px' }}>
+            {recentPhotos.slice(0, 6).map(photo => (
+              <button
+                key={photo.id}
+                onClick={() => navigate(`/posts/${photo.postId}`)}
+                style={{ aspectRatio: '1 / 1', borderRadius: 11, border: '1px solid var(--line)', background: 'linear-gradient(135deg, rgba(232,108,180,0.18), rgba(255,255,255,0.04))', color: 'var(--ink-2)', cursor: 'pointer', overflow: 'hidden', padding: 8, textAlign: 'left', fontFamily: 'var(--mono)', fontSize: 9, display: 'flex', alignItems: 'flex-end' }}
+              >
+                {photo.title}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {hasSection(profile, 'articles') && recentArticles.length > 0 && (
+        <div style={{ marginTop: 26 }}>
+          <SectionLabel>Ensaios</SectionLabel>
+          <div style={{ borderTop: '1px solid var(--line)' }}>
+            {recentArticles.map(p => <EntryCard key={p.id} post={p} showAuthor={false} />)}
+          </div>
+        </div>
+      )}
+
+      {hasSection(profile, 'trajectory') && (
+        <div style={{ margin: '26px 20px 0', border: '1px solid var(--line)', borderRadius: 15, padding: 16, background: 'rgba(255,255,255,0.015)' }}>
+          <div style={{ fontFamily: 'var(--serif)', fontSize: 17, color: 'var(--ink)', fontStyle: 'italic', marginBottom: 6 }}>
+            Trajetória arquivada
+          </div>
+          <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)', lineHeight: 1.55 }}>
+            {profile.name.split(' ')[0]} guarda projetos, registros e marcos há {daysKept.toLocaleString('pt-BR')} dias.
+          </div>
+        </div>
+      )}
+
       {/* Recent entries */}
-      <div style={{ marginTop: 26 }}>
+      {hasSection(profile, 'entries') && <div style={{ marginTop: 26 }}>
         <SectionLabel>Entradas recentes</SectionLabel>
         <div style={{ borderTop: '1px solid var(--line)' }}>
           {posts.length === 0 ? (
@@ -301,7 +377,7 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
             posts.map(p => <EntryCard key={p.id} post={p} showAuthor={false} />)
           )}
         </div>
-      </div>
+      </div>}
     </div>
   )
 }
