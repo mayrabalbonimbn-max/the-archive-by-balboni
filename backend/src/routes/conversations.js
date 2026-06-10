@@ -170,7 +170,7 @@ router.post('/:id/messages', async (req, res) => {
        WHERE cp.conversation_id = $1 AND cp.profile_id != $2`,
       [id, pid]
     )
-    if (others.length > 0) {
+    if (others.length > 0 && others[0].profile_id !== pid) {
       const recipientId = others[0].profile_id
       const senderName = others[0].sender_name || 'Alguém'
       const dmMsg = `${senderName} enviou uma mensagem.`

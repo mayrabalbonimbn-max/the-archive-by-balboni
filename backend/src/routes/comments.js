@@ -105,7 +105,9 @@ router.post('/posts/:postId/comments', async (req, res) => {
     const author = await pool.query('SELECT name FROM profiles WHERE id = $1', [req.user.profileId])
     const msg = `${author.rows[0]?.name || 'Alguém'} comentou seu post.`
     await notify(post.profile_id, req.user.profileId, 'comment', msg, post.id, result.rows[0].id)
-    sendPushToUser(post.profile_id, { title: 'The Archive', body: msg, url: `/posts/${post.id}`, tag: `comment-${post.id}` }).catch(() => {})
+    if (post.profile_id !== req.user.profileId) {
+      sendPushToUser(post.profile_id, { title: 'The Archive', body: msg, url: `/posts/${post.id}`, tag: `comment-${post.id}` }).catch(() => {})
+    }
     notifyMentions(content, req.user.profileId, post.id).catch(err => console.error('[mentions] comment error:', err.message))
     res.status(201).json(result.rows[0])
   } catch (err) {
@@ -165,7 +167,9 @@ router.post('/comments/:id/replies', async (req, res) => {
     const author = await pool.query('SELECT name FROM profiles WHERE id = $1', [req.user.profileId])
     const replyMsg = `${author.rows[0]?.name || 'Alguém'} respondeu seu comentário.`
     await notify(comment.rows[0].author_id, req.user.profileId, 'reply', replyMsg, comment.rows[0].post_id, req.params.id)
-    sendPushToUser(comment.rows[0].author_id, { title: 'The Archive', body: replyMsg, url: `/posts/${comment.rows[0].post_id}`, tag: `reply-${req.params.id}` }).catch(() => {})
+    if (comment.rows[0].author_id !== req.user.profileId) {
+      sendPushToUser(comment.rows[0].author_id, { title: 'The Archive', body: replyMsg, url: `/posts/${comment.rows[0].post_id}`, tag: `reply-${req.params.id}` }).catch(() => {})
+    }
     notifyMentions(content, req.user.profileId, comment.rows[0].post_id).catch(err => console.error('[mentions] reply error:', err.message))
     res.status(201).json(result.rows[0])
   } catch (err) {
