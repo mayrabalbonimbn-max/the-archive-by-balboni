@@ -299,15 +299,12 @@ router.post('/', async (req, res) => {
     const cleanVisibility = normalizeVisibility(visibility, isPrivate === true ? 'private' : 'private')
 
     if (!cleanContent && !cleanCode && hasAttachments !== true) {
-      client.release()
       return res.status(400).json({ error: 'Post deve ter texto, código ou anexo.' })
     }
     if (cleanCode && !CODE_LANGUAGES.has(codeLanguage)) {
-      client.release()
       return res.status(400).json({ error: 'Linguagem de código inválida.' })
     }
     if (cleanCode.length > MAX_CODE_LENGTH) {
-      client.release()
       return res.status(400).json({ error: 'Código deve ter no máximo 50 mil caracteres.' })
     }
 
@@ -341,7 +338,6 @@ router.post('/', async (req, res) => {
         [req.user.profileId, cleanContent, cleanCode || '']
       )
       if (dupCheck.rows.length > 0) {
-        client.release()
         return res.status(409).json({ error: 'Você já guardou um texto muito parecido.' })
       }
     }
@@ -380,7 +376,6 @@ router.post('/', async (req, res) => {
       } else {
         // Date is invalid or in the past — reject to avoid capsule with null unlock_at
         await client.query('ROLLBACK')
-        client.release()
         return res.status(400).json({ error: 'A data de abertura da cápsula deve ser no futuro.' })
       }
     }
