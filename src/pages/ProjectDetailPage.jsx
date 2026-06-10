@@ -143,7 +143,12 @@ function MilestonesSection({ slug }) {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    api.get(`/projects/${slug}/milestones`).then(setMilestones).catch(() => setMilestones([]))
+    api.get(`/projects/${slug}/milestones`)
+      .then(setMilestones)
+      .catch(err => {
+        console.error('[ProjectDetailPage] load milestones failed:', err?.message)
+        setMilestones([])
+      })
   }, [slug])
 
   async function addMilestone(title) {
@@ -158,7 +163,9 @@ function MilestonesSection({ slug }) {
       setMilestones(prev => [...(prev || []), m])
       setAdding(false)
       setNewTitle(''); setNewDate(''); setNewDesc('')
-    } catch {}
+    } catch (err) {
+      console.error('[ProjectDetailPage] add milestone failed:', err?.message)
+    }
     setSaving(false)
   }
 
@@ -299,7 +306,9 @@ function LearningsSection({ slug }) {
       setLearnings(prev => [l, ...(prev || [])])
       setNewContent('')
       setAdding(false)
-    } catch {}
+    } catch (err) {
+      console.error('[ProjectDetailPage] add learning failed:', err?.message)
+    }
     setSaving(false)
   }
 
@@ -308,7 +317,9 @@ function LearningsSection({ slug }) {
       const l = await api.patch(`/projects/${slug}/learnings/${id}`, { content: editContent })
       setLearnings(prev => prev.map(x => x.id === id ? l : x))
       setEditingId(null)
-    } catch {}
+    } catch (err) {
+      console.error('[ProjectDetailPage] update learning failed:', err?.message)
+    }
   }
 
   async function remove(id) {
@@ -442,7 +453,12 @@ function EditPanel({ project, onClose, onSaved, onDelete, slug }) {
 
   async function del() {
     if (!window.confirm('Apagar este projeto? Esta ação é irreversível.')) return
-    try { await api.delete(`/projects/${slug}`); onDelete() } catch {}
+    try {
+      await api.delete(`/projects/${slug}`)
+      onDelete()
+    } catch (err) {
+      console.error('[ProjectDetailPage] delete project failed:', err?.message)
+    }
   }
 
   return (

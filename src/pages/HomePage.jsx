@@ -883,7 +883,7 @@ export default function HomePage({ posts, profile, onLike, onSave }) {
     api.get('/archive/graph').then(setGraphData).catch(() => setGraphData({ nodes: [], links: [] }))
     api.get('/posts/following')
       .then(d => setCirclePosts(d))
-      .catch(() => {})
+      .catch(err => console.error('[HomePage] load following feed failed:', err?.message))
       .finally(() => setCircleLoading(false))
   }, [])
 
@@ -891,7 +891,9 @@ export default function HomePage({ posts, profile, onLike, onSave }) {
     try {
       const updated = await api.patch(`/posts/${id}`, reactionType ? { action, reactionType } : { action })
       setCirclePosts(cur => cur.map(p => p.id === id ? { ...updated, attachments: p.attachments, author: p.author } : p))
-    } catch {}
+    } catch (err) {
+      console.error('[HomePage] update post failed:', err?.message)
+    }
   }
 
   return (

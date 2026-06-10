@@ -42,7 +42,10 @@ export default function ConversationPage({ profile }) {
         const other = data.find(m => !m.mine)
         if (other) setParticipant(other.sender)
       }
-    } catch {}
+    } catch (err) {
+      console.error('[ConversationPage] load failed:', err?.message)
+      setError(err?.message || 'Não foi possível carregar a conversa.')
+    }
   }
 
   useEffect(() => {
