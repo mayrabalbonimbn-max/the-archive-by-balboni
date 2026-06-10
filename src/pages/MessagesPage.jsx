@@ -50,9 +50,9 @@ export default function MessagesPage() {
               style={{
                 display: 'flex', alignItems: 'center', gap: 13,
                 width: '100%', padding: '14px 20px',
-                borderBottom: '1px solid var(--line)',
+                border: 'none', borderBottom: '1px solid var(--line)',
                 background: conv.unread > 0 ? 'rgba(232,108,180,0.04)' : 'transparent',
-                border: 'none', cursor: 'pointer', textAlign: 'left',
+                cursor: 'pointer', textAlign: 'left',
               }}
             >
               <Avatar name={conv.participant?.name} src={conv.participant?.avatar} profileId={conv.participant?.id} size={44} />

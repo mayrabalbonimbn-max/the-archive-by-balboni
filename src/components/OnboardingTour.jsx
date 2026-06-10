@@ -39,17 +39,6 @@ function IlloProjects() {
   )
 }
 
-function IlloReflections() {
-  return (
-    <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-      <circle cx="40" cy="40" r="5" fill="var(--accent)" />
-      <circle cx="40" cy="40" r="13" stroke="var(--accent)" strokeWidth="1.5" fill="none" opacity="0.45" />
-      <circle cx="40" cy="40" r="22" stroke="var(--accent)" strokeWidth="1" fill="none" opacity="0.22" />
-      <circle cx="40" cy="40" r="32" stroke="var(--accent)" strokeWidth="0.5" fill="none" opacity="0.1" />
-    </svg>
-  )
-}
-
 function IlloCapsules() {
   return (
     <svg width="80" height="80" viewBox="0 0 80 80" fill="none">

@@ -551,13 +551,13 @@ router.patch('/:id', async (req, res) => {
         }
         const maxOrder = await pool.query('SELECT COALESCE(MAX(pin_order), 0) AS mo FROM posts WHERE profile_id = $1 AND pinned = true', [req.user.profileId])
         result = await pool.query(
-          'UPDATE posts SET pinned = true, pin_order = $1, updated_at = now() WHERE id = $2 RETURNING *',
-          [maxOrder.rows[0].mo + 1, id]
+          'UPDATE posts SET pinned = true, pin_order = $1, updated_at = now() WHERE id = $2 AND profile_id = $3 RETURNING *',
+          [maxOrder.rows[0].mo + 1, id, req.user.profileId]
         )
       } else {
         result = await pool.query(
-          'UPDATE posts SET pinned = false, pin_order = 0, updated_at = now() WHERE id = $1 RETURNING *',
-          [id]
+          'UPDATE posts SET pinned = false, pin_order = 0, updated_at = now() WHERE id = $1 AND profile_id = $2 RETURNING *',
+          [id, req.user.profileId]
         )
       }
     } else if (action === 'edit') {
@@ -572,8 +572,8 @@ router.patch('/:id', async (req, res) => {
         await client3.query('BEGIN')
         const updated = await client3.query(
           `UPDATE posts SET content = $1, article_title = $2, visibility = $3, updated_at = now()
-           WHERE id = $4 RETURNING *`,
-          [newContent.trim(), post.is_article ? (newTitle?.trim() || null) : post.article_title, vis, id]
+           WHERE id = $4 AND profile_id = $5 RETURNING *`,
+          [newContent.trim(), post.is_article ? (newTitle?.trim() || null) : post.article_title, vis, id, req.user.profileId]
         )
         let finalTags = []
         if (Array.isArray(newTags)) {

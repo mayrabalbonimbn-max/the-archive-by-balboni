@@ -15,6 +15,9 @@ function toProject(r) {
     slug: r.slug,
     emoji: r.emoji || '🌱',
     description: r.description || '',
+    whatItIs: r.what_it_is || '',
+    whatItSolves: r.what_it_solves || '',
+    features: r.features || [],
     status: r.status,
     githubUrl: r.github_url || null,
     websiteUrl: r.website_url || null,
@@ -125,22 +128,26 @@ router.get('/:slug/posts', async (req, res) => {
 // POST /api/projects
 router.post('/', async (req, res) => {
   try {
-    const { title, emoji, description, status, githubUrl, websiteUrl, tags, isFeatured, startedAt, completedAt, color } = req.body
+    const { title, emoji, description, whatItIs, whatItSolves, features, status, githubUrl, websiteUrl, tags, isFeatured, startedAt, completedAt, color } = req.body
     if (!title || !title.trim()) return res.status(400).json({ error: 'Título é obrigatório.' })
 
     const cleanTitle = title.trim().slice(0, 200)
     const slug = makeSlug(cleanTitle)
     const cleanStatus = VALID_STATUSES.includes(status) ? status : 'ativo'
     const cleanTags = Array.isArray(tags) ? tags.slice(0, 10).map(t => String(t).trim().slice(0, 30)) : []
+    const cleanFeatures = Array.isArray(features) ? features.slice(0, 20).map(f => String(f).trim().slice(0, 200)).filter(Boolean) : []
 
     const result = await pool.query(
-      `INSERT INTO projects (profile_id, title, slug, emoji, description, status, github_url, website_url, tags, is_featured, started_at, completed_at, color)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      `INSERT INTO projects (profile_id, title, slug, emoji, description, what_it_is, what_it_solves, features, status, github_url, website_url, tags, is_featured, started_at, completed_at, color)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
        RETURNING *`,
       [
         req.user.profileId, cleanTitle, slug,
         (emoji || '🌱').slice(0, 10),
         (description || '').slice(0, 2000),
+        (whatItIs || '').slice(0, 2000),
+        (whatItSolves || '').slice(0, 2000),
+        cleanFeatures,
         cleanStatus,
         typeof githubUrl === 'string' ? githubUrl.slice(0, 300) : null,
         typeof websiteUrl === 'string' ? websiteUrl.slice(0, 300) : null,
@@ -162,7 +169,7 @@ router.post('/', async (req, res) => {
 // PATCH /api/projects/:slug
 router.patch('/:slug', async (req, res) => {
   try {
-    const { title, emoji, description, status, githubUrl, websiteUrl, tags, isFeatured, startedAt, completedAt, color } = req.body
+    const { title, emoji, description, whatItIs, whatItSolves, features, status, githubUrl, websiteUrl, tags, isFeatured, startedAt, completedAt, color } = req.body
     const current = await pool.query(
       `SELECT * FROM projects WHERE profile_id = $1 AND slug = $2`,
       [req.user.profileId, req.params.slug]
@@ -174,19 +181,23 @@ router.patch('/:slug', async (req, res) => {
     const newSlug = title ? makeSlug(newTitle) : p.slug
     const cleanStatus = status && VALID_STATUSES.includes(status) ? status : p.status
     const cleanTags = Array.isArray(tags) ? tags.slice(0, 10).map(t => String(t).trim().slice(0, 30)) : p.tags
+    const cleanFeatures = Array.isArray(features) ? features.slice(0, 20).map(f => String(f).trim().slice(0, 200)).filter(Boolean) : p.features
 
     const result = await pool.query(
       `UPDATE projects
-       SET title=$1, slug=$2, emoji=$3, description=$4, status=$5,
-           github_url=$6, website_url=$7, tags=$8, is_featured=$9,
-           started_at=$10, completed_at=$11, color=$12,
+       SET title=$1, slug=$2, emoji=$3, description=$4, what_it_is=$5, what_it_solves=$6, features=$7,
+           status=$8, github_url=$9, website_url=$10, tags=$11, is_featured=$12,
+           started_at=$13, completed_at=$14, color=$15,
            updated_at=now()
-       WHERE id=$13 AND profile_id=$14
+       WHERE id=$16 AND profile_id=$17
        RETURNING *`,
       [
         newTitle, newSlug,
         (emoji !== undefined ? emoji : p.emoji || '🌱').slice(0, 10),
         (description !== undefined ? description : p.description || '').slice(0, 2000),
+        (whatItIs !== undefined ? whatItIs : p.what_it_is || '').slice(0, 2000),
+        (whatItSolves !== undefined ? whatItSolves : p.what_it_solves || '').slice(0, 2000),
+        cleanFeatures,
         cleanStatus,
         githubUrl !== undefined ? (githubUrl || null) : p.github_url,
         websiteUrl !== undefined ? (websiteUrl || null) : p.website_url,

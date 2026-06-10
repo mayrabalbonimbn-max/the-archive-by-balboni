@@ -44,6 +44,18 @@ function toPublicProfile(row) {
   }
 }
 
+function toPerson(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    handle: row.handle,
+    avatar: row.avatar,
+    isFollowing: row.is_following === true,
+    followerCount: Number(row.follower_count || 0),
+    followingCount: Number(row.following_count || 0),
+  }
+}
+
 function toPost(row) {
   const reactionCounts = row.reaction_counts || {}
   const viewerReactions = row.viewer_reactions || []
@@ -127,6 +139,46 @@ router.get('/:id', async (req, res) => {
     res.json(toPublicProfile(result.rows[0]))
   } catch (err) {
     console.error('GET /profiles/:id error:', err)
+    res.status(500).json({ error: 'Erro interno do servidor.' })
+  }
+})
+
+router.get('/:id/following', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT p.id, p.name, p.handle, p.avatar,
+        EXISTS (SELECT 1 FROM follows me WHERE me.follower_id = $1 AND me.following_id = p.id) AS is_following,
+        (SELECT COUNT(*)::int FROM follows fl WHERE fl.following_id = p.id) AS follower_count,
+        (SELECT COUNT(*)::int FROM follows fl WHERE fl.follower_id = p.id) AS following_count
+       FROM follows f
+       JOIN profiles p ON p.id = f.following_id
+       WHERE f.follower_id = $2
+       ORDER BY f.created_at DESC`,
+      [req.user.profileId, req.params.id]
+    )
+    res.json(result.rows.map(toPerson))
+  } catch (err) {
+    console.error('GET /profiles/:id/following error:', err)
+    res.status(500).json({ error: 'Erro interno do servidor.' })
+  }
+})
+
+router.get('/:id/followers', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT p.id, p.name, p.handle, p.avatar,
+        EXISTS (SELECT 1 FROM follows me WHERE me.follower_id = $1 AND me.following_id = p.id) AS is_following,
+        (SELECT COUNT(*)::int FROM follows fl WHERE fl.following_id = p.id) AS follower_count,
+        (SELECT COUNT(*)::int FROM follows fl WHERE fl.follower_id = p.id) AS following_count
+       FROM follows f
+       JOIN profiles p ON p.id = f.follower_id
+       WHERE f.following_id = $2
+       ORDER BY f.created_at DESC`,
+      [req.user.profileId, req.params.id]
+    )
+    res.json(result.rows.map(toPerson))
+  } catch (err) {
+    console.error('GET /profiles/:id/followers error:', err)
     res.status(500).json({ error: 'Erro interno do servidor.' })
   }
 })

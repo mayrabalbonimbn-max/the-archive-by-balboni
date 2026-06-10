@@ -346,6 +346,11 @@ CREATE TABLE IF NOT EXISTS project_learnings (
 );
 CREATE INDEX IF NOT EXISTS idx_project_learnings_project ON project_learnings(project_id);
 
+-- Projects: portfolio fields
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS what_it_is TEXT DEFAULT '';
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS what_it_solves TEXT DEFAULT '';
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS features TEXT[] DEFAULT '{}';
+
 -- Post categoria (semantic nature of the content)
 ALTER TABLE posts ADD COLUMN IF NOT EXISTS categoria VARCHAR(40) DEFAULT NULL;
 

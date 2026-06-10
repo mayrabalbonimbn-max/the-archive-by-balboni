@@ -40,7 +40,6 @@ function SettingsDebugPage() {
 const PublicProfilePage    = lazy(() => import('./pages/PublicProfilePage'))
 const FriendsPage          = lazy(() => import('./pages/FriendsPage'))
 const NotificationsPage    = lazy(() => import('./pages/NotificationsPage'))
-const TodayPage            = lazy(() => import('./pages/TodayPage'))
 const MemoriesPage         = lazy(() => import('./pages/MemoriesPage'))
 const CalendarPage         = lazy(() => import('./pages/CalendarPage'))
 const StatsPage            = lazy(() => import('./pages/StatsPage'))
@@ -64,11 +63,9 @@ const ProjectsPage         = lazy(() => import('./pages/ProjectsPage'))
 const ProjectDetailPage    = lazy(() => import('./pages/ProjectDetailPage'))
 const LifeMapPage          = lazy(() => import('./pages/LifeMapPage'))
 const GraphPage            = lazy(() => import('./pages/GraphPage'))
-const DashboardPage        = lazy(() => import('./pages/DashboardPage'))
 const YearReviewPage       = lazy(() => import('./pages/YearReviewPage'))
 const KnowledgePage        = lazy(() => import('./pages/KnowledgePage'))
 const AchievementsPage     = lazy(() => import('./pages/AchievementsPage'))
-const StoryPage            = lazy(() => import('./pages/StoryPage'))
 const TrajetoriaPage       = lazy(() => import('./pages/TrajetoriaPage'))
 
 // ── Suspense fallback ──────────────────────────────────────────────────────────
@@ -129,7 +126,6 @@ function AuthenticatedApp({ onLogout }) {
             <Route path="/profiles/:id"   element={<PublicProfilePage {...sharedProps} />} />
             <Route path="/friends"        element={<FriendsPage />} />
             <Route path="/notifications"  element={<NotificationsPage />} />
-            <Route path="/today"          element={<TodayPage />} />
             <Route path="/memories"       element={<MemoriesPage />} />
             <Route path="/calendar"       element={<CalendarPage />} />
             <Route path="/stats"          element={<StatsPage />} />
@@ -157,12 +153,9 @@ function AuthenticatedApp({ onLogout }) {
             <Route path="/projects/:slug"   element={<ProjectDetailPage />} />
             <Route path="/life-map"         element={<LifeMapPage />} />
             <Route path="/graph"            element={<Navigate to="/trajetoria" replace />} />
-            <Route path="/dashboard"        element={<DashboardPage />} />
             <Route path="/year-review/:year" element={<YearReviewPage />} />
             <Route path="/knowledge"        element={<KnowledgePage />} />
-            <Route path="/growth"           element={<Navigate to="/story" replace />} />
             <Route path="/achievements"     element={<AchievementsPage />} />
-            <Route path="/story"            element={<StoryPage />} />
             <Route path="/trajetoria"       element={<TrajetoriaPage />} />
 
             {/* Public profile by @username — catch-all, must be last */}

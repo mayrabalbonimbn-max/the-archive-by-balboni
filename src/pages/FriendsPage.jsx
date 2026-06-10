@@ -22,10 +22,12 @@ export default function FriendsPage() {
   const [viewFollowing, setViewFollowing] = useState(null)
   const [viewFollowers, setViewFollowers] = useState(null)
   const [viewLoading, setViewLoading] = useState(false)
+  const [viewError, setViewError] = useState(null)
 
   useEffect(() => {
     if (!viewId) return
     setViewLoading(true)
+    setViewError(null)
     Promise.all([
       api.get(`/profiles/${viewId}`),
       api.get(`/profiles/${viewId}/following`),
@@ -34,7 +36,10 @@ export default function FriendsPage() {
       setViewProfile(prof)
       setViewFollowing(following)
       setViewFollowers(followers)
-    }).catch(() => {}).finally(() => setViewLoading(false))
+    }).catch(err => {
+      console.error('[FriendsPage] failed to load profile circle:', err?.message)
+      setViewError('Não foi possível carregar o perfil.')
+    }).finally(() => setViewLoading(false))
   }, [viewId])
 
   const isViewing = Boolean(viewId)
@@ -107,7 +112,11 @@ export default function FriendsPage() {
       </div>
 
       {/* List */}
-      {loading ? (
+      {viewError ? (
+        <p style={{ padding: '40px 20px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-3)' }}>
+          {viewError}
+        </p>
+      ) : loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
           <div className="w-5 h-5 rounded-full border-2 border-accent border-t-transparent animate-spin" />
         </div>

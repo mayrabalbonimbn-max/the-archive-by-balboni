@@ -7,11 +7,11 @@ import Icon from '../components/ui/Icon'
 // ─── constants ────────────────────────────────────────────────────────────────
 
 const STATUS_META = {
-  ideia:      { label: 'Ideia',       color: '#6b7280' },
-  construindo:{ label: 'Construindo', color: '#f59e0b' },
-  ativo:      { label: 'Ativo',       color: '#10b981' },
-  pausado:    { label: 'Pausado',     color: '#6b7280' },
-  concluído:  { label: 'Concluído',   color: '#8b5cf6' },
+  ideia:       { label: 'Ideia',       color: '#6b7280' },
+  construindo: { label: 'Construindo', color: '#f59e0b' },
+  ativo:       { label: 'Ativo',       color: '#10b981' },
+  pausado:     { label: 'Pausado',     color: '#6b7280' },
+  'concluído': { label: 'Concluído',   color: '#8b5cf6' },
 }
 
 const SUGGESTED_MILESTONES = ['Ideia inicial', 'Primeira versão', 'MVP', 'Lançamento', 'Conclusão']
@@ -99,6 +99,39 @@ function PostItem({ post }) {
   )
 }
 
+// ─── ProseBlock ───────────────────────────────────────────────────────────────
+
+function ProseBlock({ label, text }) {
+  if (!text) return null
+  return (
+    <div style={{ padding: '24px 24px', borderTop: '1px solid var(--line)' }}>
+      <SectionHead label={label} />
+      <p style={{ margin: 0, fontFamily: 'var(--sans)', fontSize: 14.5, color: 'var(--ink-2)', lineHeight: 1.8, maxWidth: 600 }}>
+        {text}
+      </p>
+    </div>
+  )
+}
+
+// ─── FeaturesBlock ────────────────────────────────────────────────────────────
+
+function FeaturesBlock({ features }) {
+  if (!features || features.length === 0) return null
+  return (
+    <div style={{ padding: '24px 24px', borderTop: '1px solid var(--line)' }}>
+      <SectionHead label="FUNCIONALIDADES" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {features.map((f, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+            <span style={{ color: 'var(--accent)', fontFamily: 'var(--mono)', fontSize: 11, marginTop: 3, flexShrink: 0 }}>→</span>
+            <span style={{ fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.55 }}>{f}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── Milestones section ───────────────────────────────────────────────────────
 
 function MilestonesSection({ slug }) {
@@ -138,7 +171,6 @@ function MilestonesSection({ slug }) {
     <div style={{ padding: '28px 24px', borderTop: '1px solid var(--line)' }}>
       <SectionHead label="MARCOS" action="+ Adicionar" onAction={() => setAdding(a => !a)} />
 
-      {/* Suggested quick-add */}
       {!adding && (!milestones || milestones.length === 0) && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
           {SUGGESTED_MILESTONES.map(s => (
@@ -157,7 +189,6 @@ function MilestonesSection({ slug }) {
         </div>
       )}
 
-      {/* Add form */}
       {adding && (
         <div style={{ background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 12, padding: '14px', marginBottom: 14 }}>
           <input
@@ -182,7 +213,6 @@ function MilestonesSection({ slug }) {
             style={{ ...inputStyle, resize: 'vertical', marginBottom: 10 }}
           />
           <div style={{ display: 'flex', gap: 7 }}>
-            {/* Quick suggestions while adding */}
             {SUGGESTED_MILESTONES.map(s => (
               <button key={s} onClick={() => setNewTitle(s)}
                 style={{ flexShrink: 0, padding: '3px 9px', borderRadius: 16, border: '1px solid var(--line)', background: newTitle === s ? 'rgba(232,108,180,0.1)' : 'transparent', cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: 11, color: newTitle === s ? 'var(--accent)' : 'var(--ink-3)' }}>
@@ -203,19 +233,17 @@ function MilestonesSection({ slug }) {
         </div>
       )}
 
-      {/* Timeline */}
       {milestones === null ? (
-        <div className="w-4 h-4 rounded-full border-2 border-accent border-t-transparent animate-spin" style={{ margin: '12px 0' }} />
+        <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid var(--accent)', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite', margin: '12px 0' }} />
       ) : milestones.length === 0 && !adding ? (
         <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 13.5, color: 'var(--ink-3)' }}>
           Registre os momentos importantes deste projeto.
         </p>
       ) : (
         <div style={{ position: 'relative', paddingLeft: 20 }}>
-          {/* vertical line */}
           <div style={{ position: 'absolute', left: 6, top: 6, bottom: 6, width: 1, background: 'var(--line)' }} />
           {milestones.map(m => (
-            <div key={m.id} style={{ position: 'relative', paddingBottom: 20 }}>
+            <div key={m.id} style={{ position: 'relative', paddingBottom: 22 }}>
               <div style={{ position: 'absolute', left: -14, top: 4, width: 9, height: 9, borderRadius: '50%', background: 'var(--accent)', border: '2px solid var(--bg)' }} />
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                 <div>
@@ -228,13 +256,13 @@ function MilestonesSection({ slug }) {
                     </div>
                   )}
                   {m.description && (
-                    <p style={{ margin: '4px 0 0', fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)', lineHeight: 1.5 }}>
+                    <p style={{ margin: '4px 0 0', fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-3)', lineHeight: 1.55 }}>
                       {m.description}
                     </p>
                   )}
                 </div>
                 <button onClick={() => deleteMilestone(m.id)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-3)', fontSize: 14, flexShrink: 0, padding: '2px 4px', opacity: 0.6 }}>
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-3)', fontSize: 14, flexShrink: 0, padding: '2px 4px', opacity: 0.5 }}>
                   ×
                 </button>
               </div>
@@ -317,14 +345,14 @@ function LearningsSection({ slug }) {
       )}
 
       {learnings === null ? (
-        <div className="w-4 h-4 rounded-full border-2 border-accent border-t-transparent animate-spin" style={{ margin: '12px 0' }} />
+        <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid var(--accent)', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite', margin: '12px 0' }} />
       ) : learnings.length === 0 && !adding ? (
         <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 13.5, color: 'var(--ink-3)' }}>
           Capture os aprendizados e descobertas deste projeto.
         </p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {learnings.map(l => (
+          {learnings.map((l, i) => (
             <div key={l.id} style={{ padding: '13px 14px', borderRadius: 11, border: '1px solid var(--line)', background: 'var(--surface-2)' }}>
               {editingId === l.id ? (
                 <>
@@ -348,7 +376,10 @@ function LearningsSection({ slug }) {
                 </>
               ) : (
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  <p style={{ flex: 1, margin: 0, fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink)', lineHeight: 1.6 }}>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', marginTop: 4, flexShrink: 0, minWidth: 18, textAlign: 'right' }}>
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <p style={{ flex: 1, margin: 0, fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink)', lineHeight: 1.65 }}>
                     {l.content}
                   </p>
                   <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
@@ -359,9 +390,6 @@ function LearningsSection({ slug }) {
                   </div>
                 </div>
               )}
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--ink-3)', marginTop: 6 }}>
-                {fmtDate(l.createdAt)}
-              </div>
             </div>
           ))}
         </div>
@@ -374,16 +402,19 @@ function LearningsSection({ slug }) {
 
 function EditPanel({ project, onClose, onSaved, onDelete, slug }) {
   const [form, setForm] = useState({
-    emoji:       project.emoji || '🌱',
-    title:       project.title || '',
-    description: project.description || '',
-    status:      project.status || 'ativo',
-    githubUrl:   project.githubUrl || '',
-    websiteUrl:  project.websiteUrl || '',
-    tags:        (project.tags || []).join(', '),
-    startedAt:   toInputDate(project.startedAt),
-    completedAt: toInputDate(project.completedAt),
-    isFeatured:  project.isFeatured || false,
+    emoji:        project.emoji || '🌱',
+    title:        project.title || '',
+    description:  project.description || '',
+    whatItIs:     project.whatItIs || '',
+    whatItSolves: project.whatItSolves || '',
+    features:     (project.features || []).join('\n'),
+    status:       project.status || 'ativo',
+    githubUrl:    project.githubUrl || '',
+    websiteUrl:   project.websiteUrl || '',
+    tags:         (project.tags || []).join(', '),
+    startedAt:    toInputDate(project.startedAt),
+    completedAt:  toInputDate(project.completedAt),
+    isFeatured:   project.isFeatured || false,
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -396,11 +427,12 @@ function EditPanel({ project, onClose, onSaved, onDelete, slug }) {
     try {
       const updated = await api.patch(`/projects/${slug}`, {
         ...form,
-        tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
-        startedAt: form.startedAt || null,
+        tags:        form.tags.split(',').map(t => t.trim()).filter(Boolean),
+        features:    form.features.split('\n').map(f => f.trim()).filter(Boolean),
+        startedAt:   form.startedAt || null,
         completedAt: form.completedAt || null,
-        githubUrl: form.githubUrl || null,
-        websiteUrl: form.websiteUrl || null,
+        githubUrl:   form.githubUrl || null,
+        websiteUrl:  form.websiteUrl || null,
       })
       onSaved(updated)
       if (updated.slug !== slug) navigate(`/projects/${updated.slug}`, { replace: true })
@@ -416,7 +448,7 @@ function EditPanel({ project, onClose, onSaved, onDelete, slug }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div style={{ background: 'var(--bg)', borderRadius: '20px 20px 0 0', border: '1px solid var(--line)', width: '100%', maxWidth: 560, maxHeight: '90dvh', overflowY: 'auto', padding: '22px 22px 40px' }}>
+      <div style={{ background: 'var(--bg)', borderRadius: '20px 20px 0 0', border: '1px solid var(--line)', width: '100%', maxWidth: 560, maxHeight: '92dvh', overflowY: 'auto', padding: '22px 22px 48px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
           <span style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 18, color: 'var(--ink)' }}>Editar Projeto</span>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-3)', fontSize: 20, lineHeight: 1 }}>✕</button>
@@ -431,9 +463,24 @@ function EditPanel({ project, onClose, onSaved, onDelete, slug }) {
           </Field>
         </div>
 
-        <Field label="DESCRIÇÃO">
-          <textarea value={form.description} onChange={set('description')} placeholder="O que é este projeto?" rows={3}
+        <Field label="TAGLINE (descrição curta)">
+          <textarea value={form.description} onChange={set('description')} placeholder="Uma frase que resume o projeto." rows={2}
             style={{ ...inputStyle, resize: 'vertical' }} />
+        </Field>
+
+        <Field label="O QUE É">
+          <textarea value={form.whatItIs} onChange={set('whatItIs')} placeholder="Explique o projeto em linguagem humana, sem jargão." rows={3}
+            style={{ ...inputStyle, resize: 'vertical' }} />
+        </Field>
+
+        <Field label="O QUE RESOLVE">
+          <textarea value={form.whatItSolves} onChange={set('whatItSolves')} placeholder="Qual problema real este projeto resolve?" rows={3}
+            style={{ ...inputStyle, resize: 'vertical' }} />
+        </Field>
+
+        <Field label="FUNCIONALIDADES (uma por linha)">
+          <textarea value={form.features} onChange={set('features')} placeholder={"Autenticação com JWT\nGeração de PDF\nUpload de imagens"} rows={5}
+            style={{ ...inputStyle, resize: 'vertical', fontFamily: 'var(--mono)', fontSize: 12.5 }} />
         </Field>
 
         <Field label="STATUS">
@@ -469,8 +516,8 @@ function EditPanel({ project, onClose, onSaved, onDelete, slug }) {
           <input value={form.websiteUrl} onChange={set('websiteUrl')} placeholder="https://..." style={inputStyle} />
         </Field>
 
-        <Field label="TAGS (separadas por vírgula)">
-          <input value={form.tags} onChange={set('tags')} placeholder="fotografia, ios, swift" style={inputStyle} />
+        <Field label="TECH STACK / TAGS (separadas por vírgula)">
+          <input value={form.tags} onChange={set('tags')} placeholder="React, Node.js, PostgreSQL" style={inputStyle} />
         </Field>
 
         <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 20 }}>
@@ -526,16 +573,21 @@ export default function ProjectDetailPage() {
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', padding: '80px 0' }}>
-        <div className="w-6 h-6 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+        <div style={{ width: 24, height: 24, borderRadius: '50%', border: '2px solid var(--accent)', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
       </div>
     )
   }
   if (!project) return null
 
   const statusMeta = STATUS_META[project.status] || STATUS_META.ativo
+  const hasProse = project.whatItIs || project.whatItSolves
+  const hasFeatures = project.features?.length > 0
 
   return (
-    <div style={{ animation: 'fadeUp var(--dur-screen) var(--ease-out)', minHeight: '100vh', paddingBottom: 60 }}>
+    <div style={{ animation: 'fadeUp var(--dur-screen) var(--ease-out)', minHeight: '100vh', paddingBottom: 80 }}>
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+
       <AppBar
         left={
           <button onClick={goBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -567,39 +619,56 @@ export default function ProjectDetailPage() {
         <span style={{ fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink)', fontWeight: 500 }}>{project.title}</span>
       </div>
 
-      {/* Hero */}
-      <div style={{ padding: '28px 24px 24px', borderBottom: '1px solid var(--line)' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 18, marginBottom: 16 }}>
-          <span style={{ fontSize: 52, lineHeight: 1 }}>{project.emoji}</span>
+      {/* ── Hero ───────────────────────────────────────────────────────────── */}
+      <div style={{ padding: '32px 24px 28px', borderBottom: '1px solid var(--line)' }}>
+
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 18, marginBottom: 18 }}>
+          <span style={{ fontSize: 52, lineHeight: 1, flexShrink: 0 }}>{project.emoji}</span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 style={{ margin: '0 0 8px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontWeight: 400, fontSize: 26, color: 'var(--ink)', letterSpacing: '-0.01em', lineHeight: 1.15 }}>
+            <h1 style={{ margin: '0 0 10px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontWeight: 400, fontSize: 28, color: 'var(--ink)', letterSpacing: '-0.01em', lineHeight: 1.15 }}>
               {project.title}
             </h1>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusMeta.color }} />
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: statusMeta.color }} />
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--ink-3)', letterSpacing: '0.06em' }}>
                   {statusMeta.label.toUpperCase()}
                 </span>
               </span>
               {project.startedAt && (
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--ink-3)' }}>
-                  {fmtShort(project.startedAt)}{project.completedAt ? ` → ${fmtShort(project.completedAt)}` : ''}
+                  {fmtShort(project.startedAt)}{project.completedAt ? ` → ${fmtShort(project.completedAt)}` : ' → presente'}
                 </span>
               )}
             </div>
           </div>
         </div>
 
+        {/* Tagline */}
         {project.description && (
-          <p style={{ margin: '0 0 16px', fontFamily: 'var(--sans)', fontSize: 14.5, color: 'var(--ink-2)', lineHeight: 1.7, maxWidth: 560 }}>
+          <p style={{ margin: '0 0 20px', fontFamily: 'var(--sans)', fontSize: 15.5, color: 'var(--ink)', lineHeight: 1.7, maxWidth: 580, fontStyle: 'italic' }}>
             {project.description}
           </p>
         )}
 
+        {/* Tech stack tags */}
+        {project.tags?.length > 0 && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 18 }}>
+            {project.tags.map(tag => (
+              <span key={tag} style={{
+                fontFamily: 'var(--mono)', fontSize: 10.5, padding: '4px 10px',
+                borderRadius: 6, background: 'var(--surface-2)',
+                color: 'var(--ink-2)', border: '1px solid var(--line)',
+              }}>
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* Stats row */}
         {(project.postCount > 0 || project.photoCount > 0 || project.fileCount > 0) && (
-          <div style={{ display: 'flex', gap: 16, marginBottom: 14 }}>
+          <div style={{ display: 'flex', gap: 16, marginBottom: 18 }}>
             {project.postCount > 0 && <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>{project.postCount} posts</span>}
             {project.photoCount > 0 && <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>📷 {project.photoCount}</span>}
             {project.fileCount > 0 && <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>📎 {project.fileCount}</span>}
@@ -611,34 +680,51 @@ export default function ProjectDetailPage() {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           {project.githubUrl && (
             <a href={project.githubUrl} target="_blank" rel="noopener noreferrer"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface-2)', fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--ink-2)', textDecoration: 'none' }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface-2)', fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--ink-2)', textDecoration: 'none' }}>
               <Icon name="code" size={14} stroke={1.5} /> GitHub
             </a>
           )}
           {project.websiteUrl && (
             <a href={project.websiteUrl} target="_blank" rel="noopener noreferrer"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface-2)', fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--ink-2)', textDecoration: 'none' }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface-2)', fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--ink-2)', textDecoration: 'none' }}>
               <Icon name="explore" size={14} stroke={1.5} /> Site
             </a>
           )}
-          {(project.tags || []).map(tag => (
-            <span key={tag} style={{ fontFamily: 'var(--mono)', fontSize: 10.5, padding: '3px 9px', borderRadius: 20, background: 'var(--surface-2)', color: 'var(--ink-3)', border: '1px solid var(--line)' }}>
-              {tag}
-            </span>
-          ))}
           <button onClick={() => setEditing(true)}
-            style={{ marginLeft: 'auto', background: 'none', border: '1px solid var(--line)', borderRadius: 8, cursor: 'pointer', padding: '5px 12px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>
+            style={{ marginLeft: project.githubUrl || project.websiteUrl ? 'auto' : 0, background: 'none', border: '1px solid var(--line)', borderRadius: 8, cursor: 'pointer', padding: '6px 14px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>
             Editar
           </button>
         </div>
+
+        {/* Empty state CTA when no prose content yet */}
+        {!hasProse && !hasFeatures && (
+          <div style={{ marginTop: 22, padding: '16px 18px', borderRadius: 12, border: '1px dashed var(--line)', background: 'var(--surface-2)' }}>
+            <p style={{ margin: '0 0 10px', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.6 }}>
+              Conta mais sobre este projeto — o que é, o que resolve, quais funcionalidades tem.
+            </p>
+            <button onClick={() => setEditing(true)}
+              style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, letterSpacing: '0.06em' }}>
+              Preencher agora →
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Milestones */}
+      {/* ── O que é ──────────────────────────────────────────────────────────── */}
+      <ProseBlock label="O QUE É" text={project.whatItIs} />
+
+      {/* ── O que resolve ────────────────────────────────────────────────────── */}
+      <ProseBlock label="O QUE RESOLVE" text={project.whatItSolves} />
+
+      {/* ── Funcionalidades ──────────────────────────────────────────────────── */}
+      <FeaturesBlock features={project.features} />
+
+      {/* ── Marcos ───────────────────────────────────────────────────────────── */}
       <MilestonesSection slug={slug} />
 
-      {/* Timeline */}
+      {/* ── Entradas vinculadas ───────────────────────────────────────────────── */}
       <div style={{ padding: '28px 24px', borderTop: '1px solid var(--line)' }}>
-        <SectionHead label={`TIMELINE — ${posts.length} ${posts.length === 1 ? 'ENTRADA' : 'ENTRADAS'}`} />
+        <SectionHead label={`ENTRADAS VINCULADAS — ${posts.length} ${posts.length === 1 ? 'ENTRADA' : 'ENTRADAS'}`} />
         {posts.length === 0 ? (
           <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 14, color: 'var(--ink-3)', lineHeight: 1.7 }}>
             Nenhuma entrada vinculada. Ao criar um post, selecione este projeto.
@@ -648,10 +734,9 @@ export default function ProjectDetailPage() {
         )}
       </div>
 
-      {/* Learnings */}
+      {/* ── Aprendizados ─────────────────────────────────────────────────────── */}
       <LearningsSection slug={slug} />
 
-      {/* Edit panel */}
       {editing && (
         <EditPanel
           project={project}
