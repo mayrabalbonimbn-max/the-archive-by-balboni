@@ -177,6 +177,166 @@ function ExportSection() {
   )
 }
 
+function fmtInviteDate(iso) {
+  if (!iso) return 'Sem expiração'
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function inviteStatus(invite) {
+  if (invite.revokedAt) return { label: 'Revogado', color: '#f87171' }
+  if (!invite.valid) return { label: 'Usado/expirado', color: '#f59e0b' }
+  return { label: 'Ativo', color: '#4ade80' }
+}
+
+function InviteSettingsSection() {
+  const [invites, setInvites] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [creating, setCreating] = useState(false)
+  const [copied, setCopied] = useState('')
+  const [error, setError] = useState('')
+  const [form, setForm] = useState({ note: '', maxUses: 1, expiresDays: 30 })
+
+  useEffect(() => {
+    let ignore = false
+    api.get('/auth/invites')
+      .then(data => { if (!ignore) setInvites(data) })
+      .catch(err => { if (!ignore) setError(err.message) })
+      .finally(() => { if (!ignore) setLoading(false) })
+    return () => { ignore = true }
+  }, [])
+
+  async function createInvite(e) {
+    e.preventDefault()
+    setError('')
+    setCreating(true)
+    try {
+      const invite = await api.post('/auth/invites', {
+        note: form.note.trim() || undefined,
+        maxUses: Number(form.maxUses) || 1,
+        expiresDays: Number(form.expiresDays) || undefined,
+      })
+      setInvites(prev => [invite, ...prev])
+      setForm({ note: '', maxUses: 1, expiresDays: 30 })
+      copyInvite(invite.code)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  function copyInvite(code) {
+    const signupUrl = `${window.location.origin}/?view=register`
+    const text = `Código de convite: ${code}\nCriar perfil: ${signupUrl}`
+    navigator.clipboard?.writeText(text).then(() => {
+      setCopied(code)
+      setTimeout(() => setCopied(''), 2200)
+    }).catch(() => {})
+  }
+
+  async function revokeInvite(code) {
+    setError('')
+    try {
+      await api.delete(`/auth/invites/${code}`)
+      setInvites(prev => prev.map(inv => inv.code === code ? { ...inv, revokedAt: new Date().toISOString(), valid: false } : inv))
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  return (
+    <div style={{ marginBottom: 40 }}>
+      <SectionHead label="Convites" />
+      <p style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', marginTop: 0, marginBottom: 18, lineHeight: 1.6 }}>
+        Gere códigos para liberar a criação de novos perfis.
+      </p>
+
+      <form onSubmit={createInvite} style={{ marginBottom: 16 }}>
+        <Field label="Nome ou observação">
+          <input
+            value={form.note}
+            onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
+            style={fieldInput}
+            placeholder="Ex: Ana, cliente, família..."
+          />
+        </Field>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <Field label="Usos">
+            <input
+              type="number"
+              min="1"
+              max="20"
+              value={form.maxUses}
+              onChange={e => setForm(f => ({ ...f, maxUses: e.target.value }))}
+              style={fieldInput}
+            />
+          </Field>
+          <Field label="Expira em dias">
+            <input
+              type="number"
+              min="1"
+              max="365"
+              value={form.expiresDays}
+              onChange={e => setForm(f => ({ ...f, expiresDays: e.target.value }))}
+              style={fieldInput}
+            />
+          </Field>
+        </div>
+
+        {error && (
+          <div style={{ marginBottom: 12, fontFamily: 'var(--sans)', fontSize: 13, color: '#f87171' }}>
+            {error}
+          </div>
+        )}
+
+        <AccentBtn type="submit" disabled={creating}>
+          {creating ? 'Gerando...' : 'Gerar convite'}
+        </AccentBtn>
+      </form>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {loading ? (
+          <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 14, color: 'var(--ink-3)' }}>Carregando convites...</div>
+        ) : invites.length === 0 ? (
+          <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 14, color: 'var(--ink-3)' }}>Nenhum convite criado ainda.</div>
+        ) : (
+          invites.map(invite => {
+            const status = inviteStatus(invite)
+            return (
+              <div key={invite.id} style={{ border: '1px solid var(--line-strong)', borderRadius: 12, padding: '13px 14px', background: 'rgba(255,255,255,0.02)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 10 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--ink)', letterSpacing: '0.04em', wordBreak: 'break-all' }}>
+                      {invite.code}
+                    </div>
+                    <div style={{ fontFamily: 'var(--sans)', fontSize: 12.5, color: 'var(--ink-3)', marginTop: 5 }}>
+                      {invite.note || 'Sem observação'} · {invite.usedCount}/{invite.maxUses} usos · {fmtInviteDate(invite.expiresAt)}
+                    </div>
+                  </div>
+                  <span style={{ flexShrink: 0, fontFamily: 'var(--mono)', fontSize: 9.5, color: status.color, border: `1px solid ${status.color}55`, borderRadius: 999, padding: '4px 8px' }}>
+                    {status.label}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <OutlineBtn onClick={() => copyInvite(invite.code)}>
+                    {copied === invite.code ? 'Copiado' : 'Copiar código e link'}
+                  </OutlineBtn>
+                  {invite.valid && (
+                    <OutlineBtn danger onClick={() => revokeInvite(invite.code)}>
+                      Revogar
+                    </OutlineBtn>
+                  )}
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function SettingsPage({ profile, posts, onUpdateProfile, onUploadProfileMedia, onRemoveProfileMedia, onImportPosts, onLogout, onResetOnboarding }) {
   const navigate = useNavigate()
   // Safe defaults so hooks are always called unconditionally (rules of hooks)
@@ -202,6 +362,7 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
   const [pushLoading, setPushLoading] = useState(false)
   const [pushMsg, setPushMsg] = useState('')
   const [pushDiag, setPushDiag] = useState(null) // { swOk, permOk, subOk }
+  const canManageInvites = profile?.handle?.toLowerCase() === '@mayrabalboni'
 
   useEffect(() => {
     const swOk = 'serviceWorker' in navigator
@@ -454,6 +615,8 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
             </AccentBtn>
           </form>
         </div>
+
+        {canManageInvites && <InviteSettingsSection />}
 
         {/* ── Exportar ── */}
         <ExportSection />

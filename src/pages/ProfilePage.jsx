@@ -136,193 +136,6 @@ const TYPE_FILTERS = [
   { id: 'media', label: 'Fotos' },
 ]
 
-function fmtInviteDate(iso) {
-  if (!iso) return 'Sem expiração'
-  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
-}
-
-function inviteStatus(invite) {
-  if (invite.revokedAt) return { label: 'Revogado', color: '#f87171' }
-  if (!invite.valid) return { label: 'Usado/expirado', color: '#f59e0b' }
-  return { label: 'Ativo', color: '#4ade80' }
-}
-
-function InviteManager() {
-  const [invites, setInvites] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [creating, setCreating] = useState(false)
-  const [copied, setCopied] = useState('')
-  const [error, setError] = useState('')
-  const [form, setForm] = useState({ note: '', maxUses: 1, expiresDays: 30 })
-
-  useEffect(() => {
-    let ignore = false
-    api.get('/auth/invites')
-      .then(data => { if (!ignore) setInvites(data) })
-      .catch(err => { if (!ignore) setError(err.message) })
-      .finally(() => { if (!ignore) setLoading(false) })
-    return () => { ignore = true }
-  }, [])
-
-  async function createInvite(e) {
-    e.preventDefault()
-    setError('')
-    setCreating(true)
-    try {
-      const invite = await api.post('/auth/invites', {
-        note: form.note.trim() || undefined,
-        maxUses: Number(form.maxUses) || 1,
-        expiresDays: Number(form.expiresDays) || undefined,
-      })
-      setInvites(prev => [invite, ...prev])
-      setForm({ note: '', maxUses: 1, expiresDays: 30 })
-      copyInvite(invite.code)
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setCreating(false)
-    }
-  }
-
-  function copyInvite(code) {
-    const signupUrl = `${window.location.origin}/?view=register`
-    const text = `Código de convite: ${code}\nCriar perfil: ${signupUrl}`
-    navigator.clipboard?.writeText(text).then(() => {
-      setCopied(code)
-      setTimeout(() => setCopied(''), 2200)
-    }).catch(() => {})
-  }
-
-  async function revokeInvite(code) {
-    setError('')
-    try {
-      await api.delete(`/auth/invites/${code}`)
-      setInvites(prev => prev.map(inv => inv.code === code ? { ...inv, revokedAt: new Date().toISOString(), valid: false } : inv))
-    } catch (err) {
-      setError(err.message)
-    }
-  }
-
-  return (
-    <div id="convites" style={{ marginTop: 28 }}>
-      <SectionLabel>Convites</SectionLabel>
-
-      <div style={{ padding: '10px 20px 0' }}>
-        <form
-          onSubmit={createInvite}
-          style={{
-            border: '1px solid var(--line)',
-            background: 'var(--surface-2)',
-            borderRadius: 14,
-            padding: 14,
-          }}
-        >
-          <div style={{ fontFamily: 'var(--serif)', fontSize: 16, color: 'var(--ink)', marginBottom: 4 }}>
-            Gerar senha para criar perfil
-          </div>
-          <p style={{ margin: '0 0 14px', fontFamily: 'var(--sans)', fontSize: 12.5, lineHeight: 1.5, color: 'var(--ink-3)' }}>
-            Crie um código e envie para a pessoa usar na tela de Criar perfil.
-          </p>
-
-          <input
-            value={form.note}
-            onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
-            placeholder="Nome ou observação"
-            style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink)', marginBottom: 10 }}
-          />
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
-            <label style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--ink-3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              Usos
-              <input
-                type="number"
-                min="1"
-                max="20"
-                value={form.maxUses}
-                onChange={e => setForm(f => ({ ...f, maxUses: e.target.value }))}
-                style={{ display: 'block', width: '100%', boxSizing: 'border-box', marginTop: 5, background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 10, padding: '9px 10px', fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink)' }}
-              />
-            </label>
-            <label style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--ink-3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              Dias
-              <input
-                type="number"
-                min="1"
-                max="365"
-                value={form.expiresDays}
-                onChange={e => setForm(f => ({ ...f, expiresDays: e.target.value }))}
-                style={{ display: 'block', width: '100%', boxSizing: 'border-box', marginTop: 5, background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 10, padding: '9px 10px', fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink)' }}
-              />
-            </label>
-          </div>
-
-          {error && (
-            <div style={{ marginBottom: 10, fontFamily: 'var(--sans)', fontSize: 12.5, color: '#f87171' }}>
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={creating}
-            style={{ width: '100%', padding: 12, borderRadius: 11, border: 'none', background: 'var(--accent)', color: '#fff', fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 600, cursor: creating ? 'default' : 'pointer', opacity: creating ? 0.65 : 1 }}
-          >
-            {creating ? 'Gerando...' : 'Gerar convite'}
-          </button>
-        </form>
-      </div>
-
-      <div style={{ padding: '12px 20px 0', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {loading ? (
-          <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 14, color: 'var(--ink-3)' }}>Carregando convites...</div>
-        ) : invites.length === 0 ? (
-          <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 14, color: 'var(--ink-3)' }}>Nenhum convite criado ainda.</div>
-        ) : (
-          invites.map(invite => {
-            const status = inviteStatus(invite)
-            return (
-              <div
-                key={invite.id}
-                style={{ border: '1px solid var(--line)', background: 'rgba(242,237,230,0.015)', borderRadius: 13, padding: 12, display: 'grid', gap: 10 }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--ink)', letterSpacing: '0.04em', wordBreak: 'break-all' }}>{invite.code}</div>
-                    <div style={{ fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>
-                      {invite.note || 'Sem observação'} · {invite.usedCount}/{invite.maxUses} usos · {fmtInviteDate(invite.expiresAt)}
-                    </div>
-                  </div>
-                  <span style={{ flexShrink: 0, fontFamily: 'var(--mono)', fontSize: 9, color: status.color, border: `1px solid ${status.color}55`, borderRadius: 999, padding: '4px 7px' }}>
-                    {status.label}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    type="button"
-                    onClick={() => copyInvite(invite.code)}
-                    style={{ flex: 1, padding: '9px 10px', borderRadius: 10, border: '1px solid var(--line-strong)', background: copied === invite.code ? 'var(--accent-soft)' : 'transparent', color: copied === invite.code ? 'var(--accent)' : 'var(--ink-2)', fontFamily: 'var(--sans)', fontSize: 12.5, cursor: 'pointer' }}
-                  >
-                    {copied === invite.code ? 'Copiado' : 'Copiar código e link'}
-                  </button>
-                  {invite.valid && (
-                    <button
-                      type="button"
-                      onClick={() => revokeInvite(invite.code)}
-                      style={{ padding: '9px 11px', borderRadius: 10, border: '1px solid rgba(248,113,113,0.35)', background: 'transparent', color: '#f87171', fontFamily: 'var(--sans)', fontSize: 12.5, cursor: 'pointer' }}
-                    >
-                      Revogar
-                    </button>
-                  )}
-                </div>
-              </div>
-            )
-          })
-        )}
-      </div>
-    </div>
-  )
-}
-
 export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }) {
   const navigate = useNavigate()
   const { collections } = useCollections()
@@ -334,7 +147,6 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
   const [showNewProject, setShowNewProject] = useState(false)
   const [newProject, setNewProject] = useState({ emoji: '🌱', title: '', description: '', status: 'ativo', githubUrl: '', websiteUrl: '', tags: '', startedAt: '', completedAt: '' })
   const [creating, setCreating] = useState(false)
-  const canManageInvites = profile.handle?.toLowerCase() === '@mayrabalboni'
 
   useEffect(() => {
     api.get('/projects').then(setProjects).catch(() => {})
@@ -449,14 +261,10 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
             { to: '/messages',    emoji: '💬', label: 'Mensagens' },
             { to: '/capsules',    emoji: '📦', label: 'Cápsulas' },
             { to: '/settings',    emoji: '⚙️', label: 'Ajustes' },
-            ...(canManageInvites ? [{ to: '#convites', emoji: '🔑', label: 'Convites' }] : []),
           ].map(({ to, emoji, label }) => (
             <button
               key={to}
-              onClick={() => {
-                if (to.startsWith('#')) document.querySelector(to)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                else navigate(to)
-              }}
+              onClick={() => navigate(to)}
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
                 padding: '12px 8px', borderRadius: 13,
@@ -507,8 +315,6 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
           </div>
         </div>
       )}
-
-      {canManageInvites && <InviteManager />}
 
       {/* Projects */}
       {(projects.length > 0 || true) && (
