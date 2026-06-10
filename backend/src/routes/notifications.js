@@ -8,29 +8,39 @@ router.use(requireAuth)
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT n.*, actor.name AS actor_name, actor.handle AS actor_handle, actor.avatar AS actor_avatar
+      `SELECT n.*,
+              actor.name AS actor_name, actor.handle AS actor_handle, actor.avatar AS actor_avatar,
+              p.article_title AS post_article_title,
+              LEFT(p.content, 120) AS post_snippet
        FROM notifications n
        LEFT JOIN profiles actor ON actor.id = n.actor_id
+       LEFT JOIN posts p ON p.id = n.post_id
        WHERE n.profile_id = $1
        ORDER BY n.created_at DESC
        LIMIT 50`,
       [req.user.profileId]
     )
-    res.json(result.rows.map(row => ({
-      id: row.id,
-      type: row.type,
-      message: row.message,
-      postId: row.post_id,
-      commentId: row.comment_id,
-      readAt: row.read_at,
-      createdAt: row.created_at,
-      actor: row.actor_id ? {
-        id: row.actor_id,
-        name: row.actor_name,
-        handle: row.actor_handle,
-        avatar: row.actor_avatar,
-      } : null,
-    })))
+    res.json(result.rows.map(row => {
+      const postTitle = row.post_article_title || null
+      const quote = row.post_snippet || null
+      return {
+        id: row.id,
+        type: row.type,
+        message: row.message,
+        postId: row.post_id,
+        commentId: row.comment_id,
+        readAt: row.read_at,
+        createdAt: row.created_at,
+        postTitle,
+        quote,
+        actor: row.actor_id ? {
+          id: row.actor_id,
+          name: row.actor_name,
+          handle: row.actor_handle,
+          avatar: row.actor_avatar,
+        } : null,
+      }
+    }))
   } catch (err) {
     console.error('GET /notifications error:', err)
     res.status(500).json({ error: 'Erro interno do servidor.' })

@@ -45,7 +45,7 @@ const TYPE_ICON = {
   mention: 'tag',
 }
 
-function NoticeRow({ item, onFollowBack }) {
+function NoticeRow({ item, onFollowBack, onRead }) {
   const navigate = useNavigate()
   const isMemory = item.type === 'memory'
   const unread = !item.readAt
@@ -55,6 +55,7 @@ function NoticeRow({ item, onFollowBack }) {
   const iconName = TYPE_ICON[item.type]
 
   function open() {
+    if (unread) onRead?.(item.id)
     if (isMemory) navigate('/memories')
     else if (item.type === 'comment' && item.postId) navigate(`/posts/${item.postId}?comment=${item.commentId ?? ''}`)
     else if (item.type === 'reply' && item.postId) navigate(`/posts/${item.postId}?comment=${item.commentId ?? ''}`)
@@ -155,6 +156,11 @@ export default function NotificationsPage() {
     api.get('/notifications').then(setItems).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
+  async function markRead(id) {
+    await api.patch(`/notifications/${id}/read`, {}).catch(() => {})
+    setItems(cur => cur.map(i => i.id === id ? { ...i, readAt: i.readAt || new Date().toISOString() } : i))
+  }
+
   async function markAllRead() {
     await api.post('/notifications/read-all', {}).catch(() => {})
     setItems(cur => cur.map(i => ({ ...i, readAt: i.readAt || new Date().toISOString() })))
@@ -217,7 +223,7 @@ export default function NotificationsPage() {
                 </div>
                 <div style={{ borderTop: '1px solid var(--line)' }}>
                   {groupItems.map(item => (
-                    <NoticeRow key={item.id} item={item} onFollowBack={followBack} />
+                    <NoticeRow key={item.id} item={item} onFollowBack={followBack} onRead={markRead} />
                   ))}
                 </div>
               </div>
