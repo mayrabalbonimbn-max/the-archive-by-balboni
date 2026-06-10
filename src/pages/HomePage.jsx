@@ -428,7 +428,7 @@ function GraphPreviewSection({ graphData }) {
 
   const { nodes, links } = graphData
   const postCount = nodes.filter(n => n.type === 'post' || n.type === 'article').length
-  const hasEnough = postCount >= 3 && links.length >= 2
+  const hasEnough = postCount >= 1
 
   // Connection count per node
   const connCount = new Map()
@@ -507,9 +507,13 @@ function GraphPreviewSection({ graphData }) {
           Suas ideias,<br /><span style={{ fontStyle: 'italic' }}>conectadas.</span>
         </p>
         <p style={{ fontFamily: 'var(--mono)', fontSize: 11, color: '#6b6560', margin: 0, letterSpacing: '0.04em' }}>
-          {postCount} registros · {links.length} conexões
+          {postCount} registros
+          {links.length > 0 && <> · {links.length} conexões</>}
           {topTagLabels.length > 0 && (
             <> · <span style={{ color: '#E86CB4' }}>{topTagLabels.join('  ')}</span></>
+          )}
+          {links.length === 0 && (
+            <span style={{ color: '#4a4540' }}> · use #tags para criar conexões</span>
           )}
         </p>
       </div>
