@@ -369,12 +369,20 @@ router.post('/', async (req, res) => {
       if (parent.rows.length > 0) validParentMemoryPostId = parentMemoryPostId
     }
 
-    // Validate unlockAt for time capsules
-    const isCapsule = isTimeCapsule === true && unlockAt
+    // Validate unlockAt for time capsules — date must be valid and in the future
+    let isCapsule = false
     let cleanUnlockAt = null
-    if (isCapsule) {
+    if (isTimeCapsule === true && unlockAt) {
       const d = new Date(unlockAt)
-      if (!isNaN(d.getTime()) && d > new Date()) cleanUnlockAt = d.toISOString()
+      if (!isNaN(d.getTime()) && d > new Date()) {
+        isCapsule = true
+        cleanUnlockAt = d.toISOString()
+      } else {
+        // Date is invalid or in the past — reject to avoid capsule with null unlock_at
+        await client.query('ROLLBACK')
+        client.release()
+        return res.status(400).json({ error: 'A data de abertura da cápsula deve ser no futuro.' })
+      }
     }
 
     const VALID_CATEGORIAS = new Set(['pensamento','reflexão','ideia','aprendizado','decisão','observação','memória','citação','meta'])

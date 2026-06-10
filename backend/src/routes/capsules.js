@@ -84,18 +84,31 @@ router.get('/:id', async (req, res) => {
 // PATCH /api/capsules/:id/open  — the ceremony: reveals content and marks as opened
 router.patch('/:id/open', async (req, res) => {
   try {
+    // unlock_at IS NULL means the capsule was saved without a date (treated as immediately ready)
     const { rows } = await pool.query(
       `UPDATE posts
        SET opened_at = NOW()
        WHERE id = $1
          AND profile_id = $2
          AND is_time_capsule = true
-         AND unlock_at <= NOW()
+         AND (unlock_at IS NULL OR unlock_at <= NOW())
          AND opened_at IS NULL
        RETURNING id, content, article_title, type, unlock_at, created_at, opened_at`,
       [req.params.id, req.user.profileId]
     )
     if (!rows.length) {
+      // Diagnose why opening failed
+      const check = await pool.query(
+        `SELECT id, unlock_at, opened_at, is_time_capsule FROM posts WHERE id = $1 AND profile_id = $2`,
+        [req.params.id, req.user.profileId]
+      )
+      const r = check.rows[0]
+      if (!r) return res.status(404).json({ error: 'Cápsula não encontrada.' })
+      if (!r.is_time_capsule) return res.status(400).json({ error: 'Este registro não é uma cápsula.' })
+      if (r.opened_at) return res.status(400).json({ error: 'Esta cápsula já foi aberta.' })
+      if (r.unlock_at && new Date(r.unlock_at) > new Date()) {
+        return res.status(400).json({ error: 'Esta cápsula ainda não está pronta para abertura.' })
+      }
       return res.status(400).json({ error: 'Cápsula não pode ser aberta agora.' })
     }
     const r = rows[0]

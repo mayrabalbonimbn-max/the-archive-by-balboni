@@ -150,7 +150,7 @@ function LockedView({ capsule }) {
 
 // ── READY view ────────────────────────────────────────────────────────────────
 
-function ReadyView({ capsule, onOpen, opening }) {
+function ReadyView({ capsule, onOpen, opening, openError }) {
   const kept = formatDuration(capsule.createdAt, new Date().toISOString())
   return (
     <div style={{ textAlign: 'center', animation: 'capsuleContentReveal 0.6s ease-out both' }}>
@@ -203,6 +203,16 @@ function ReadyView({ capsule, onOpen, opening }) {
       <p style={{ fontFamily: 'var(--sans)', fontSize: 12, color: 'var(--ink-3)', marginTop: 14 }}>
         Esta ação é permanente e não pode ser desfeita.
       </p>
+
+      {openError && (
+        <p style={{
+          fontFamily: 'var(--mono)', fontSize: 11, color: '#f87171',
+          marginTop: 16, padding: '10px 14px', borderRadius: 8,
+          background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)',
+        }}>
+          {openError}
+        </p>
+      )}
     </div>
   )
 }
@@ -347,9 +357,10 @@ export default function CapsulePage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [capsule, setCapsule] = useState(null)
-  const [phase, setPhase] = useState('loading') // loading | locked | ready | opening | opened
+  const [phase, setPhase] = useState('loading') // loading | locked | ready | opening | opened | error
   const [fresh, setFresh] = useState(false) // true immediately after opening ceremony
   const [attachments, setAttachments] = useState([])
+  const [openError, setOpenError] = useState(null)
 
   useEffect(() => {
     api.get(`/capsules/${id}`)
@@ -365,6 +376,7 @@ export default function CapsulePage() {
 
   const handleOpen = useCallback(async () => {
     setPhase('opening')
+    setOpenError(null)
     try {
       const opened = await api.patch(`/capsules/${id}/open`)
       setCapsule(prev => ({ ...prev, ...opened }))
@@ -376,7 +388,9 @@ export default function CapsulePage() {
       setPhase('opened')
       // Remove fresh flag after flash animation
       setTimeout(() => setFresh(false), 2000)
-    } catch {
+    } catch (err) {
+      console.error('[CapsulePage] open failed:', err?.message, err?.status)
+      setOpenError(err?.message || 'Não foi possível abrir a cápsula.')
       setPhase('ready')
     }
   }, [id])
@@ -432,7 +446,7 @@ export default function CapsulePage() {
         {phase === 'locked' && capsule && <LockedView capsule={capsule} />}
 
         {(phase === 'ready' || phase === 'opening') && capsule && (
-          <ReadyView capsule={capsule} onOpen={handleOpen} opening={phase === 'opening'} />
+          <ReadyView capsule={capsule} onOpen={handleOpen} opening={phase === 'opening'} openError={openError} />
         )}
 
         {phase === 'opened' && capsule && <OpenedView capsule={capsule} fresh={fresh} attachments={attachments} />}
