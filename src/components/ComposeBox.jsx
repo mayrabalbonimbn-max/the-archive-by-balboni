@@ -113,6 +113,16 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
   const [mdPreview, setMdPreview] = useState(false)
   const [capsuleOption, setCapsuleOption] = useState('now') // 'now' | '1m' | '6m' | '1y' | 'custom'
   const [capsuleCustomDate, setCapsuleCustomDate] = useState('')
+  const [capsuleMediaType, setCapsuleMediaType] = useState('text') // 'text' | 'audio' | 'video'
+  const [audioState, setAudioState] = useState('idle') // 'idle' | 'recording' | 'recorded'
+  const [audioBlob, setAudioBlob] = useState(null)
+  const [audioTimer, setAudioTimer] = useState(0)
+  const [audioPreviewUrl, setAudioPreviewUrl] = useState(null)
+  const [videoFile, setVideoFile] = useState(null)
+  const mediaRecorderRef = useRef(null)
+  const audioTimerIntervalRef = useRef(null)
+  const audioChunksRef = useRef([])
+  const videoInputRef = useRef(null)
   const [projectId, setProjectId] = useState('')
   const [projects, setProjects] = useState([])
   const [tags, setTags] = useState([])
@@ -182,7 +192,8 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
   const detectedUrl = extractFirstUrl(body)
   const { preview: linkPreview } = useLinkPreview(!isFile && detectedUrl ? detectedUrl : null)
 
-  const hasContent = title.trim() || body.trim() || attachments.length > 0 || code.trim()
+  const hasCapsuleMedia = (capsuleMediaType === 'audio' && audioBlob != null) || (capsuleMediaType === 'video' && videoFile != null)
+  const hasContent = title.trim() || body.trim() || attachments.length > 0 || code.trim() || hasCapsuleMedia
   const canPost = hasContent && !posting
 
   useEffect(() => { attachmentsRef.current = attachments }, [attachments])
@@ -245,6 +256,49 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
     })
   }
 
+  function formatAudioTimer(s) {
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+  }
+
+  async function startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : ''
+      audioChunksRef.current = []
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {})
+      mediaRecorderRef.current = recorder
+      recorder.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current.push(e.data) }
+      recorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType })
+        const url = URL.createObjectURL(blob)
+        setAudioBlob(blob)
+        setAudioPreviewUrl(url)
+        setAudioState('recorded')
+        stream.getTracks().forEach(t => t.stop())
+      }
+      recorder.start(100)
+      setAudioState('recording')
+      setAudioTimer(0)
+      audioTimerIntervalRef.current = setInterval(() => setAudioTimer(t => t + 1), 1000)
+    } catch {
+      setFileError('Não foi possível acessar o microfone.')
+    }
+  }
+
+  function stopRecording() {
+    clearInterval(audioTimerIntervalRef.current)
+    mediaRecorderRef.current?.stop()
+  }
+
+  function resetRecording() {
+    if (audioPreviewUrl) URL.revokeObjectURL(audioPreviewUrl)
+    setAudioBlob(null)
+    setAudioPreviewUrl(null)
+    setAudioState('idle')
+    setAudioTimer(0)
+  }
+
   function capsuleUnlockDate() {
     if (capsuleOption === 'now') return null
     if (capsuleOption === 'custom') {
@@ -265,6 +319,19 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
     setPosting(true)
     const unlockAt = capsuleUnlockDate()
     const isCapsule = capsuleOption !== 'now' && Boolean(unlockAt)
+
+    // Build attachments array — for audio/video capsules, prepend the media file
+    let allAttachments = [...attachments]
+    if (isCapsule) {
+      if (capsuleMediaType === 'audio' && audioBlob) {
+        const mt = audioBlob.type || 'audio/webm'
+        const ext = mt.includes('mp4') ? 'm4a' : mt.includes('ogg') ? 'ogg' : 'webm'
+        allAttachments = [{ file: new File([audioBlob], `capsula-audio.${ext}`, { type: mt }) }, ...allAttachments]
+      } else if (capsuleMediaType === 'video' && videoFile) {
+        allAttachments = [{ file: videoFile }, ...allAttachments]
+      }
+    }
+
     try {
       await onPost({
         content: body.trim(),
@@ -274,7 +341,7 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
         visibility: isCapsule ? 'private' : privacy,
         isPrivate: isCapsule ? true : privacy === 'private',
         collectionId: collectionId || undefined,
-        attachments,
+        attachments: allAttachments,
         codeBlock: isCode && code.trim() ? { language: codeLanguage, code } : null,
         tags,
         linkPreview: linkPreview || undefined,
@@ -747,6 +814,141 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
                   colorScheme: 'dark', outline: 'none',
                 }}
               />
+            )}
+
+            {/* Media type selector — only when a future date is chosen */}
+            {capsuleOption !== 'now' && (
+              <div style={{ marginTop: 20 }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.12em', color: 'var(--ink-3)', marginBottom: 10 }}>
+                  FORMATO DA CÁPSULA
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {[
+                    { id: 'text',  label: 'Texto',  icon: '✍' },
+                    { id: 'audio', label: 'Áudio',  icon: '🎙' },
+                    { id: 'video', label: 'Vídeo',  icon: '🎬' },
+                  ].map(t => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => { setCapsuleMediaType(t.id); resetRecording(); setVideoFile(null) }}
+                      style={{
+                        flex: 1, padding: '9px 4px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                        background: capsuleMediaType === t.id ? 'var(--accent)' : 'var(--surface-2)',
+                        color: capsuleMediaType === t.id ? '#fff' : 'var(--ink-3)',
+                        fontFamily: 'var(--sans)', fontSize: 12.5, fontWeight: 500,
+                        transition: 'background .15s, color .15s',
+                      }}
+                    >
+                      {t.icon} {t.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Audio recorder */}
+                {capsuleMediaType === 'audio' && (
+                  <div style={{ marginTop: 14 }}>
+                    {audioState === 'idle' && (
+                      <button
+                        type="button"
+                        onClick={startRecording}
+                        style={{
+                          width: '100%', padding: '14px 0', borderRadius: 12,
+                          border: '1px dashed rgba(232,108,180,0.4)', background: 'rgba(232,108,180,0.04)',
+                          cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--accent)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                        }}
+                      >
+                        🎙 Iniciar gravação
+                      </button>
+                    )}
+                    {audioState === 'recording' && (
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 12 }}>
+                          <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#e74c3c', animation: 'pulse 1s ease-in-out infinite' }} />
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: 22, color: 'var(--ink)', letterSpacing: '0.05em' }}>
+                            {formatAudioTimer(audioTimer)}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={stopRecording}
+                          style={{
+                            padding: '10px 28px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                            background: 'var(--accent)', color: '#fff', fontFamily: 'var(--sans)', fontSize: 13.5, fontWeight: 600,
+                          }}
+                        >
+                          ⏹ Parar
+                        </button>
+                        <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
+                      </div>
+                    )}
+                    {audioState === 'recorded' && audioPreviewUrl && (
+                      <div>
+                        <audio controls src={audioPreviewUrl} style={{ width: '100%', marginBottom: 10 }} />
+                        <button
+                          type="button"
+                          onClick={resetRecording}
+                          style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)', letterSpacing: '0.06em',
+                          }}
+                        >
+                          ↺ Gravar novamente
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Video picker */}
+                {capsuleMediaType === 'video' && (
+                  <div style={{ marginTop: 14 }}>
+                    {!videoFile ? (
+                      <button
+                        type="button"
+                        onClick={() => videoInputRef.current?.click()}
+                        style={{
+                          width: '100%', padding: '14px 0', borderRadius: 12,
+                          border: '1px dashed rgba(232,108,180,0.4)', background: 'rgba(232,108,180,0.04)',
+                          cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--accent)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                        }}
+                      >
+                        🎬 Selecionar vídeo
+                      </button>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, background: 'var(--surface-2)' }}>
+                        <span style={{ flex: 1, fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          🎬 {videoFile.name}
+                        </span>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)', flexShrink: 0 }}>
+                          {formatSize(videoFile.size)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setVideoFile(null)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-3)', padding: 4, fontSize: 12 }}
+                        >✕</button>
+                      </div>
+                    )}
+                    <input
+                      ref={videoInputRef}
+                      type="file"
+                      accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
+                      className="hidden"
+                      onChange={e => {
+                        const f = e.target.files?.[0]
+                        e.target.value = ''
+                        if (!f) return
+                        if (f.size > 200 * 1024 * 1024) { setFileError('Vídeo muito grande. Máximo 200 MB.'); return }
+                        setFileError('')
+                        setVideoFile(f)
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
             )}
 
             {capsuleOption !== 'now' && (() => {

@@ -2,6 +2,7 @@ const express = require('express')
 const multer = require('multer')
 const crypto = require('crypto')
 const fs = require('fs/promises')
+const fsSync = require('fs')
 const path = require('path')
 const pool = require('../db')
 const requireAuth = require('../middleware/auth')
@@ -16,7 +17,9 @@ try { exifr = require('exifr') } catch { exifr = null }
 const router = express.Router()
 const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, '..', '..', 'storage', 'uploads')
 const MAX_IMAGE_SIZE = 25 * 1024 * 1024
-const MAX_FILE_SIZE = 10 * 1024 * 1024
+const MAX_FILE_SIZE  = 10 * 1024 * 1024
+const MAX_AUDIO_SIZE = 50 * 1024 * 1024
+const MAX_VIDEO_SIZE = 200 * 1024 * 1024
 const MAX_ATTACHMENTS = 3
 
 const THUMB_WIDTH = 480
@@ -44,6 +47,17 @@ const allowed = {
   '.sh':       { mimeType: 'text/plain; charset=utf-8',       fileType: 'code' },
   '.bash':     { mimeType: 'text/plain; charset=utf-8',       fileType: 'code' },
   '.txt':      { mimeType: 'text/plain; charset=utf-8',       fileType: 'code' },
+  // Audio
+  '.mp3':      { mimeType: 'audio/mpeg',                      fileType: 'audio' },
+  '.m4a':      { mimeType: 'audio/mp4',                       fileType: 'audio' },
+  '.ogg':      { mimeType: 'audio/ogg',                       fileType: 'audio' },
+  '.wav':      { mimeType: 'audio/wav',                       fileType: 'audio' },
+  '.aac':      { mimeType: 'audio/aac',                       fileType: 'audio' },
+  // Video
+  '.mp4':      { mimeType: 'video/mp4',                       fileType: 'video' },
+  '.mov':      { mimeType: 'video/quicktime',                  fileType: 'video' },
+  // .webm is audio or video — determined by MIME type from browser (handled in fileFilter)
+  '.webm':     { mimeType: 'audio/webm',                      fileType: 'audio' },
 }
 
 function attachmentJson(row) {
@@ -73,6 +87,8 @@ async function removeUploadedFiles(files = []) {
 }
 
 async function hasValidContent(file) {
+  // Audio and video: trust multer's extension+MIME check, skip binary validation
+  if (file.fileType === 'audio' || file.fileType === 'video') return true
   const data = await fs.readFile(file.path)
   if (file.fileType === 'pdf') return data.subarray(0, 5).toString() === '%PDF-'
   if (file.fileType === 'python' || file.fileType === 'markdown' || file.fileType === 'code') return !data.includes(0)
@@ -165,10 +181,15 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: MAX_IMAGE_SIZE, files: MAX_ATTACHMENTS },
+  limits: { fileSize: MAX_VIDEO_SIZE, files: MAX_ATTACHMENTS },
   fileFilter(req, file, callback) {
     const extension = path.extname(file.originalname).toLowerCase()
-    const config = allowed[extension]
+    let config = allowed[extension]
+    // .webm can be audio or video — use browser-reported MIME to decide
+    if (extension === '.webm') {
+      const isAudio = file.mimetype.startsWith('audio/')
+      config = { mimeType: isAudio ? 'audio/webm' : 'video/webm', fileType: isAudio ? 'audio' : 'video' }
+    }
     if (!config) {
       return callback(new multer.MulterError('LIMIT_UNEXPECTED_FILE', file.fieldname))
     }
@@ -229,21 +250,21 @@ router.post('/posts/:id/attachments', requireAuth, ownedPost, (req, res) => {
     if (err) {
       await removeUploadedFiles(req.files)
       const message = err.code === 'LIMIT_FILE_SIZE'
-        ? 'Arquivo muito grande. Imagens: máx. 25 MB. PDFs e scripts: máx. 10 MB.'
+        ? 'Arquivo muito grande. Imagens: máx. 25 MB · Áudio: máx. 50 MB · Vídeo: máx. 200 MB · PDFs: máx. 10 MB.'
         : err.code === 'LIMIT_FILE_COUNT'
           ? 'Máximo de 3 anexos por post.'
-          : 'Tipo de arquivo inválido. Use PDF, imagens (JPG, PNG, WebP), Markdown (MD), Python (PY) ou código (JS, TS, HTML, CSS, JSON, SQL, SH, TXT).'
+          : 'Tipo de arquivo inválido. Use imagens, PDF, áudio (MP3, M4A, WAV, OGG, WebM), vídeo (MP4, MOV, WebM) ou código.'
       return res.status(400).json({ error: message })
     }
 
     const files = req.files || []
     if (files.length === 0) return res.status(400).json({ error: 'Selecione ao menos um arquivo.' })
 
-    const oversized = files.filter(f => f.fileType !== 'image' && f.size > MAX_FILE_SIZE)
-    if (oversized.length > 0) {
-      await removeUploadedFiles(files)
-      return res.status(400).json({ error: 'PDFs e scripts: máximo 10 MB cada.' })
-    }
+    // Per-type size validation (multer limit is set to video max)
+    const oversizedAudio = files.filter(f => f.fileType === 'audio' && f.size > MAX_AUDIO_SIZE)
+    const oversizedOther = files.filter(f => f.fileType !== 'image' && f.fileType !== 'audio' && f.fileType !== 'video' && f.size > MAX_FILE_SIZE)
+    if (oversizedAudio.length > 0) { await removeUploadedFiles(files); return res.status(400).json({ error: 'Áudios: máximo 50 MB cada.' }) }
+    if (oversizedOther.length > 0) { await removeUploadedFiles(files); return res.status(400).json({ error: 'PDFs e scripts: máximo 10 MB cada.' }) }
 
     let client
     try {
@@ -322,28 +343,66 @@ router.get('/attachments/:id/download', requireAuth, visibleAttachment, (req, re
   })
 })
 
-// View: serve optimized WebP if available, else original
-router.get('/attachments/:id/view', requireAuth, visibleAttachment, (req, res) => {
-  const a = req.attachment
-  const filePath = a.optimized_path
-    ? path.join(uploadDir, a.optimized_path)
-    : path.join(uploadDir, a.storage_path)
-  const mimeType = a.optimized_path ? (a.optimized_mime || 'image/webp') : a.mime_type
-  res.type(mimeType)
-  res.setHeader('Content-Disposition', `inline; filename="${safeOriginalName(a.original_name)}"`)
-  res.sendFile(filePath, err => {
-    if (!err) return
-    // Fall back to original if optimized missing on disk
-    if (a.optimized_path) {
-      res.type(a.mime_type)
-      res.sendFile(path.join(uploadDir, a.storage_path), e => {
-        if (e && !res.headersSent) res.status(404).json({ error: 'Arquivo não encontrado no storage.' })
-      })
-    } else if (!res.headersSent) {
-      res.status(404).json({ error: 'Arquivo não encontrado no storage.' })
+// View: serve file — audio/video use range requests, images use sendFile
+// ?token= query param allowed so <audio>/<video> src can authenticate without JS fetch
+router.get('/attachments/:id/view',
+  (req, res, next) => {
+    if (req.query.token && !req.headers.authorization) {
+      req.headers.authorization = `Bearer ${req.query.token}`
     }
-  })
-})
+    next()
+  },
+  requireAuth, visibleAttachment, async (req, res) => {
+    const a = req.attachment
+
+    if (a.file_type === 'audio' || a.file_type === 'video') {
+      const filePath = path.join(uploadDir, a.storage_path)
+      let stat
+      try { stat = await fs.stat(filePath) } catch {
+        return res.status(404).json({ error: 'Arquivo não encontrado no storage.' })
+      }
+      const total = stat.size
+      const range = req.headers.range
+
+      res.setHeader('Accept-Ranges', 'bytes')
+      res.setHeader('Content-Type', a.mime_type)
+      res.setHeader('Content-Disposition', `inline; filename="${safeOriginalName(a.original_name)}"`)
+
+      if (range) {
+        const [startStr, endStr] = range.replace(/bytes=/, '').split('-')
+        const start = parseInt(startStr, 10)
+        const end = endStr ? parseInt(endStr, 10) : Math.min(start + 1024 * 1024 - 1, total - 1)
+        res.writeHead(206, {
+          'Content-Range': `bytes ${start}-${end}/${total}`,
+          'Content-Length': end - start + 1,
+        })
+        fsSync.createReadStream(filePath, { start, end }).pipe(res)
+      } else {
+        res.setHeader('Content-Length', total)
+        fsSync.createReadStream(filePath).pipe(res)
+      }
+      return
+    }
+
+    const filePath = a.optimized_path
+      ? path.join(uploadDir, a.optimized_path)
+      : path.join(uploadDir, a.storage_path)
+    const mimeType = a.optimized_path ? (a.optimized_mime || 'image/webp') : a.mime_type
+    res.type(mimeType)
+    res.setHeader('Content-Disposition', `inline; filename="${safeOriginalName(a.original_name)}"`)
+    res.sendFile(filePath, err => {
+      if (!err) return
+      if (a.optimized_path) {
+        res.type(a.mime_type)
+        res.sendFile(path.join(uploadDir, a.storage_path), e => {
+          if (e && !res.headersSent) res.status(404).json({ error: 'Arquivo não encontrado no storage.' })
+        })
+      } else if (!res.headersSent) {
+        res.status(404).json({ error: 'Arquivo não encontrado no storage.' })
+      }
+    })
+  }
+)
 
 // Thumbnail: serve small WebP thumbnail if available, else view endpoint redirect
 router.get('/attachments/:id/thumbnail', requireAuth, visibleAttachment, (req, res) => {

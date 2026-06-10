@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../utils/api'
 
+const API_BASE = import.meta.env.VITE_API_URL || '/api'
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatDatePT(iso) {
@@ -205,11 +207,50 @@ function ReadyView({ capsule, onOpen, opening }) {
   )
 }
 
+// ── Media players ─────────────────────────────────────────────────────────────
+
+function AudioPlayer({ attachment }) {
+  const token = localStorage.getItem('ms_token')
+  const src = `${API_BASE}/attachments/${attachment.id}/view?token=${encodeURIComponent(token)}`
+  return (
+    <div style={{
+      padding: '20px', borderRadius: 16, background: 'rgba(232,108,180,0.06)',
+      border: '1px solid rgba(232,108,180,0.15)', marginBottom: 28,
+      animation: 'capsuleContentReveal 0.7s ease-out 0.2s both',
+    }}>
+      <p style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-3)', margin: '0 0 12px', textAlign: 'center' }}>
+        🎙 Memória de voz
+      </p>
+      <audio controls src={src} style={{ width: '100%', colorScheme: 'dark' }} />
+    </div>
+  )
+}
+
+function VideoPlayer({ attachment }) {
+  const token = localStorage.getItem('ms_token')
+  const src = `${API_BASE}/attachments/${attachment.id}/view?token=${encodeURIComponent(token)}`
+  return (
+    <div style={{ marginBottom: 28, animation: 'capsuleContentReveal 0.7s ease-out 0.2s both' }}>
+      <p style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-3)', margin: '0 0 12px', textAlign: 'center' }}>
+        🎬 Memória em vídeo
+      </p>
+      <video
+        controls
+        src={src}
+        style={{ width: '100%', maxWidth: 480, borderRadius: 12, display: 'block', margin: '0 auto', background: '#000' }}
+      />
+    </div>
+  )
+}
+
 // ── OPENED view ───────────────────────────────────────────────────────────────
 
-function OpenedView({ capsule, fresh }) {
+function OpenedView({ capsule, fresh, attachments }) {
   const kept = formatDuration(capsule.createdAt, capsule.openedAt || new Date().toISOString())
   const paragraphs = (capsule.content || '').split(/\n{2,}/).filter(Boolean)
+  const audioAttachment = attachments.find(a => a.fileType === 'audio')
+  const videoAttachment = attachments.find(a => a.fileType === 'video')
+  const hasMedia = Boolean(audioAttachment || videoAttachment)
 
   return (
     <div>
@@ -244,6 +285,10 @@ function OpenedView({ capsule, fresh }) {
 
       <Divider />
 
+      {/* Audio or video player */}
+      {audioAttachment && <AudioPlayer attachment={audioAttachment} />}
+      {videoAttachment && <VideoPlayer attachment={videoAttachment} />}
+
       {/* Title */}
       {capsule.articleTitle && (
         <h1 style={{
@@ -256,31 +301,33 @@ function OpenedView({ capsule, fresh }) {
       )}
 
       {/* Content paragraphs — staggered reveal */}
-      <div style={{ textAlign: 'left' }}>
-        {paragraphs.map((para, idx) => (
-          <p
-            key={idx}
-            style={{
-              fontFamily: 'var(--serif)', fontSize: 18, lineHeight: 1.85,
-              color: 'var(--ink)', margin: '0 0 20px',
-              animation: 'capsuleContentReveal 0.7s ease-out both',
-              animationDelay: `${0.3 + idx * 0.25}s`,
-            }}
-          >
-            {para}
-          </p>
-        ))}
-        {paragraphs.length === 0 && capsule.content && (
-          <p style={{
-            fontFamily: 'var(--serif)', fontSize: 18, lineHeight: 1.85, color: 'var(--ink)', margin: 0,
-            animation: 'capsuleContentReveal 0.7s ease-out 0.3s both',
-          }}>
-            {capsule.content}
-          </p>
-        )}
-      </div>
+      {(paragraphs.length > 0 || capsule.content) && (
+        <div style={{ textAlign: 'left' }}>
+          {paragraphs.map((para, idx) => (
+            <p
+              key={idx}
+              style={{
+                fontFamily: 'var(--serif)', fontSize: 18, lineHeight: 1.85,
+                color: 'var(--ink)', margin: '0 0 20px',
+                animation: 'capsuleContentReveal 0.7s ease-out both',
+                animationDelay: `${0.3 + idx * 0.25}s`,
+              }}
+            >
+              {para}
+            </p>
+          ))}
+          {paragraphs.length === 0 && capsule.content && (
+            <p style={{
+              fontFamily: 'var(--serif)', fontSize: 18, lineHeight: 1.85, color: 'var(--ink)', margin: 0,
+              animation: 'capsuleContentReveal 0.7s ease-out 0.3s both',
+            }}>
+              {capsule.content}
+            </p>
+          )}
+        </div>
+      )}
 
-      <Divider />
+      {(paragraphs.length > 0 || capsule.content || hasMedia) && <Divider />}
 
       <p style={{
         fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 14, color: 'var(--ink-3)',
@@ -288,7 +335,7 @@ function OpenedView({ capsule, fresh }) {
         animation: `capsuleContentReveal 0.7s ease-out ${0.3 + Math.max(paragraphs.length, 1) * 0.25 + 0.3}s both`,
       }}>
         Uma mensagem da Mayra do passado,<br />
-        escrita para este exato momento.
+        guardada para este exato momento.
       </p>
     </div>
   )
@@ -302,12 +349,16 @@ export default function CapsulePage() {
   const [capsule, setCapsule] = useState(null)
   const [phase, setPhase] = useState('loading') // loading | locked | ready | opening | opened
   const [fresh, setFresh] = useState(false) // true immediately after opening ceremony
+  const [attachments, setAttachments] = useState([])
 
   useEffect(() => {
     api.get(`/capsules/${id}`)
       .then(data => {
         setCapsule(data)
         setPhase(data.status)
+        if (data.status === 'opened') {
+          api.get(`/posts/${data.id}/attachments`).then(setAttachments).catch(() => {})
+        }
       })
       .catch(() => navigate('/capsules', { replace: true }))
   }, [id, navigate])
@@ -319,6 +370,8 @@ export default function CapsulePage() {
       setCapsule(prev => ({ ...prev, ...opened }))
       // Give the seal-break animation time to finish (1s) before revealing
       await new Promise(r => setTimeout(r, 1100))
+      // Fetch attachments now that it's opened
+      api.get(`/posts/${id}/attachments`).then(setAttachments).catch(() => {})
       setFresh(true)
       setPhase('opened')
       // Remove fresh flag after flash animation
@@ -382,7 +435,7 @@ export default function CapsulePage() {
           <ReadyView capsule={capsule} onOpen={handleOpen} opening={phase === 'opening'} />
         )}
 
-        {phase === 'opened' && capsule && <OpenedView capsule={capsule} fresh={fresh} />}
+        {phase === 'opened' && capsule && <OpenedView capsule={capsule} fresh={fresh} attachments={attachments} />}
       </div>
     </div>
   )
