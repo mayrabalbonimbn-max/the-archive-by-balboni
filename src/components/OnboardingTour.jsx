@@ -61,6 +61,21 @@ function IlloCapsules() {
   )
 }
 
+function IlloArchive() {
+  return (
+    <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+      <rect x="10" y="12" width="26" height="18" rx="2" stroke="var(--accent)" strokeWidth="1.5" fill="var(--accent)" fillOpacity="0.06" />
+      <rect x="44" y="12" width="26" height="18" rx="2" stroke="var(--accent)" strokeWidth="1" opacity="0.55" />
+      <rect x="10" y="36" width="26" height="18" rx="2" stroke="var(--accent)" strokeWidth="1" opacity="0.55" />
+      <rect x="44" y="36" width="26" height="18" rx="2" stroke="var(--accent)" strokeWidth="1" opacity="0.45" />
+      <rect x="10" y="60" width="26" height="10" rx="2" stroke="var(--accent)" strokeWidth="1" opacity="0.3" />
+      <rect x="44" y="60" width="26" height="10" rx="2" stroke="var(--accent)" strokeWidth="1" opacity="0.25" />
+      <line x1="13" y1="18" x2="32" y2="18" stroke="var(--accent)" strokeWidth="1" opacity="0.5" strokeLinecap="round" />
+      <line x1="13" y1="22" x2="26" y2="22" stroke="var(--accent)" strokeWidth="1" opacity="0.3" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function IlloEvolution() {
   return (
     <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
@@ -121,46 +136,54 @@ const CHAPTERS = [
     Illo: IlloCompose,
     title: 'Comece registrando.',
     lines: [
-      'Uma nota. Uma fotografia.',
-      'Um pensamento. Um trecho de código.',
-      'Tudo começa com um registro.',
+      'Uma nota. Uma fotografia. Um trecho de código.',
+      'Cada entrada é privada por padrão — você decide se compartilha.',
     ],
   },
   {
     id: 'projects',
     Illo: IlloProjects,
     title: 'Projetos dão contexto.',
-    lines: ['Projetos agrupam registros ao longo do tempo.'],
+    lines: [
+      'Agrupe registros sob um projeto.',
+      'Acompanhe o progresso ao longo do tempo.',
+    ],
     examples: ['Python AI Agent', 'The Archive', 'Balboni Lab'],
   },
   {
-    id: 'reflections',
-    Illo: IlloReflections,
-    title: 'Memórias podem amadurecer.',
+    id: 'archive',
+    Illo: IlloArchive,
+    title: 'O Arquivo é o seu índice.',
     lines: [
-      'Você pode revisitar registros antigos.',
-      'Refletir sobre eles.',
-      'Adicionar novas camadas de significado.',
+      'Tudo que você guardar tem um lugar.',
+      'Navegue por seção — não por feed.',
     ],
+    tags: ['Memórias', 'Calendário', 'Fotografias', 'Documentos', 'Coleções', 'Cápsulas', 'Projetos', 'Momentos'],
   },
   {
     id: 'capsules',
     Illo: IlloCapsules,
     title: 'Cápsulas guardam o futuro.',
-    lines: ['Escreva algo hoje.', 'Abra daqui a meses ou anos.'],
+    lines: [
+      'Escreva uma mensagem para daqui a meses ou anos.',
+      'Quando o momento chegar, uma cerimônia especial a revela.',
+    ],
   },
   {
     id: 'evolution',
     Illo: IlloEvolution,
     title: 'Sua evolução fica registrada.',
     lines: ['Tudo nasce automaticamente dos registros que você cria.'],
-    tags: ['Dashboard', 'Graph', 'Conquistas', 'Crescimento', 'História'],
+    tags: ['Trajetória', 'Grafo', 'Conquistas', 'Retrospectiva', 'Dashboard'],
   },
   {
     id: 'story',
     Illo: IlloStory,
     title: 'Seu arquivo conta sua história.',
-    lines: ['Com o tempo, o Archive constrói uma narrativa da sua vida criativa.'],
+    lines: [
+      'Com o tempo, o Archive constrói uma narrativa da sua vida criativa.',
+      'Você é o único leitor que importa.',
+    ],
   },
   {
     id: 'begin',
