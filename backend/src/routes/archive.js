@@ -299,6 +299,24 @@ router.get('/stats', async (req, res) => {
        WHERE p.profile_id = $1 GROUP BY c.id ORDER BY count DESC LIMIT 1`,
       [req.user.profileId]
     )
+    const topCategory = await pool.query(
+      `SELECT categoria AS name, COUNT(*)::int AS count
+       FROM posts
+       WHERE profile_id = $1 AND categoria IS NOT NULL
+       GROUP BY categoria
+       ORDER BY count DESC, categoria ASC
+       LIMIT 1`,
+      [req.user.profileId]
+    )
+    const topMonth = await pool.query(
+      `SELECT date_trunc('month', created_at) AS month, COUNT(*)::int AS count
+       FROM posts
+       WHERE profile_id = $1
+       GROUP BY month
+       ORDER BY count DESC, month DESC
+       LIMIT 1`,
+      [req.user.profileId]
+    )
     const all = await pool.query('SELECT content, code_content FROM posts WHERE profile_id = $1', [req.user.profileId])
     const tagCounts = new Map()
     all.rows.forEach(row => {
@@ -308,6 +326,8 @@ router.get('/stats', async (req, res) => {
       ...result.rows[0],
       ...files.rows[0],
       topCollection: topCollection.rows[0] || null,
+      topCategory: topCategory.rows[0] || null,
+      topMonth: topMonth.rows[0] || null,
       topTags: [...tagCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([tag, count]) => ({ tag, count })),
     })
   } catch (err) {

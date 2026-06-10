@@ -310,7 +310,44 @@ describe('Categorias', () => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 4. REAÇÕES
+// 4. ESTATÍSTICAS
+// ─────────────────────────────────────────────────────────────────────────────
+describe('Estatísticas', () => {
+  let token, profile
+
+  before(async () => {
+    ;({ token, profile } = await registerUser('stats'))
+    await request(app)
+      .post('/api/posts')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ content: 'Primeiro registro.', type: 'pensamento', categoria: 'ideia', visibility: 'private' })
+    await request(app)
+      .post('/api/posts')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ content: 'Segundo registro.', type: 'pensamento', categoria: 'ideia', visibility: 'private' })
+    await request(app)
+      .post('/api/posts')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ content: 'Terceiro registro.', type: 'pensamento', categoria: 'aprendizado', visibility: 'private' })
+  })
+
+  after(async () => {
+    await cleanupProfile(profile.id)
+  })
+
+  it('GET /api/archive/stats retorna categoria mais recorrente', async () => {
+    const res = await request(app)
+      .get('/api/archive/stats')
+      .set('Authorization', `Bearer ${token}`)
+    assert.equal(res.status, 200)
+    assert.equal(res.body.topCategory?.name, 'ideia')
+    assert.equal(res.body.topCategory?.count, 2)
+    assert.ok(res.body.topMonth)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5. REAÇÕES
 // ─────────────────────────────────────────────────────────────────────────────
 describe('Reações', () => {
   let token, profile, postId

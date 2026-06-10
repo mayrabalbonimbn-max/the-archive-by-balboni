@@ -39,10 +39,11 @@ export default function StatsPage() {
   const navigate = useNavigate()
   const [data, setData] = useState(null)
   const [streak, setStreak] = useState(null)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    api.get('/archive/stats').then(setData).catch(() => {})
-    api.get('/archive/streak').then(setStreak).catch(() => {})
+    api.get('/archive/stats').then(setData).catch(() => setError('Não foi possível carregar as estatísticas.'))
+    api.get('/archive/streak').then(setStreak).catch(() => setError('Não foi possível carregar a sequência.'))
   }, [])
 
   const loading = !data && !streak
@@ -72,6 +73,15 @@ export default function StatsPage() {
         </div>
       ) : (
         <div style={{ padding: '20px 24px 80px' }}>
+          {error && (
+            <div style={{
+              marginBottom: 18, padding: '12px 14px', borderRadius: 12,
+              border: '1px solid rgba(248,113,113,0.25)', background: 'rgba(248,113,113,0.08)',
+              fontFamily: 'var(--sans)', fontSize: 13, color: 'var(--ink)',
+            }}>
+              {error}
+            </div>
+          )}
           {/* Streak section */}
           {streak && (
             <>
@@ -110,6 +120,15 @@ export default function StatsPage() {
                 />
                 {data.topCollection && (
                   <InfoRow label="Coleção mais usada" value={data.topCollection.name} />
+                )}
+                {data.topCategory && (
+                  <InfoRow label="Categoria mais recorrente" value={data.topCategory.name} />
+                )}
+                {data.topMonth && (
+                  <InfoRow
+                    label="Mês mais ativo"
+                    value={`${new Date(data.topMonth.month).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })} · ${data.topMonth.count} entradas`}
+                  />
                 )}
                 {(data.topTags || []).length > 0 && (
                   <div style={{
