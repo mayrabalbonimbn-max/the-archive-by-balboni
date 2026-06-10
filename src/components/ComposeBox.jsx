@@ -81,6 +81,7 @@ const CREATE_TYPES = [
   { id: 'arquivo',  label: 'Arquivo',    icon: 'file',     hint: 'Envie um script Python, JS, HTML ou qualquer arquivo de código' },
   { id: 'code',     label: 'Código',     icon: 'code',     hint: 'Escreva ou cole um trecho de código inline' },
 ]
+const BASIC_CREATE_TYPES = new Set(['note', 'article', 'photo'])
 
 const PRIVACY = [
   ['private',   'Privado'],
@@ -111,6 +112,8 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
   const { collections } = useCollections()
   const isDesktop = useIsDesktop()
   const [entryType, setEntryType] = useState('note')
+  const [showAllTypes, setShowAllTypes] = useState(false)
+  const [showDetails, setShowDetails] = useState(false)
   const [title, setTitle] = useState('')
   const [body, setBody] = useState(initialContent || '')
   const [collectionId, setCollectionId] = useState('')
@@ -378,7 +381,7 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
 
         {/* Type selector */}
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '16px 18px', scrollbarWidth: 'none' }}>
-          {CREATE_TYPES.map(t => {
+          {CREATE_TYPES.filter(t => showAllTypes || BASIC_CREATE_TYPES.has(t.id) || t.id === entryType).map(t => {
             const on = t.id === entryType
             return (
               <button
@@ -400,6 +403,21 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
               </button>
             )
           })}
+          <button
+            type="button"
+            onClick={() => setShowAllTypes(v => !v)}
+            style={{
+              flexShrink: 0,
+              display: 'flex', alignItems: 'center', gap: 7,
+              padding: '9px 14px', borderRadius: 12, cursor: 'pointer',
+              border: '1px solid var(--line-strong)',
+              background: 'transparent',
+              color: 'var(--ink-3)',
+              fontFamily: 'var(--sans)', fontSize: 13, fontWeight: 500,
+            }}
+          >
+            {showAllTypes ? 'Menos' : 'Mais tipos'}
+          </button>
         </div>
 
         <div style={{ padding: '4px 20px 20px' }}>
@@ -671,8 +689,34 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
           </div>
         )}
 
+        <div style={{ borderTop: '1px solid var(--line)', padding: '14px 20px' }}>
+          <button
+            type="button"
+            onClick={() => setShowDetails(v => !v)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              border: '1px solid var(--line)',
+              background: 'rgba(255,255,255,0.02)',
+              color: 'var(--ink-2)',
+              borderRadius: 12,
+              padding: '11px 13px',
+              cursor: 'pointer',
+              fontFamily: 'var(--sans)',
+              fontSize: 13.5,
+            }}
+          >
+            <span>Organização e privacidade</span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)' }}>
+              {showDetails ? 'FECHAR' : privacy === 'private' ? 'PRIVADO' : privacy.toUpperCase()}
+            </span>
+          </button>
+        </div>
+
         {/* Meta block */}
-        <div style={{ borderTop: '1px solid var(--line)', padding: '16px 20px 32px' }}>
+        {showDetails && <div style={{ borderTop: '1px solid var(--line)', padding: '16px 20px 32px' }}>
           {/* Tags */}
           <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '0.12em', color: 'var(--ink-3)', marginBottom: 11 }}>
             TAGS
@@ -930,7 +974,7 @@ export default function ComposeBox({ profile, onPost, onClose, initialContent, p
               )
             })()}
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* Hidden file input */}

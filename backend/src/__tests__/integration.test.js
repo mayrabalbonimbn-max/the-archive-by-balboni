@@ -192,7 +192,81 @@ describe('Posts — CRUD', () => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 3. CATEGORIAS
+// 3. PRIVACIDADE SOCIAL
+// ─────────────────────────────────────────────────────────────────────────────
+describe('Privacidade em rotas públicas e sociais', () => {
+  let owner, viewer
+  let privatePostId, publicPostId, followersPostId
+
+  before(async () => {
+    owner = await registerUser('privacy_owner')
+    viewer = await registerUser('privacy_viewer')
+
+    const privatePost = await request(app)
+      .post('/api/posts')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ content: 'Registro privado não deve vazar.', type: 'pensamento', visibility: 'private' })
+    assert.equal(privatePost.status, 201)
+    privatePostId = privatePost.body.id
+
+    const publicPost = await request(app)
+      .post('/api/posts')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ content: 'Registro público pode aparecer.', type: 'pensamento', visibility: 'public' })
+    assert.equal(publicPost.status, 201)
+    publicPostId = publicPost.body.id
+
+    const followersPost = await request(app)
+      .post('/api/posts')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ content: 'Registro apenas para seguidores.', type: 'pensamento', visibility: 'followers' })
+    assert.equal(followersPost.status, 201)
+    followersPostId = followersPost.body.id
+  })
+
+  after(async () => {
+    await cleanupProfile(owner.profile.id)
+    await cleanupProfile(viewer.profile.id)
+  })
+
+  it('perfil público não expõe posts privados para outro usuário', async () => {
+    const res = await request(app)
+      .get(`/api/profiles/${owner.profile.id}/posts`)
+      .set('Authorization', `Bearer ${viewer.token}`)
+    assert.equal(res.status, 200)
+    assert.ok(!res.body.some(p => p.id === privatePostId), 'post privado não deve aparecer')
+    assert.ok(res.body.some(p => p.id === publicPostId), 'post público deve aparecer')
+    assert.ok(!res.body.some(p => p.id === followersPostId), 'post followers não deve aparecer antes de seguir')
+  })
+
+  it('feed público não expõe posts privados ou de seguidores', async () => {
+    const res = await request(app)
+      .get('/api/posts/explore')
+      .set('Authorization', `Bearer ${viewer.token}`)
+    assert.equal(res.status, 200)
+    assert.ok(!res.body.some(p => p.id === privatePostId), 'feed público não deve incluir privado')
+    assert.ok(!res.body.some(p => p.id === followersPostId), 'feed público não deve incluir followers')
+    assert.ok(res.body.some(p => p.id === publicPostId), 'feed público deve incluir público')
+  })
+
+  it('post followers aparece depois de seguir o perfil', async () => {
+    const follow = await request(app)
+      .post(`/api/follows/${owner.profile.id}`)
+      .set('Authorization', `Bearer ${viewer.token}`)
+      .send({})
+    assert.equal(follow.status, 201)
+
+    const res = await request(app)
+      .get(`/api/profiles/${owner.profile.id}/posts`)
+      .set('Authorization', `Bearer ${viewer.token}`)
+    assert.equal(res.status, 200)
+    assert.ok(res.body.some(p => p.id === followersPostId), 'post followers deve aparecer para seguidor')
+    assert.ok(!res.body.some(p => p.id === privatePostId), 'post privado continua invisível')
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4. CATEGORIAS
 // ─────────────────────────────────────────────────────────────────────────────
 describe('Categorias', () => {
   let token, profile

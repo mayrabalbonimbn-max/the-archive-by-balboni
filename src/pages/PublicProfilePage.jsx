@@ -65,12 +65,15 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
           if (mediaUrls.current.avatar) URL.revokeObjectURL(mediaUrls.current.avatar)
           mediaUrls.current.avatar = URL.createObjectURL(blob)
           next.avatar = mediaUrls.current.avatar
-        } catch {}
+        } catch (err) {
+          console.warn('[PublicProfilePage] avatar load failed:', err.message)
+        }
       }
       setProfile(next)
       setPosts(postsData)
       setSummary(summaryData)
-    } catch {
+    } catch (err) {
+      console.warn('[PublicProfilePage] load failed:', err.message)
       setProfile(null)
     } finally {
       setLoading(false)

@@ -151,6 +151,7 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
   const [showNewProject, setShowNewProject] = useState(false)
   const [newProject, setNewProject] = useState({ emoji: '🌱', title: '', description: '', status: 'ativo', githubUrl: '', websiteUrl: '', tags: '', startedAt: '', completedAt: '' })
   const [creating, setCreating] = useState(false)
+  const [projectError, setProjectError] = useState('')
 
   useEffect(() => {
     api.get('/projects').then(setProjects).catch(() => {})
@@ -264,7 +265,7 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
             { to: '/trajetoria',  emoji: '📖', label: 'Trajetória' },
             { to: '/messages',    emoji: '💬', label: 'Mensagens' },
             { to: '/capsules',    emoji: '📦', label: 'Cápsulas' },
-            { to: '/settings',    emoji: '⚙️', label: 'Ajustes' },
+            { to: '/settings',    emoji: '⚙️', label: 'Config.' },
           ].map(({ to, emoji, label }) => (
             <button
               key={to}
@@ -472,6 +473,7 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
               onClick={async () => {
                 if (!newProject.title.trim()) return
                 setCreating(true)
+                setProjectError('')
                 try {
                   const payload = {
                     ...newProject,
@@ -485,7 +487,9 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
                   setProjects(prev => [proj, ...prev])
                   setShowNewProject(false)
                   setNewProject({ emoji: '🌱', title: '', description: '', status: 'ativo', githubUrl: '', websiteUrl: '', tags: '', startedAt: '', completedAt: '' })
-                } catch {}
+                } catch (err) {
+                  setProjectError(err.message || 'Não foi possível criar o projeto.')
+                }
                 setCreating(false)
               }}
               disabled={creating || !newProject.title.trim()}
@@ -498,6 +502,11 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
             >
               {creating ? 'Criando…' : 'Criar projeto'}
             </button>
+            {projectError && (
+              <div style={{ marginTop: 10, fontFamily: 'var(--sans)', fontSize: 12.5, color: '#f87171' }}>
+                {projectError}
+              </div>
+            )}
           </div>
         </div>
       )}

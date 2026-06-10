@@ -54,6 +54,14 @@ const PUBLIC_SECTION_OPTIONS = [
   { id: 'trajectory', label: 'Trajetória' },
 ]
 
+const SETTINGS_GROUPS = [
+  { id: 'account', label: 'Conta' },
+  { id: 'invites', label: 'Convites' },
+  { id: 'data', label: 'Dados' },
+  { id: 'notifications', label: 'Notificações' },
+  { id: 'security', label: 'Segurança' },
+]
+
 function OutlineBtn({ onClick, children, danger = false, disabled = false }) {
   return (
     <button
@@ -374,6 +382,8 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
   const [pushMsg, setPushMsg] = useState('')
   const [pushDiag, setPushDiag] = useState(null) // { swOk, permOk, subOk }
   const canManageInvites = profile?.isAdmin === true
+  const [settingsGroup, setSettingsGroup] = useState('account')
+  const visibleGroups = SETTINGS_GROUPS.filter(g => g.id !== 'invites' || canManageInvites)
 
   useEffect(() => {
     const swOk = 'serviceWorker' in navigator
@@ -536,13 +546,38 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
             <Icon name="back" size={22} />
           </button>
         }
-        title="Ajustes"
+        title="Configurações"
       />
 
       <div style={{ maxWidth: 560, margin: '0 auto', padding: '24px 20px', paddingBottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}>
+        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', marginBottom: 26 }}>
+          {visibleGroups.map(group => {
+            const on = settingsGroup === group.id
+            return (
+              <button
+                key={group.id}
+                type="button"
+                onClick={() => setSettingsGroup(group.id)}
+                style={{
+                  flexShrink: 0,
+                  padding: '8px 14px',
+                  borderRadius: 999,
+                  border: `1px solid ${on ? 'var(--accent)' : 'var(--line-strong)'}`,
+                  background: on ? 'rgba(232,108,180,0.12)' : 'transparent',
+                  color: on ? 'var(--accent)' : 'var(--ink-3)',
+                  fontFamily: 'var(--sans)',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                }}
+              >
+                {group.label}
+              </button>
+            )
+          })}
+        </div>
 
         {/* ── Perfil ── */}
-        <div style={{ marginBottom: 40 }}>
+        {settingsGroup === 'account' && <><div style={{ marginBottom: 40 }}>
           <SectionHead label="Perfil" />
 
           {/* Avatar */}
@@ -603,32 +638,6 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
           </AccentBtn>
         </div>
 
-        {/* ── Senha ── */}
-        <div style={{ marginBottom: 40 }}>
-          <SectionHead label="Senha" />
-          <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <Field label="Senha atual">
-              <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} style={fieldInput} placeholder="Senha atual" />
-            </Field>
-            <Field label="Nova senha">
-              <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} style={fieldInput} placeholder="Mínimo 6 caracteres" />
-            </Field>
-            {newPassword && (
-              <Field label="Confirmar">
-                <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={fieldInput} placeholder="Repita a nova senha" />
-              </Field>
-            )}
-            {passwordStatus && (
-              <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: passwordStatus.ok ? '#4ade80' : '#f87171' }}>
-                {passwordStatus.msg}
-              </div>
-            )}
-            <AccentBtn type="submit" disabled={passwordLoading || !currentPassword || !newPassword}>
-              {passwordLoading ? 'Salvando…' : 'Atualizar senha'}
-            </AccentBtn>
-          </form>
-        </div>
-
         {/* ── Perfil público ── */}
         <div style={{ marginBottom: 40 }}>
           <SectionHead label="Perfil público" />
@@ -675,11 +684,12 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
           <AccentBtn onClick={handleSaveProfile}>
             {saved ? '✓ Salvo!' : 'Salvar vitrine'}
           </AccentBtn>
-        </div>
+        </div></>}
 
-        {canManageInvites && <InviteSettingsSection />}
+        {settingsGroup === 'invites' && canManageInvites && <InviteSettingsSection />}
 
         {/* ── Exportar ── */}
+        {settingsGroup === 'data' && <>
         <ExportSection />
 
         {/* ── Importar ── */}
@@ -719,8 +729,18 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
           )}
         </div>
 
-        {/* ── Notificações Push ── */}
+        {/* ── Estatísticas ── */}
         <div style={{ marginBottom: 40 }}>
+          <SectionHead label="Estatísticas" />
+          <div style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', marginBottom: 16 }}>
+            Veja um resumo do seu uso e do seu arquivo ao longo do tempo.
+          </div>
+          <OutlineBtn onClick={() => navigate('/stats')}>Ver estatísticas</OutlineBtn>
+        </div>
+        </>}
+
+        {/* ── Notificações Push ── */}
+        {settingsGroup === 'notifications' && <div style={{ marginBottom: 40 }}>
           <SectionHead label="Notificações" />
 
           {/* Diagnostic checklist */}
@@ -782,15 +802,33 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
               {pushLoading ? 'Ativando…' : 'Ativar notificações push'}
             </AccentBtn>
           )}
-        </div>
+        </div>}
 
-        {/* ── Estatísticas ── */}
+        {settingsGroup === 'security' && <>
+        {/* ── Senha ── */}
         <div style={{ marginBottom: 40 }}>
-          <SectionHead label="Estatísticas" />
-          <div style={{ fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', marginBottom: 16 }}>
-            Veja um resumo do seu uso e do seu arquivo ao longo do tempo.
-          </div>
-          <OutlineBtn onClick={() => navigate('/stats')}>Ver estatísticas</OutlineBtn>
+          <SectionHead label="Senha" />
+          <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <Field label="Senha atual">
+              <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} style={fieldInput} placeholder="Senha atual" />
+            </Field>
+            <Field label="Nova senha">
+              <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} style={fieldInput} placeholder="Mínimo 6 caracteres" />
+            </Field>
+            {newPassword && (
+              <Field label="Confirmar">
+                <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={fieldInput} placeholder="Repita a nova senha" />
+              </Field>
+            )}
+            {passwordStatus && (
+              <div style={{ fontFamily: 'var(--sans)', fontSize: 13, color: passwordStatus.ok ? '#4ade80' : '#f87171' }}>
+                {passwordStatus.msg}
+              </div>
+            )}
+            <AccentBtn type="submit" disabled={passwordLoading || !currentPassword || !newPassword}>
+              {passwordLoading ? 'Salvando…' : 'Atualizar senha'}
+            </AccentBtn>
+          </form>
         </div>
 
         {/* ── Sessão ── */}
@@ -827,6 +865,7 @@ export default function SettingsPage({ profile, posts, onUpdateProfile, onUpload
             Deletar todos os registros
           </OutlineBtn>
         </div>
+        </>}
 
       </div>
     </div>

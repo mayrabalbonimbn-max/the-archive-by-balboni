@@ -57,7 +57,7 @@ export default function FriendsPage() {
 
   const title = isViewing
     ? (viewProfile ? `${viewProfile.name}` : 'Círculo')
-    : 'Pessoas'
+    : 'Círculo'
 
   return (
     <div style={{ animation: 'fadeUp var(--dur-screen) var(--ease-out)' }}>
@@ -138,7 +138,7 @@ export default function FriendsPage() {
       {/* Footer */}
       {!isViewing && (
         <div style={{ padding: '26px 20px', textAlign: 'center', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 14.5, color: 'var(--ink-3)' }}>
-          Encontre pessoas pelo Explorar.
+          Encontre pessoas em Arquivos públicos.
         </div>
       )}
     </div>

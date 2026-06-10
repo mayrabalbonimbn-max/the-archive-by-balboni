@@ -7,7 +7,7 @@ const TABS = [
   { to: '/',        end: true,  icon: 'today',   label: 'Hoje' },
   { to: '/archive',             icon: 'archive', label: 'Arquivo' },
   // compose button goes here (rendered inline)
-  { to: '/explore',             icon: 'explore', label: 'Explorar' },
+  { to: '/explore',             icon: 'explore', label: 'Públicos' },
   { to: '/profile',             icon: 'profile', label: 'Você' },
 ]
 
@@ -52,7 +52,7 @@ export default function TabBar({ onCompose }) {
           </div>
         </button>
 
-        {/* Explorar */}
+        {/* Arquivos públicos */}
         <TabBtn tab={TABS[2]} />
 
         {/* Você — com badge de DMs não lidas */}

@@ -269,8 +269,8 @@ export default function Sidebar({ profile, onLogout, onCompose }) {
           {/* Primary nav */}
           <nav style={{ padding: '4px 12px', display: 'flex', flexDirection: 'column', gap: 2 }}>
             <DSidebarItem icon="today"   label="Hoje"      active={isToday()}    onClick={() => navigate('/')} />
-            <DSidebarItem icon="explore" label="Explorar"  active={isExplore()}  onClick={() => navigate('/explore')} />
-            <DSidebarItem icon="people"  label="Pessoas"   active={isPeople()}   onClick={() => navigate('/friends')} />
+            <DSidebarItem icon="explore" label="Arquivos públicos"  active={isExplore()}  onClick={() => navigate('/explore')} />
+            <DSidebarItem icon="people"  label="Círculo"   active={isPeople()}   onClick={() => navigate('/friends')} />
             <DSidebarItem icon="bell"    label="Avisos"    active={isNotices()}  onClick={() => navigate('/notifications')} badge={unreadCount > 0} />
             <DSidebarItem icon="comment" label="Mensagens" active={isMessages()} onClick={() => navigate('/messages')} />
             <DSidebarItem icon="clock"   label="Cápsulas"  active={isCapsules()} onClick={() => navigate('/capsules')} tourId="capsules-nav" />
@@ -327,7 +327,7 @@ export default function Sidebar({ profile, onLogout, onCompose }) {
             <button
               onClick={e => { e.stopPropagation(); navigate('/settings') }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-3)', padding: 4, display: 'flex', alignItems: 'center', borderRadius: 6, flexShrink: 0 }}
-              title="Ajustes"
+              title="Configurações"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3"/>
@@ -374,15 +374,15 @@ export default function Sidebar({ profile, onLogout, onCompose }) {
 
             <nav className="flex flex-col gap-0.5 px-3 py-3 shrink-0">
               <MobileNavItem to="/"               end   label="Início"        Icon={HomeIcon}    onClick={close} />
-              <MobileNavItem to="/explore"              label="Explorar"      Icon={ExploreIcon} onClick={close} />
+              <MobileNavItem to="/explore"              label="Arquivos públicos" Icon={ExploreIcon} onClick={close} />
               <MobileNavItem to="/archive"              label="Arquivo"       Icon={ArchiveIcon} onClick={close} />
               <MobileNavItem to="/profile"              label="Perfil"        Icon={UserIcon}    onClick={close} />
-              <MobileNavItem to="/friends"              label="Conexões"      Icon={FriendsIcon} onClick={close} />
+              <MobileNavItem to="/friends"              label="Círculo"       Icon={FriendsIcon} onClick={close} />
               <MobileNavItem to="/notifications"        label="Notificações"  Icon={BellIcon}    onClick={close} />
               <MobileNavItem to="/messages"             label="Mensagens"     Icon={MessagesIcon} onClick={close} />
               <MobileNavItem to="/capsules"             label="Cápsulas"      Icon={CapsulesIcon} onClick={close} />
               <MobileNavItem to="/archive/stories"      label="Momentos"      Icon={StoriesArchiveIcon} onClick={close} />
-              <MobileNavItem to="/settings"             label="Ajustes"       Icon={SettingsIcon} onClick={close} />
+              <MobileNavItem to="/settings"             label="Configurações" Icon={SettingsIcon} onClick={close} />
             </nav>
 
             <div className="mt-auto px-3 pb-8 pt-3 border-t border-dark-border/50 shrink-0">

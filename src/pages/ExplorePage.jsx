@@ -38,7 +38,7 @@ function SearchField({ value, onChange, inputRef }) {
         ref={inputRef}
         value={value}
         onChange={e => onChange(e.target.value)}
-        placeholder="Arquivos, entradas, pessoas…"
+        placeholder="Arquivos, entradas, pessoas do círculo…"
         style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: 'var(--ink)', fontFamily: 'var(--sans)', fontSize: 14.5 }}
       />
       {value && (
@@ -224,7 +224,7 @@ function PeopleSection({ people, navigate }) {
   if (people.length === 0) {
     return (
       <div>
-        <SectionLabel>Pessoas no Archive</SectionLabel>
+        <SectionLabel>Círculo no Archive</SectionLabel>
         <div style={{
           margin: '4px 20px 32px',
           padding: '24px 20px',
@@ -238,7 +238,7 @@ function PeopleSection({ people, navigate }) {
             A comunidade ainda está crescendo.
           </p>
           <p style={{ margin: '0 0 16px', fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.6, maxWidth: 280, marginInline: 'auto' }}>
-            Enquanto isso, explore os guias do Archive e descubra novas formas de registrar a sua trajetória.
+            Enquanto isso, veja os guias do Archive e descubra novas formas de registrar a sua trajetória.
           </p>
           <button
             onClick={() => navigate(profileUrl('@thearchive'))}
@@ -254,7 +254,7 @@ function PeopleSection({ people, navigate }) {
   return (
     <div>
       <SectionLabel action="Ver tudo" onAction={() => navigate('/friends')}>
-        Pessoas guardando coisas como você
+        Círculo do Archive
       </SectionLabel>
       <div style={{ borderTop: '1px solid var(--line)' }}>
         {people.slice(0, 5).map(u => <PersonRow key={u.id} person={u} />)}
@@ -498,7 +498,7 @@ function SearchResults({ q, results, loading }) {
 
       {people.length > 0 && (
         <div style={{ marginBottom: 8 }}>
-          <SectionLabel>Pessoas</SectionLabel>
+          <SectionLabel>Círculo</SectionLabel>
           <div style={{ borderTop: '1px solid var(--line)' }}>
             {people.map(u => <PersonRow key={u.id} person={u} />)}
           </div>
@@ -600,7 +600,7 @@ export default function ExplorePage() {
       <AppBar
         left={
           <span style={{ fontFamily: 'var(--serif)', fontSize: 19, color: 'var(--ink)', fontStyle: 'italic' }}>
-            Explorar
+            Arquivos públicos
           </span>
         }
       />
