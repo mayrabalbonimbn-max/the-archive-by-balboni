@@ -5,7 +5,6 @@ import Icon from '../components/ui/Icon'
 import SectionLabel from '../components/ui/SectionLabel'
 import EntryCard from '../components/ui/EntryCard'
 import { api } from '../utils/api'
-import StoriesBar from '../components/StoriesBar'
 
 // ── Conteúdo curado ───────────────────────────────────────────────────────────
 
@@ -903,7 +902,6 @@ export default function HomePage({ posts, profile, onLike, onSave }) {
         }
       />
 
-      <StoriesBar profile={profile} />
 
       {/* 1. Hero */}
       <Hero profile={profile} posts={posts} projects={projects} capsules={capsules} streak={streak} />

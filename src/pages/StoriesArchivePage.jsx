@@ -155,10 +155,10 @@ export default function StoriesArchivePage() {
           ARQUIVO
         </div>
         <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontStyle: 'italic', fontWeight: 400, fontSize: 28, color: 'var(--ink)' }}>
-          Stories
+          Momentos
         </h1>
         <p style={{ margin: '8px 0 0', fontFamily: 'var(--sans)', fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.55 }}>
-          Tudo que você publicou continua aqui. Stories desaparecem da área pública, mas nunca do seu arquivo.
+          Registros rápidos do que você viveu. Saem da superfície após 24h, mas nunca saem do seu arquivo.
         </p>
       </div>
 
@@ -173,10 +173,10 @@ export default function StoriesArchivePage() {
         {!loading && stories.length === 0 && (
           <div style={{ textAlign: 'center', padding: '64px 20px' }}>
             <p style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 22, color: 'var(--ink-3)', margin: '0 0 10px' }}>
-              Nenhum story ainda.
+              Nenhum momento ainda.
             </p>
             <p style={{ fontFamily: 'var(--sans)', fontSize: 14, color: 'var(--ink-3)', margin: 0 }}>
-              Publique seu primeiro story pela tela inicial.
+              Registre seu primeiro momento pelo Arquivo.
             </p>
           </div>
         )}

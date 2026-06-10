@@ -6,7 +6,6 @@ import Avatar from '../components/ui/Avatar'
 import SectionLabel from '../components/ui/SectionLabel'
 import EntryCard from '../components/ui/EntryCard'
 import { useCollections } from '../hooks/useCollections'
-import { useStoryProfiles } from '../hooks/useStories'
 import { api } from '../utils/api'
 
 function useStreak() {
@@ -140,7 +139,6 @@ const TYPE_FILTERS = [
 export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }) {
   const navigate = useNavigate()
   const { collections } = useCollections()
-  const storyProfiles = useStoryProfiles()
   const [typeFilter, setTypeFilter] = useState('all')
   const [tagFilter, setTagFilter] = useState(null)
   const streak = useStreak()
@@ -195,7 +193,7 @@ export default function ProfilePage({ profile, posts, onLike, onSave, onDelete }
 
       {/* Identity */}
       <div style={{ padding: '20px 20px 0' }}>
-        <Avatar name={profile.name} src={profile.avatar} size={76} ring={!storyProfiles.has(profile.id)} story={storyProfiles.has(profile.id)} />
+        <Avatar name={profile.name} src={profile.avatar} size={76} ring />
         <h1 style={{ margin: '16px 0 3px', fontFamily: 'var(--serif)', fontSize: 28, color: 'var(--ink)', fontWeight: 400, letterSpacing: '-0.01em' }}>
           {profile.name}
         </h1>

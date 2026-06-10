@@ -18,7 +18,7 @@ const FEATURES = [
   { emoji: '📁', label: 'Coleções',            path: '/archive?s=collections' },
   { emoji: '💭', label: 'Memórias',            path: '/archive?s=memories' },
   { emoji: '📸', label: 'Fotos',               path: '/photos' },
-  { emoji: '📖', label: 'Stories',             path: '/archive?s=stories' },
+  { emoji: '📖', label: 'Trajetória',           path: '/trajetoria' },
   { emoji: '🗂️', label: 'Seu Arquivo',         path: '/archive' },
 ]
 

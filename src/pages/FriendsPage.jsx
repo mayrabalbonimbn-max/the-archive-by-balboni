@@ -6,7 +6,6 @@ import { api } from '../utils/api'
 import AppBar from '../components/ui/AppBar'
 import Icon from '../components/ui/Icon'
 import PersonRow from '../components/ui/PersonRow'
-import { useStoryProfiles } from '../hooks/useStories'
 
 export default function FriendsPage() {
   const navigate = useNavigate()
@@ -16,7 +15,6 @@ export default function FriendsPage() {
 
   const friendsApi = useFriends()
   const followsApi = useFollows()
-  const storyProfiles = useStoryProfiles()
   const [tab, setTab] = useState(initialTab)
 
   // For viewing another user's circle
@@ -123,7 +121,7 @@ export default function FriendsPage() {
       ) : (
         <div>
           {list.map(person => (
-            <PersonRow key={person.id} person={person} storyProfiles={storyProfiles} />
+            <PersonRow key={person.id} person={person} />
           ))}
         </div>
       )}

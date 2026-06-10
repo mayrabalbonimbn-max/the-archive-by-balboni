@@ -252,7 +252,7 @@ function StoryComposer({ profile, onCreated, onClose }) {
       >
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 20 }}>
-          <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 22, color: 'var(--ink)', flex: 1 }}>Novo Story</div>
+          <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 22, color: 'var(--ink)', flex: 1 }}>Novo Momento</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, color: 'var(--ink-3)', cursor: 'pointer', lineHeight: 1 }}>×</button>
         </div>
 
@@ -284,7 +284,7 @@ function StoryComposer({ profile, onCreated, onClose }) {
             <textarea
               value={content}
               onChange={e => setContent(e.target.value)}
-              placeholder="O que você quer registrar hoje?"
+              placeholder="O que você quer guardar desse momento?"
               maxLength={280}
               rows={3}
               style={{ width: '100%', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 10, padding: '12px 14px', fontFamily: 'var(--sans)', fontSize: 15, color: 'var(--ink)', resize: 'none', outline: 'none', boxSizing: 'border-box', marginBottom: 14 }}
@@ -362,7 +362,7 @@ function StoryComposer({ profile, onCreated, onClose }) {
           disabled={saving}
           style={{ width: '100%', padding: '14px 0', borderRadius: 99, background: 'var(--accent)', border: 'none', color: '#fff', fontFamily: 'var(--sans)', fontSize: 15, fontWeight: 600, cursor: saving ? 'wait' : 'pointer', opacity: saving ? 0.6 : 1 }}
         >
-          {saving ? 'Publicando…' : 'Publicar Story'}
+          {saving ? 'Registrando…' : 'Registrar momento'}
         </button>
       </div>
     </div>,

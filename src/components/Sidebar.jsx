@@ -287,7 +287,7 @@ export default function Sidebar({ profile, onLogout, onCompose }) {
             <DSidebarItem icon="collections" label="Coleções"     active={isArchiveSection('collections')} onClick={() => navigate('/archive?s=collections')} />
             <DSidebarItem icon="library"     label="Arquivos"     active={isArchiveSection('library') || location.pathname === '/library'} onClick={() => navigate('/library')} />
             <DSidebarItem icon="photo"       label="Fotografia"   active={isArchiveSection('photography') || location.pathname === '/photos'} onClick={() => navigate('/photos')} tourId="photo-nav" />
-            <DSidebarItem icon="stories"     label="Stories"      active={location.pathname === '/archive/stories'} onClick={() => navigate('/archive/stories')} />
+            <DSidebarItem icon="stories"     label="Momentos"     active={location.pathname === '/archive/stories'} onClick={() => navigate('/archive/stories')} />
           </nav>
 
           {/* SUA TRAJETÓRIA */}
@@ -381,7 +381,7 @@ export default function Sidebar({ profile, onLogout, onCompose }) {
               <MobileNavItem to="/notifications"        label="Notificações"  Icon={BellIcon}    onClick={close} />
               <MobileNavItem to="/messages"             label="Mensagens"     Icon={MessagesIcon} onClick={close} />
               <MobileNavItem to="/capsules"             label="Cápsulas"      Icon={CapsulesIcon} onClick={close} />
-              <MobileNavItem to="/archive/stories"      label="Stories"       Icon={StoriesArchiveIcon} onClick={close} />
+              <MobileNavItem to="/archive/stories"      label="Momentos"      Icon={StoriesArchiveIcon} onClick={close} />
               <MobileNavItem to="/settings"             label="Ajustes"       Icon={SettingsIcon} onClick={close} />
             </nav>
 

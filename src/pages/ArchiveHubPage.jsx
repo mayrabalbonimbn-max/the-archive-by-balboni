@@ -18,7 +18,7 @@ const SECTIONS = [
   { id: 'collections',  label: 'Coleções' },
   { id: 'library',      label: 'Arquivos' },
   { id: 'photography',  label: 'Fotos' },
-  { id: 'stories',      label: 'Stories' },
+  { id: 'stories',      label: 'Momentos' },
 ]
 
 // ── Subnav — mobile only ──────────────────────────────────────────────────────

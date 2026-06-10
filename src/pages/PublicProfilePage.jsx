@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, publicProfileMediaBlob } from '../utils/api'
-import { useStoryProfiles } from '../hooks/useStories'
 import AppBar from '../components/ui/AppBar'
 import Icon from '../components/ui/Icon'
 import Avatar from '../components/ui/Avatar'
@@ -21,7 +20,6 @@ function Stat({ n, label, onClick }) {
 export default function PublicProfilePage({ profile: viewerProfile }) {
   const { id, username } = useParams()
   const navigate = useNavigate()
-  const storyProfiles = useStoryProfiles()
   const [profile, setProfile] = useState(null)
   const [posts, setPosts] = useState([])
   const [summary, setSummary] = useState(null)
@@ -154,7 +152,7 @@ export default function PublicProfilePage({ profile: viewerProfile }) {
 
       {/* Identity */}
       <div style={{ padding: '20px 20px 0' }}>
-        <Avatar name={profile.name} src={profile.avatar} size={76} ring={!storyProfiles.has(profile.id)} story={storyProfiles.has(profile.id)} />
+        <Avatar name={profile.name} src={profile.avatar} size={76} />
         <h1 style={{ margin: '16px 0 3px', fontFamily: 'var(--serif)', fontSize: 28, color: 'var(--ink)', fontWeight: 400, letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 8 }}>
           {profile.name}
           {profile.verified && <VerifiedBadge size={22} />}
