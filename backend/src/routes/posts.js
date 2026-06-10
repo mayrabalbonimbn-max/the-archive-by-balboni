@@ -327,7 +327,6 @@ router.post('/', async (req, res) => {
     const isTextOnly = hasAttachments !== true
     const hasRealText = cleanContent.length >= 4
     const hasRealCode = Boolean(cleanCode)
-    console.log('[dupcheck] type:', type, 'hasAttachments:', hasAttachments, 'contentLen:', cleanContent.length, 'hasCode:', hasRealCode)
 
     if (isTextOnly && (hasRealText || hasRealCode)) {
       const dupCheck = await pool.query(
@@ -341,12 +340,9 @@ router.post('/', async (req, res) => {
         [req.user.profileId, cleanContent, cleanCode || '']
       )
       if (dupCheck.rows.length > 0) {
-        console.log('[dupcheck] blocked — matched post id:', dupCheck.rows[0].id)
         client.release()
         return res.status(409).json({ error: 'Você já guardou um texto muito parecido.' })
       }
-    } else {
-      console.log('[dupcheck] skipped —', hasAttachments ? 'tem anexo' : 'texto muito curto')
     }
 
     await client.query('BEGIN')
