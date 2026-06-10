@@ -105,7 +105,7 @@ async function notifyNetworkJoin(newProfile) {
     `INSERT INTO notifications (profile_id, actor_id, type, message)
      SELECT id, $1, 'join', $2
      FROM profiles
-     WHERE id != $1 AND password_hash IS NOT NULL
+     WHERE lower(handle) = lower('@mayrabalboni') AND id != $1
      RETURNING profile_id`,
     [newProfile.id, `${newProfile.name} entrou no The Archive.`]
   )
